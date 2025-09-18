@@ -1,86 +1,55 @@
 export type UserRole = 'ADMIN' | 'GUARD';
 
-export type TeamName = 'A' | 'B' | 'C' | 'D';
+export type SwapStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'APPROVED' | 'CANCELLED';
 
-export type ShiftPeriod = 'DIURNO' | 'NOTURNO' | 'OUTRO';
-
-export type SwapStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
-
-export type LocationName = 'CÂMARA_MUNICIPAL' | 'MUSEU_LEGISLATIVO';
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  teamId?: string;
-  team?: Team;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
+// Database types matching Supabase schema
 export interface Team {
   id: string;
-  name: TeamName;
-  users: User[];
-  shifts: Shift[];
-  createdAt: Date;
-  updatedAt: Date;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface Location {
+export interface Profile {
   id: string;
-  name: LocationName;
-  displayName: string;
-  shifts: Shift[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Shift {
-  id: string;
-  date: Date;
-  period: ShiftPeriod;
-  teamId: string;
-  team: Team;
-  locationId: string;
-  location: Location;
-  guardId?: string;
-  guard?: User;
-  createdAt: Date;
-  updatedAt: Date;
+  user_id: string;
+  name: string;
+  email: string;
+  team_id?: string;
+  role: UserRole;
+  team?: Team;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface SwapRequest {
   id: string;
-  requesterId: string;
-  requester: User;
-  targetId: string;
-  target: User;
-  requesterShiftId: string;
-  requesterShift: Shift;
-  targetShiftId: string;
-  targetShift: Shift;
+  requester_id: string;
+  target_id: string;
+  swap_date: string;
+  reason: string;
   status: SwapStatus;
-  reason?: string;
-  decidedAt?: Date;
-  decidedBy?: string;
-  decider?: User;
-  createdAt: Date;
-  updatedAt: Date;
+  target_confirmation: boolean;
+  admin_approved: boolean;
+  admin_approved_by?: string;
+  admin_approved_at?: string;
+  requester?: Profile;
+  target?: Profile;
+  admin_approver?: Profile;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface Notification {
+export interface AuditLog {
   id: string;
-  userId: string;
-  user: User;
-  type: string;
-  title: string;
-  message: string;
-  read: boolean;
-  metadata?: Record<string, any>;
-  createdAt: Date;
-  updatedAt: Date;
+  user_id: string;
+  action: string;
+  entity_type: string;
+  entity_id?: string;
+  details?: Record<string, any>;
+  user?: Profile;
+  created_at: string;
 }
 
 export interface DashboardStats {

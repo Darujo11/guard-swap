@@ -131,9 +131,17 @@ const AdminDashboard = () => {
                 Gerencie as solicitações de troca de plantão
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Filter className="h-4 w-4" />
-              Filtrar
+            <Button variant="outline" size="sm" className="gap-2" asChild>
+              <a href="/admin/equipes">
+                <Users className="h-4 w-4" />
+                Gerenciar Equipes
+              </a>
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2" asChild>
+              <a href="/admin/trocas">
+                <Filter className="h-4 w-4" />
+                Gerenciar Trocas
+              </a>
             </Button>
           </div>
         </CardHeader>

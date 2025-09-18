@@ -1,21 +1,8 @@
-import { TeamName, ShiftPeriod, LocationName } from './types';
-
-export const TEAMS: { name: TeamName; color: string }[] = [
-  { name: 'A', color: 'bg-blue-100 text-blue-800' },
-  { name: 'B', color: 'bg-green-100 text-green-800' },
-  { name: 'C', color: 'bg-yellow-100 text-yellow-800' },
-  { name: 'D', color: 'bg-purple-100 text-purple-800' },
-];
-
-export const SHIFT_PERIODS: { period: ShiftPeriod; label: string; hours: string }[] = [
-  { period: 'DIURNO', label: 'Diurno', hours: '08:00 - 18:00' },
-  { period: 'NOTURNO', label: 'Noturno', hours: '18:00 - 08:00' },
-  { period: 'OUTRO', label: 'Outro', hours: 'Horário especial' },
-];
-
-export const LOCATIONS: { name: LocationName; displayName: string; capacity: number }[] = [
-  { name: 'CÂMARA_MUNICIPAL', displayName: 'Câmara Municipal', capacity: 4 },
-  { name: 'MUSEU_LEGISLATIVO', displayName: 'Museu do Legislativo', capacity: 1 },
+export const TEAM_COLORS = [
+  { name: 'Equipe A', color: 'bg-blue-100 text-blue-800' },
+  { name: 'Equipe B', color: 'bg-green-100 text-green-800' },
+  { name: 'Equipe C', color: 'bg-yellow-100 text-yellow-800' },
+  { name: 'Equipe D', color: 'bg-purple-100 text-purple-800' },
 ];
 
 export const SWAP_STATUS_CONFIG = {
@@ -23,6 +10,11 @@ export const SWAP_STATUS_CONFIG = {
     label: 'Pendente',
     color: 'bg-warning-light text-warning border-warning/20',
     icon: 'Clock'
+  },
+  ACCEPTED: {
+    label: 'Aceita',
+    color: 'bg-info-light text-info border-info/20',
+    icon: 'CheckCircle2'
   },
   APPROVED: {
     label: 'Aprovada',

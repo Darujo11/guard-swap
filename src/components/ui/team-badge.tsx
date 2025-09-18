@@ -1,15 +1,16 @@
 import { Badge } from "@/components/ui/badge";
-import { TeamName } from "@/lib/types";
-import { TEAMS } from "@/lib/constants";
+import { Team } from "@/lib/types";
+import { TEAM_COLORS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 interface TeamBadgeProps {
-  team: TeamName;
+  team: Team | string;
   className?: string;
 }
 
 export function TeamBadge({ team, className }: TeamBadgeProps) {
-  const teamConfig = TEAMS.find(t => t.name === team);
+  const teamName = typeof team === 'string' ? team : team.name;
+  const teamConfig = TEAM_COLORS.find(t => t.name === teamName);
   
   return (
     <Badge 
@@ -20,7 +21,7 @@ export function TeamBadge({ team, className }: TeamBadgeProps) {
         className
       )}
     >
-      Equipe {team}
+      {teamName}
     </Badge>
   );
 }
