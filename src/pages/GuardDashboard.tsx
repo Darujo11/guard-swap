@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { TeamBadge } from '@/components/ui/team-badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { GuardSwapForm } from '@/components/guards/GuardSwapForm';
+import { GuardSwapList } from '@/components/guards/GuardSwapList';
+import { supabase } from '@/integrations/supabase/client';
+import { Profile } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Calendar, 
   Clock, 
@@ -14,57 +20,45 @@ import {
   Eye
 } from 'lucide-react';
 
-// Mock data - será substituído por dados reais do Supabase
-const mockGuard = {
-  id: '1',
-  name: 'Carlos Silva',
-  team: 'A' as const,
-  shifts: [
-    {
-      id: '1',
-      date: '2024-01-15',
-      period: 'DIURNO' as const,
-      location: 'Câmara Municipal',
-      hours: '08:00 - 18:00'
-    },
-    {
-      id: '2',
-      date: '2024-01-17',
-      period: 'NOTURNO' as const,
-      location: 'Museu do Legislativo',
-      hours: '18:00 - 08:00'
-    },
-    {
-      id: '3',
-      date: '2024-01-20',
-      period: 'DIURNO' as const,
-      location: 'Câmara Municipal',
-      hours: '08:00 - 18:00'
-    },
-  ]
-};
-
-const mockSwapRequests = [
-  {
-    id: '1',
-    target: { name: 'Maria Santos', team: 'B' },
-    myShift: { date: '2024-01-15', period: 'DIURNO', location: 'Câmara Municipal' },
-    targetShift: { date: '2024-01-16', period: 'NOTURNO', location: 'Museu do Legislativo' },
-    status: 'PENDING' as const,
-    createdAt: '2024-01-10T10:30:00Z',
-  },
-  {
-    id: '2',
-    target: { name: 'Ana Lima', team: 'D' },
-    myShift: { date: '2024-01-20', period: 'DIURNO', location: 'Câmara Municipal' },
-    targetShift: { date: '2024-01-18', period: 'DIURNO', location: 'Câmara Municipal' },
-    status: 'APPROVED' as const,
-    createdAt: '2024-01-08T14:20:00Z',
-  },
-];
-
 const GuardDashboard = () => {
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
+  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
+  const [isSwapFormOpen, setIsSwapFormOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          team:teams(*)
+        `)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      setCurrentUser(data as Profile);
+    } catch (error) {
+      console.error('[GuardDashboard][FetchUser]', error);
+      toast({
+        title: 'Erro de autenticação',
+        description: 'Não foi possível carregar seus dados.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
@@ -74,36 +68,58 @@ const GuardDashboard = () => {
     });
   };
 
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  if (loading) {
+    return (
+      <AppLayout title="Meu Painel" user={{ name: 'Carregando...', role: 'GUARD' }}>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
-  const getDateStatus = (dateString: string) => {
-    const today = new Date();
-    const shiftDate = new Date(dateString);
-    const diffDays = Math.ceil((shiftDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) return { label: 'Concluído', color: 'text-muted-foreground' };
-    if (diffDays === 0) return { label: 'Hoje', color: 'text-primary font-medium' };
-    if (diffDays <= 3) return { label: `Em ${diffDays} dias`, color: 'text-warning' };
-    return { label: `${diffDays} dias`, color: 'text-foreground' };
-  };
+  if (!currentUser) {
+    return (
+      <AppLayout title="Erro" user={{ name: 'Usuário', role: 'GUARD' }}>
+        <div className="text-center py-8">
+          <p className="text-destructive">Erro ao carregar dados do usuário.</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout
       title="Meu Painel"
-      user={{ name: mockGuard.name, role: 'GUARD', teamName: mockGuard.team }}
+      user={{ 
+        name: currentUser.name, 
+        role: 'GUARD', 
+        teamName: currentUser.team?.name || 'Sem equipe'
+      }}
       notificationCount={1}
     >
       {/* Quick Actions */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        <Button className="gap-2 bg-gradient-to-r from-primary to-primary-hover">
-          <Plus className="h-4 w-4" />
-          Solicitar Troca de Plantão
-        </Button>
+        <Dialog open={isSwapFormOpen} onOpenChange={setIsSwapFormOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2 bg-gradient-to-r from-primary to-primary-hover">
+              <Plus className="h-4 w-4" />
+              Solicitar Troca de Plantão
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Solicitar Troca de Plantão</DialogTitle>
+            </DialogHeader>
+            <GuardSwapForm 
+              currentUser={currentUser} 
+              onClose={() => setIsSwapFormOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
         <Button variant="outline" className="gap-2">
           <Eye className="h-4 w-4" />
           Ver Escala Completa
@@ -121,7 +137,7 @@ const GuardDashboard = () => {
                   Meus Próximos Plantões
                 </CardTitle>
                 <CardDescription>
-                  Seus turnos programados - Equipe {mockGuard.team}
+                  Seus turnos programados - {currentUser.team?.name || 'Sem equipe'}
                 </CardDescription>
               </div>
               <div className="flex gap-1">
@@ -144,102 +160,17 @@ const GuardDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {mockGuard.shifts.map((shift) => {
-                const dateStatus = getDateStatus(shift.date);
-                return (
-                  <div
-                    key={shift.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{formatDate(shift.date)}</span>
-                        <span className={dateStatus.color}>({dateStatus.label})</span>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {shift.period} - {shift.hours}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {shift.location}
-                        </div>
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" className="gap-2">
-                      <ArrowRightLeft className="h-4 w-4" />
-                      Trocar
-                    </Button>
-                  </div>
-                );
-              })}
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>Escala de plantões em desenvolvimento</p>
+                <p className="text-sm">Os próximos plantões aparecerão aqui em breve</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Swap Requests */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ArrowRightLeft className="h-5 w-5" />
-              Minhas Solicitações
-            </CardTitle>
-            <CardDescription>
-              Acompanhe o status das suas trocas
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {mockSwapRequests.map((request) => (
-                <div
-                  key={request.id}
-                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{request.target.name}</span>
-                      <TeamBadge team={request.target.team as any} />
-                    </div>
-                    <StatusBadge status={request.status} />
-                  </div>
-                  
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div>
-                        <span className="font-medium text-foreground">Meu turno:</span>
-                        <br />
-                        {formatDate(request.myShift.date)} - {request.myShift.period}
-                        <br />
-                        {request.myShift.location}
-                      </div>
-                      <div>
-                        <span className="font-medium text-foreground">Turno solicitado:</span>
-                        <br />
-                        {formatDate(request.targetShift.date)} - {request.targetShift.period}
-                        <br />
-                        {request.targetShift.location}
-                      </div>
-                    </div>
-                    
-                    <div className="pt-2 border-t">
-                      <span>Solicitado em {formatDate(request.createdAt)} às {formatTime(request.createdAt)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {mockSwapRequests.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <ArrowRightLeft className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>Nenhuma solicitação de troca encontrada</p>
-                  <p className="text-sm">Clique em "Solicitar Troca" para começar</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <GuardSwapList currentUser={currentUser} />
       </div>
     </AppLayout>
   );
