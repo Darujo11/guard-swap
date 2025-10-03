@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Users, Calendar, Shield, BarChart3, LogOut } from 'lucide-react';
+import { Bell, Users, Calendar, Shield, BarChart3, LogOut, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,7 @@ const navigation = [
   { name: 'Equipes', href: '/admin/equipes', icon: Users },
   { name: 'Seguranças', href: '/admin/segurancas', icon: Shield },
   { name: 'Trocas', href: '/admin/trocas', icon: Calendar },
+  { name: 'Escalas', href: '/admin/escalas', icon: ClipboardList },
 ];
 
 export function AppLayout({ children, title, user, notificationCount = 0 }: AppLayoutProps) {

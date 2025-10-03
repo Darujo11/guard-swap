@@ -11,6 +11,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminTeams from "./pages/AdminTeams";
 import AdminSwaps from "./pages/AdminSwaps";
 import AdminGuards from "./pages/AdminGuards";
+import AdminSchedule from "./pages/AdminSchedule";
 import GuardDashboard from "./pages/GuardDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -55,6 +56,14 @@ const App = () => (
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminGuards />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/escalas" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminSchedule />
               </ProtectedRoute>
             } 
           />
