@@ -176,7 +176,7 @@ const AdminSwaps = () => {
             
             <div class="section">
               <h3>Informações da Solicitação</h3>
-              <p><span class="label">Data da Troca:</span> ${format(new Date(request.swap_date), 'dd/MM/yyyy', { locale: ptBR })}</p>
+              <p><span class="label">Datas da Troca:</span> ${format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })} → ${format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}</p>
               <p><span class="label">Status:</span> <span class="status ${request.status.toLowerCase()}">${SWAP_STATUS_CONFIG[request.status as keyof typeof SWAP_STATUS_CONFIG]?.label}</span></p>
               <p><span class="label">Data da Solicitação:</span> ${format(new Date(request.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>
             </div>
@@ -375,9 +375,14 @@ const AdminSwaps = () => {
                   </div>
 
                   <div>
-                    <div className="text-sm text-muted-foreground">Data da Troca</div>
-                    <div className="font-medium">
-                      {format(new Date(request.swap_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    <div className="text-sm text-muted-foreground">Datas da Troca</div>
+                    <div className="font-medium text-sm">
+                      {format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                      {' → '}
+                      {format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Plantão do solicitante → Plantão desejado
                     </div>
                   </div>
 
@@ -459,7 +464,13 @@ const AdminSwaps = () => {
                 {selectedRequest?.requester?.name} ↔ {selectedRequest?.target?.name}
               </div>
               <div className="text-sm text-muted-foreground mt-1">
-                Data: {selectedRequest && format(new Date(selectedRequest.swap_date), 'dd/MM/yyyy', { locale: ptBR })}
+                Datas: {selectedRequest && (
+                  <>
+                    {format(new Date(selectedRequest.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    {' → '}
+                    {format(new Date(selectedRequest.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                  </>
+                )}
               </div>
             </div>
             <div>

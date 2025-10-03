@@ -25,7 +25,8 @@ export interface SwapRequest {
   id: string;
   requester_id: string;
   target_id: string;
-  swap_date: string;
+  requester_shift_date: string; // Data do plantão do solicitante que será trocado
+  target_shift_date: string; // Data do plantão que o solicitante quer assumir
   reason: string;
   status: SwapStatus;
   target_confirmation: boolean;

@@ -19,7 +19,8 @@ interface GuardSwapFormProps {
 export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
   const [availableGuards, setAvailableGuards] = useState<Profile[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<string>('');
-  const [swapDate, setSwapDate] = useState('');
+  const [requesterShiftDate, setRequesterShiftDate] = useState(''); // Data do plantão do solicitante
+  const [targetShiftDate, setTargetShiftDate] = useState(''); // Data do plantão que quer assumir
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -52,40 +53,59 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
     }
   };
 
-  const validateSwapDate = (date: string): boolean => {
-    const swapDate = new Date(date);
+  const validateSwapDates = (requesterDate: string, targetDate: string): boolean => {
+    const requesterShift = new Date(requesterDate);
+    const targetShift = new Date(targetDate);
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const maxDate = new Date(today.getFullYear(), today.getMonth() + 2, today.getDate());
     
-    // Must be in the future
-    if (swapDate <= today) {
+    // Both dates must be in the future
+    if (requesterShift <= today) {
       toast({
         title: 'Data inválida',
-        description: 'A data da troca deve ser posterior ao dia atual.',
+        description: 'A data do seu plantão deve ser posterior ao dia atual.',
         variant: 'destructive',
       });
       return false;
     }
 
-    // Must be within 2 months
-    if (swapDate > maxDate) {
+    if (targetShift <= today) {
       toast({
         title: 'Data inválida',
-        description: 'A data da troca deve ser dentro de 2 meses.',
+        description: 'A data do plantão que você quer assumir deve ser posterior ao dia atual.',
         variant: 'destructive',
       });
       return false;
     }
 
-    // Must respect 24/72 schedule (simplified validation)
-    // In a real system, this would check against the actual shift schedule
+    // Both dates must be within 2 months
+    if (requesterShift > maxDate || targetShift > maxDate) {
+      toast({
+        title: 'Data inválida',
+        description: 'Ambas as datas devem estar dentro de 2 meses.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    // Dates cannot be the same
+    if (requesterDate === targetDate) {
+      toast({
+        title: 'Data inválida',
+        description: 'As datas dos plantões devem ser diferentes.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedTarget || !swapDate || !reason.trim()) {
+    if (!selectedTarget || !requesterShiftDate || !targetShiftDate || !reason.trim()) {
       toast({
         title: 'Campos obrigatórios',
         description: 'Todos os campos são obrigatórios.',
@@ -94,7 +114,7 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
       return;
     }
 
-    if (!validateSwapDate(swapDate)) {
+    if (!validateSwapDates(requesterShiftDate, targetShiftDate)) {
       return;
     }
 
@@ -107,7 +127,8 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
           {
             requester_id: currentUser.id,
             target_id: selectedTarget,
-            swap_date: swapDate,
+            requester_shift_date: requesterShiftDate,
+            target_shift_date: targetShiftDate,
             reason: reason.trim(),
             status: 'PENDING'
           }
@@ -132,7 +153,8 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
         entity_type: 'swap_request',
         details: {
           target_id: selectedTarget,
-          swap_date: swapDate
+          requester_shift_date: requesterShiftDate,
+          target_shift_date: targetShiftDate
         }
       });
 
@@ -143,7 +165,8 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
 
       // Reset form
       setSelectedTarget('');
-      setSwapDate('');
+      setRequesterShiftDate('');
+      setTargetShiftDate('');
       setReason('');
       
       if (onClose) {
@@ -232,20 +255,37 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
             </div>
           )}
 
-          {/* Swap Date */}
+          {/* Requester Shift Date */}
           <div className="space-y-2">
-            <Label htmlFor="swapDate">Data da Troca *</Label>
+            <Label htmlFor="requesterShiftDate">Data do Seu Plantão (que você quer trocar) *</Label>
             <Input
-              id="swapDate"
+              id="requesterShiftDate"
               type="date"
-              value={swapDate}
-              onChange={(e) => setSwapDate(e.target.value)}
+              value={requesterShiftDate}
+              onChange={(e) => setRequesterShiftDate(e.target.value)}
               min={minDate}
               max={maxDate}
               required
             />
             <p className="text-xs text-muted-foreground">
-              A data deve estar entre amanhã e {maxDateObj.toLocaleDateString('pt-BR')}.
+              Data do plantão que você atualmente tem e deseja trocar.
+            </p>
+          </div>
+
+          {/* Target Shift Date */}
+          <div className="space-y-2">
+            <Label htmlFor="targetShiftDate">Data do Plantão que Você Quer Assumir *</Label>
+            <Input
+              id="targetShiftDate"
+              type="date"
+              value={targetShiftDate}
+              onChange={(e) => setTargetShiftDate(e.target.value)}
+              min={minDate}
+              max={maxDate}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Data do plantão da outra pessoa que você deseja assumir.
             </p>
           </div>
 
@@ -283,7 +323,7 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
           <div className="flex gap-3">
             <Button
               type="submit"
-              disabled={loading || !selectedTarget || !swapDate || !reason.trim()}
+              disabled={loading || !selectedTarget || !requesterShiftDate || !targetShiftDate || !reason.trim()}
               className="flex-1"
             >
               {loading ? (

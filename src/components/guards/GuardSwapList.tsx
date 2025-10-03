@@ -274,9 +274,14 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                             </div>
                           </div>
                           <div>
-                            <div className="text-sm text-muted-foreground">Data da Troca</div>
-                            <div className="font-medium">
-                              {format(new Date(request.swap_date), 'dd/MM/yyyy', { locale: ptBR })}
+                            <div className="text-sm text-muted-foreground">Datas da Troca</div>
+                            <div className="font-medium text-sm">
+                              {format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                              {' → '}
+                              {format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Seu plantão → Plantão desejado
                             </div>
                           </div>
                         </div>
@@ -358,7 +363,13 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
               <div className="text-sm text-muted-foreground mb-1">Solicitação de</div>
               <div className="font-medium">{selectedRequest?.requester?.name}</div>
               <div className="text-sm text-muted-foreground mt-1">
-                Data: {selectedRequest && format(new Date(selectedRequest.swap_date), 'dd/MM/yyyy', { locale: ptBR })}
+                Datas: {selectedRequest && (
+                  <>
+                    {format(new Date(selectedRequest.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    {' → '}
+                    {format(new Date(selectedRequest.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                  </>
+                )}
               </div>
               <div className="text-sm mt-2">
                 <span className="text-muted-foreground">Motivo:</span> {selectedRequest?.reason}

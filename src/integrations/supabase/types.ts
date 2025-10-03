@@ -102,10 +102,11 @@ export type Database = {
           id: string
           reason: string
           requester_id: string
+          requester_shift_date: string
           status: string
-          swap_date: string
           target_confirmation: boolean | null
           target_id: string
+          target_shift_date: string
           updated_at: string
         }
         Insert: {
@@ -116,10 +117,11 @@ export type Database = {
           id?: string
           reason: string
           requester_id: string
+          requester_shift_date: string
           status?: string
-          swap_date: string
           target_confirmation?: boolean | null
           target_id: string
+          target_shift_date: string
           updated_at?: string
         }
         Update: {
@@ -130,10 +132,11 @@ export type Database = {
           id?: string
           reason?: string
           requester_id?: string
+          requester_shift_date?: string
           status?: string
-          swap_date?: string
           target_confirmation?: boolean | null
           target_id?: string
+          target_shift_date?: string
           updated_at?: string
         }
         Relationships: [
