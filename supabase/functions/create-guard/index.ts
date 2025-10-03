@@ -39,7 +39,7 @@ serve(async (req) => {
     const phoneClean = phone.replace(/\D/g, '');
     
     // Create login email using phone
-    const loginEmail = `${phoneClean}@guard.local`;
+    const loginEmail = `${phoneClean}@guardshift.com`;
     const defaultPassword = '123456';
 
     console.log('[create-guard] Creating auth user with email:', loginEmail);

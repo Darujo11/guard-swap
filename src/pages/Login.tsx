@@ -46,7 +46,7 @@ const Login = () => {
       // If input is only numbers (phone), format as login email
       let loginEmail = email;
       if (/^\d+$/.test(email)) {
-        loginEmail = `${email}@guard.local`;
+        loginEmail = `${email}@guardshift.com`;
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({

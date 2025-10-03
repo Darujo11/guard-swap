@@ -175,53 +175,23 @@ const AdminTeams = () => {
     }
 
     try {
-      // Extract first name for login
-      const firstName = memberForm.name.split(' ')[0].toLowerCase();
-      const email = `${firstName}@guardshift.com`;
-      const password = '123456';
+      // Criar segurança via Edge Function (usa Service Role e atribui papel)
+      const phoneClean = memberForm.phone.replace(/\D/g, '');
 
-      // Create user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: memberForm.name,
-            phone: memberForm.phone,
-          },
-          emailRedirectTo: `${window.location.origin}/`,
+      const { data, error } = await supabase.functions.invoke('create-guard', {
+        body: {
+          name: memberForm.name,
+          email: null,
+          phone: phoneClean,
+          team_id: selectedTeam.id,
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Falha ao criar usuário');
-
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([{
-          user_id: authData.user.id,
-          name: memberForm.name,
-          email,
-          phone: memberForm.phone,
-          team_id: selectedTeam.id,
-        }]);
-
-      if (profileError) throw profileError;
-
-      // Assign guard role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert([{
-          user_id: authData.user.id,
-          role: 'guard',
-        }]);
-
-      if (roleError) throw roleError;
+      if (error) throw new Error(error.message || 'Falha ao criar segurança');
 
       toast({
         title: 'Sucesso!',
-        description: `Membro criado! Login: ${firstName} | Senha: 123456`,
+        description: `Membro criado! Login: ${data?.login ?? phoneClean} | Senha: ${data?.password ?? '123456'}`,
       });
 
       await fetchData();
