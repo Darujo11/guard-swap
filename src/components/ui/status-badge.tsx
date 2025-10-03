@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Clock, CheckCircle, XCircle, Ban } from "lucide-react";
+import { Clock, CheckCircle, CheckCircle2, XCircle, Ban } from "lucide-react";
 import { SwapStatus } from "@/lib/types";
 import { SWAP_STATUS_CONFIG } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ interface StatusBadgeProps {
 const iconMap = {
   Clock,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   Ban,
 };
