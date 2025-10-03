@@ -28,11 +28,16 @@ const AdminTeams = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [isCreateMemberDialogOpen, setIsCreateMemberDialogOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [teamForm, setTeamForm] = useState({
     name: '',
     description: ''
+  });
+  const [memberForm, setMemberForm] = useState({
+    name: '',
+    phone: ''
   });
   const { toast } = useToast();
 
@@ -143,6 +148,58 @@ const AdminTeams = () => {
       toast({
         title: 'Erro ao excluir',
         description: 'Não foi possível excluir a equipe.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCreateMember = async () => {
+    if (!selectedTeam) return;
+    
+    if (!memberForm.name.trim()) {
+      toast({
+        title: 'Nome obrigatório',
+        description: 'O nome do membro é obrigatório.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!memberForm.phone.trim()) {
+      toast({
+        title: 'WhatsApp obrigatório',
+        description: 'O número do WhatsApp é obrigatório.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .insert([{
+          name: memberForm.name,
+          phone: memberForm.phone,
+          email: `${memberForm.phone}@temp.com`, // Email temporário
+          team_id: selectedTeam.id,
+          role: 'GUARD'
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Membro criado',
+        description: 'O membro foi criado e atribuído à equipe com sucesso.',
+      });
+
+      await fetchData();
+      setIsCreateMemberDialogOpen(false);
+      setMemberForm({ name: '', phone: '' });
+    } catch (error) {
+      console.error('[AdminTeams][CreateMember]', error);
+      toast({
+        title: 'Erro ao criar membro',
+        description: 'Não foi possível criar o membro.',
         variant: 'destructive',
       });
     }
@@ -323,11 +380,18 @@ const AdminTeams = () => {
                 <div className="space-y-2">
                   {members.length > 0 ? (
                     members.map((member) => (
-                      <div key={member.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                        <span className="font-medium">{member.name}</span>
-                        <Badge variant={member.role === 'ADMIN' ? 'default' : 'secondary'}>
-                          {member.role === 'ADMIN' ? 'Admin' : 'Segurança'}
-                        </Badge>
+                      <div key={member.id} className="flex flex-col gap-1 p-2 bg-muted/50 rounded">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{member.name}</span>
+                          <Badge variant={member.role === 'ADMIN' ? 'default' : 'secondary'}>
+                            {member.role === 'ADMIN' ? 'Admin' : 'Segurança'}
+                          </Badge>
+                        </div>
+                        {member.phone && (
+                          <span className="text-xs text-muted-foreground">
+                            WhatsApp: {member.phone}
+                          </span>
+                        )}
                       </div>
                     ))
                   ) : (
@@ -361,10 +425,32 @@ const AdminTeams = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Atribuir Membro à {selectedTeam?.name}
+              Gerenciar Membros - {selectedTeam?.name}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <Button 
+              className="w-full" 
+              onClick={() => {
+                setIsAssignDialogOpen(false);
+                setIsCreateMemberDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Cadastrar Novo Membro
+            </Button>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Ou atribuir membro existente
+                </span>
+              </div>
+            </div>
+
             {unassignedMembers.length > 0 ? (
               unassignedMembers.map((member) => (
                 <div key={member.id} className="flex items-center justify-between p-3 border rounded">
@@ -386,6 +472,51 @@ const AdminTeams = () => {
               </p>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Member Dialog */}
+      <Dialog open={isCreateMemberDialogOpen} onOpenChange={setIsCreateMemberDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Cadastrar Novo Membro - {selectedTeam?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="memberName">Nome Completo</Label>
+              <Input
+                id="memberName"
+                value={memberForm.name}
+                onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })}
+                placeholder="Ex: João Silva"
+              />
+            </div>
+            <div>
+              <Label htmlFor="memberPhone">WhatsApp</Label>
+              <Input
+                id="memberPhone"
+                value={memberForm.phone}
+                onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })}
+                placeholder="Ex: (11) 98765-4321"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsCreateMemberDialogOpen(false);
+                setIsAssignDialogOpen(true);
+              }}
+            >
+              Voltar
+            </Button>
+            <Button onClick={handleCreateMember}>
+              Cadastrar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppLayout>

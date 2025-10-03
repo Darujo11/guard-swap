@@ -16,6 +16,7 @@ export interface Profile {
   user_id: string;
   name: string;
   email: string;
+  phone?: string;
   team_id?: string;
   role: UserRole;
   team?: Team;
