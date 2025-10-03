@@ -1,5 +1,3 @@
-export type UserRole = 'ADMIN' | 'GUARD';
-
 export type SwapStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'APPROVED' | 'CANCELLED';
 
 // Database types matching Supabase schema
@@ -13,12 +11,11 @@ export interface Team {
 
 export interface Profile {
   id: string;
-  user_id: string;
+  user_id: string | null;
   name: string;
   email: string;
-  phone?: string;
-  team_id?: string;
-  role: UserRole;
+  phone?: string | null;
+  team_id?: string | null;
   team?: Team;
   created_at: string;
   updated_at: string;
