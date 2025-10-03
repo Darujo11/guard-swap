@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -132,16 +133,16 @@ const AdminDashboard = () => {
               </CardDescription>
             </div>
             <Button variant="outline" size="sm" className="gap-2" asChild>
-              <a href="/admin/equipes">
+              <Link to="/admin/equipes">
                 <Users className="h-4 w-4" />
                 Gerenciar Equipes
-              </a>
+              </Link>
             </Button>
             <Button variant="outline" size="sm" className="gap-2" asChild>
-              <a href="/admin/trocas">
+              <Link to="/admin/trocas">
                 <Filter className="h-4 w-4" />
                 Gerenciar Trocas
-              </a>
+              </Link>
             </Button>
           </div>
         </CardHeader>
