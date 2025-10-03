@@ -202,9 +202,9 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
     return request.requester_id === currentUser.id && request.status === 'PENDING';
   };
 
-  // Agrupar solicitações por mês da troca (requester_shift_date)
+  // Agrupar solicitações por mês da troca (target_shift_date)
   const groupedByMonth = swapRequests.reduce((acc, request) => {
-    const monthKey = format(startOfMonth(new Date(request.requester_shift_date)), 'yyyy-MM');
+    const monthKey = format(startOfMonth(new Date(request.target_shift_date)), 'yyyy-MM');
     if (!acc[monthKey]) {
       acc[monthKey] = [];
     }
