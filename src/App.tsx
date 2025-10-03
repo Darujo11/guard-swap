@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/guards/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import CreateAdmin from "./pages/CreateAdmin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminTeams from "./pages/AdminTeams";
 import AdminSwaps from "./pages/AdminSwaps";
@@ -23,6 +24,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/criar-admin" element={<CreateAdmin />} />
           <Route 
             path="/dashboard/admin" 
             element={

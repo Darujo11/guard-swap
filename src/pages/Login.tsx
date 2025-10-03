@@ -116,6 +116,14 @@ const Login = () => {
                 'Entrar'
               )}
             </Button>
+            <div className="text-center mt-4">
+              <a
+                href="/criar-admin"
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                Criar primeiro administrador
+              </a>
+            </div>
           </form>
         </CardContent>
       </Card>
