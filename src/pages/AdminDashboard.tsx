@@ -46,7 +46,7 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      // Buscar solicitações de troca pendentes
+      // Buscar solicitações de troca pendentes (aguardando confirmação do segurança)
       const { data: swaps, error: swapsError } = await supabase
         .from('swap_requests')
         .select(`
@@ -63,6 +63,7 @@ const AdminDashboard = () => {
           )
         `)
         .eq('status', 'PENDING')
+        .is('target_confirmation', false)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -290,31 +291,20 @@ const AdminDashboard = () => {
                       )}
                     </div>
                     
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>Solicitado em {formatDate(request.created_at)} às {formatTime(request.created_at)}</span>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-muted-foreground">Solicitado em {formatDate(request.created_at)} às {formatTime(request.created_at)}</span>
+                    </div>
+                    
+                    <div className="mt-2">
+                      <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Aguardando confirmação de {request.target?.name}
+                      </Badge>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3 mt-3 sm:mt-0">
                     <StatusBadge status={request.status} />
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="text-success hover:bg-success hover:text-success-foreground"
-                        onClick={() => openDecisionDialog(request, 'APPROVED')}
-                      >
-                        Aprovar
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="text-danger hover:bg-danger hover:text-danger-foreground"
-                        onClick={() => openDecisionDialog(request, 'REJECTED')}
-                      >
-                        Rejeitar
-                      </Button>
-                    </div>
                   </div>
                 </div>
               ))}
