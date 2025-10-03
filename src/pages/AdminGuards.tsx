@@ -303,16 +303,15 @@ const AdminGuards = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="team">Equipe</Label>
+                  <Label htmlFor="team">Equipe (opcional)</Label>
                   <Select
-                    value={guardForm.team_id}
+                    value={guardForm.team_id || undefined}
                     onValueChange={(value) => setGuardForm({ ...guardForm, team_id: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma equipe" />
+                      <SelectValue placeholder="Selecione uma equipe (opcional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sem equipe</SelectItem>
                       {teams.map((team) => (
                         <SelectItem key={team.id} value={team.id}>
                           {team.name}
@@ -451,25 +450,24 @@ const AdminGuards = () => {
                   onChange={(e) => setGuardForm({ ...guardForm, phone: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-team">Equipe</Label>
-                <Select
-                  value={guardForm.team_id}
-                  onValueChange={(value) => setGuardForm({ ...guardForm, team_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma equipe" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Sem equipe</SelectItem>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-team">Equipe (opcional)</Label>
+                  <Select
+                    value={guardForm.team_id || undefined}
+                    onValueChange={(value) => setGuardForm({ ...guardForm, team_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma equipe (opcional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teams.map((team) => (
+                        <SelectItem key={team.id} value={team.id}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
