@@ -25,7 +25,7 @@ import {
   Users,
   AlertCircle
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const AdminSwaps = () => {
@@ -383,6 +383,19 @@ const AdminSwaps = () => {
 
   const stats = getStats();
 
+  // Agrupar solicitações por mês
+  const groupedByMonth = filteredRequests.reduce((acc, request) => {
+    const monthKey = format(startOfMonth(new Date(request.created_at)), 'yyyy-MM');
+    if (!acc[monthKey]) {
+      acc[monthKey] = [];
+    }
+    acc[monthKey].push(request);
+    return acc;
+  }, {} as Record<string, SwapRequest[]>);
+
+  // Ordenar as chaves dos meses (mais recente primeiro)
+  const sortedMonthKeys = Object.keys(groupedByMonth).sort((a, b) => b.localeCompare(a));
+
   if (loading) {
     return (
       <AppLayout title="Gerenciar Trocas" user={{ name: 'Admin Sistema', role: 'ADMIN' }}>
@@ -470,119 +483,139 @@ const AdminSwaps = () => {
       </div>
 
       {/* Swap Requests List */}
-      <div className="space-y-4">
-        {filteredRequests.map((request) => (
-          <Card key={request.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div className="space-y-3 flex-1">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Badge variant="secondary" className="font-mono text-xs">
-                      Protocolo: {request.id.slice(0, 8)}
-                    </Badge>
-                    <StatusBadge status={request.status} />
-                    {!request.target_confirmation && request.status !== 'PENDING' && (
-                      <Badge variant="outline" className="text-warning border-warning">
-                        Aguardando Ciência
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Solicitante</div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{request.requester?.name}</span>
-                        {request.requester?.team && (
-                          <TeamBadge team={request.requester.team} />
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Membro Convidado</div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{request.target?.name}</span>
-                        {request.target?.team && (
-                          <TeamBadge team={request.target.team} />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-muted-foreground">Datas da Troca</div>
-                    <div className="font-medium text-sm">
-                      {format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
-                      {' → '}
-                      {format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Plantão do solicitante → Plantão desejado
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm text-muted-foreground">Motivo</div>
-                    <div className="text-sm">{request.reason}</div>
-                  </div>
-
-                  <div className="text-xs text-muted-foreground">
-                    Solicitado em {format(new Date(request.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2 lg:w-auto w-full">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => generatePDF(request)}
-                    className="gap-2"
-                  >
-                    <FileDown className="h-4 w-4" />
-                    PDF
-                  </Button>
-                  
-                  {request.status === 'ACCEPTED' && request.target_confirmation && (
-                    <>
-                      <Button
-                        size="sm"
-                        onClick={() => openDecisionDialog(request, 'approve')}
-                        className="gap-2 bg-success hover:bg-success/90 text-success-foreground"
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                        Aprovar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDecisionDialog(request, 'reject')}
-                        className="gap-2 text-danger hover:bg-danger hover:text-danger-foreground"
-                      >
-                        <XCircle className="h-4 w-4" />
-                        Rejeitar
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
+      <div className="space-y-6">
+        {sortedMonthKeys.length === 0 ? (
+          <Card className="text-center py-12">
+            <CardContent>
+              <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <CardTitle className="mb-2">Nenhuma solicitação encontrada</CardTitle>
+              <CardDescription>
+                {searchTerm || statusFilter !== 'all'
+                  ? 'Nenhuma solicitação corresponde aos critérios de busca.'
+                  : 'Não há solicitações de troca no momento.'}
+              </CardDescription>
             </CardContent>
           </Card>
-        ))}
-      </div>
+        ) : (
+          sortedMonthKeys.map((monthKey) => {
+            const monthRequests = groupedByMonth[monthKey];
+            const monthDate = new Date(monthKey + '-01');
+            const monthLabel = format(monthDate, 'MMMM yyyy', { locale: ptBR });
+            
+            return (
+              <div key={monthKey} className="space-y-4">
+                <div className="flex items-center gap-3 pb-2 border-b-2 border-primary/20">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-bold capitalize">{monthLabel}</h2>
+                  <Badge variant="secondary" className="ml-auto">
+                    {monthRequests.length} {monthRequests.length === 1 ? 'solicitação' : 'solicitações'}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-4">
+                  {monthRequests.map((request) => (
+                    <Card key={request.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                          <div className="space-y-3 flex-1">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <Badge variant="secondary" className="font-mono text-xs">
+                                Protocolo: {request.id.slice(0, 8)}
+                              </Badge>
+                              <StatusBadge status={request.status} />
+                              {!request.target_confirmation && request.status !== 'PENDING' && (
+                                <Badge variant="outline" className="text-warning border-warning">
+                                  Aguardando Ciência
+                                </Badge>
+                              )}
+                            </div>
 
-      {filteredRequests.length === 0 && (
-        <Card className="text-center py-12">
-          <CardContent>
-            <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <CardTitle className="mb-2">Nenhuma solicitação encontrada</CardTitle>
-            <CardDescription>
-              {searchTerm || statusFilter !== 'all'
-                ? 'Nenhuma solicitação corresponde aos critérios de busca.'
-                : 'Não há solicitações de troca no momento.'}
-            </CardDescription>
-          </CardContent>
-        </Card>
-      )}
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              <div>
+                                <div className="text-sm text-muted-foreground">Solicitante</div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{request.requester?.name}</span>
+                                  {request.requester?.team && (
+                                    <TeamBadge team={request.requester.team} />
+                                  )}
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-sm text-muted-foreground">Membro Convidado</div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{request.target?.name}</span>
+                                  {request.target?.team && (
+                                    <TeamBadge team={request.target.team} />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="text-sm text-muted-foreground">Datas da Troca</div>
+                              <div className="font-medium text-sm">
+                                {format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                                {' → '}
+                                {format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Plantão do solicitante → Plantão desejado
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="text-sm text-muted-foreground">Motivo</div>
+                              <div className="text-sm">{request.reason}</div>
+                            </div>
+
+                            <div className="text-xs text-muted-foreground">
+                              Solicitado em {format(new Date(request.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-2 lg:w-auto w-full">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => generatePDF(request)}
+                              className="gap-2"
+                            >
+                              <FileDown className="h-4 w-4" />
+                              PDF
+                            </Button>
+                            
+                            {request.status === 'ACCEPTED' && request.target_confirmation && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => openDecisionDialog(request, 'approve')}
+                                  className="gap-2 bg-success hover:bg-success/90 text-success-foreground"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                  Aprovar
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openDecisionDialog(request, 'reject')}
+                                  className="gap-2 text-danger hover:bg-danger hover:text-danger-foreground"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  Rejeitar
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
 
       {/* Decision Dialog */}
       <Dialog open={isDecisionDialogOpen} onOpenChange={setIsDecisionDialogOpen}>

@@ -18,7 +18,7 @@ import {
   ArrowRightLeft,
   MessageSquare
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface GuardSwapListProps {
@@ -202,6 +202,19 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
     return request.requester_id === currentUser.id && request.status === 'PENDING';
   };
 
+  // Agrupar solicitações por mês
+  const groupedByMonth = swapRequests.reduce((acc, request) => {
+    const monthKey = format(startOfMonth(new Date(request.created_at)), 'yyyy-MM');
+    if (!acc[monthKey]) {
+      acc[monthKey] = [];
+    }
+    acc[monthKey].push(request);
+    return acc;
+  }, {} as Record<string, SwapRequest[]>);
+
+  // Ordenar as chaves dos meses (mais recente primeiro)
+  const sortedMonthKeys = Object.keys(groupedByMonth).sort((a, b) => b.localeCompare(a));
+
   if (loading) {
     return (
       <Card>
@@ -237,119 +250,139 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {swapRequests.map((request) => {
-                const isRequester = request.requester_id === currentUser.id;
-                const otherUser = isRequester ? request.target : request.requester;
+            <div className="space-y-6">
+              {sortedMonthKeys.map((monthKey) => {
+                const monthRequests = groupedByMonth[monthKey];
+                const monthDate = new Date(monthKey + '-01');
+                const monthLabel = format(monthDate, 'MMMM yyyy', { locale: ptBR });
                 
                 return (
-                  <div
-                    key={request.id}
-                    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      <div className="space-y-3 flex-1">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <Badge variant="secondary" className="font-mono text-xs">
-                            Protocolo: {request.id.slice(0, 8)}
-                          </Badge>
-                          <Badge className={getRequestTypeColor(request)}>
-                            {getRequestTypeLabel(request)}
-                          </Badge>
-                          <StatusBadge status={request.status} />
-                          {isRequester && request.status === 'PENDING' && (
-                            <Badge variant="outline" className="gap-1.5 border-amber-500 text-amber-700 bg-amber-50">
-                              <Clock className="h-3 w-3" />
-                              Aguardando aprovação de {otherUser?.name}
-                            </Badge>
-                          )}
-                          {request.status === 'ACCEPTED' && !request.target_confirmation && (
-                            <Badge variant="outline" className="text-warning border-warning">
-                              Aguardando Admin
-                            </Badge>
-                          )}
-                        </div>
-
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <div>
-                            <div className="text-sm text-muted-foreground">
-                              {isRequester ? 'Para' : 'De'}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{otherUser?.name}</span>
-                              {otherUser?.team && (
-                                <TeamBadge team={otherUser.team} />
-                              )}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Datas da Troca</div>
-                            <div className="font-medium text-sm">
-                              {format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
-                              {' → '}
-                              {format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Seu plantão → Plantão desejado
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-sm text-muted-foreground">Motivo</div>
-                          <div className="text-sm">{request.reason}</div>
-                        </div>
-
-                        <div className="text-xs text-muted-foreground">
-                          Criado em {format(new Date(request.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                          {request.admin_approved_at && (
-                            <> • Decidido em {format(new Date(request.admin_approved_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-2 lg:w-auto w-full">
-                        {canRespond(request) && (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => openResponseDialog(request, 'accept')}
-                              className="gap-2 bg-success hover:bg-success/90 text-success-foreground"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                              Aceitar
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openResponseDialog(request, 'reject')}
-                              className="gap-2 text-danger hover:bg-danger hover:text-danger-foreground"
-                            >
-                              <XCircle className="h-4 w-4" />
-                              Rejeitar
-                            </Button>
-                          </>
-                        )}
+                  <div key={monthKey} className="space-y-3">
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      <h3 className="font-semibold text-sm capitalize">{monthLabel}</h3>
+                      <Badge variant="secondary" className="ml-auto">
+                        {monthRequests.length} {monthRequests.length === 1 ? 'solicitação' : 'solicitações'}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {monthRequests.map((request) => {
+                        const isRequester = request.requester_id === currentUser.id;
+                        const otherUser = isRequester ? request.target : request.requester;
                         
-                        {canCancel(request) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => cancelRequest(request)}
-                            className="gap-2"
+                        return (
+                          <div
+                            key={request.id}
+                            className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                           >
-                            <XCircle className="h-4 w-4" />
-                            Cancelar
-                          </Button>
-                        )}
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                              <div className="space-y-3 flex-1">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <Badge variant="secondary" className="font-mono text-xs">
+                                    Protocolo: {request.id.slice(0, 8)}
+                                  </Badge>
+                                  <Badge className={getRequestTypeColor(request)}>
+                                    {getRequestTypeLabel(request)}
+                                  </Badge>
+                                  <StatusBadge status={request.status} />
+                                  {isRequester && request.status === 'PENDING' && (
+                                    <Badge variant="outline" className="gap-1.5 border-amber-500 text-amber-700 bg-amber-50">
+                                      <Clock className="h-3 w-3" />
+                                      Aguardando aprovação de {otherUser?.name}
+                                    </Badge>
+                                  )}
+                                  {request.status === 'ACCEPTED' && !request.target_confirmation && (
+                                    <Badge variant="outline" className="text-warning border-warning">
+                                      Aguardando Admin
+                                    </Badge>
+                                  )}
+                                </div>
 
-                        {request.status === 'ACCEPTED' && request.target_confirmation && (
-                          <Badge variant="outline" className="text-center py-2 text-info border-info">
-                            <Clock className="h-3 w-3 mr-1" />
-                            Aguardando Admin
-                          </Badge>
-                        )}
-                      </div>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  <div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {isRequester ? 'Para' : 'De'}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">{otherUser?.name}</span>
+                                      {otherUser?.team && (
+                                        <TeamBadge team={otherUser.team} />
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="text-sm text-muted-foreground">Datas da Troca</div>
+                                    <div className="font-medium text-sm">
+                                      {format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                                      {' → '}
+                                      {format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      Seu plantão → Plantão desejado
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <div className="text-sm text-muted-foreground">Motivo</div>
+                                  <div className="text-sm">{request.reason}</div>
+                                </div>
+
+                                <div className="text-xs text-muted-foreground">
+                                  Criado em {format(new Date(request.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                                  {request.admin_approved_at && (
+                                    <> • Decidido em {format(new Date(request.admin_approved_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-2 lg:w-auto w-full">
+                                {canRespond(request) && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => openResponseDialog(request, 'accept')}
+                                      className="gap-2 bg-success hover:bg-success/90 text-success-foreground"
+                                    >
+                                      <CheckCircle className="h-4 w-4" />
+                                      Aceitar
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => openResponseDialog(request, 'reject')}
+                                      className="gap-2 text-danger hover:bg-danger hover:text-danger-foreground"
+                                    >
+                                      <XCircle className="h-4 w-4" />
+                                      Rejeitar
+                                    </Button>
+                                  </>
+                                )}
+                                
+                                {canCancel(request) && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => cancelRequest(request)}
+                                    className="gap-2"
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                    Cancelar
+                                  </Button>
+                                )}
+
+                                {request.status === 'ACCEPTED' && request.target_confirmation && (
+                                  <Badge variant="outline" className="text-center py-2 text-info border-info">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Aguardando Admin
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
