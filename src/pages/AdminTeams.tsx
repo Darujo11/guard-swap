@@ -175,31 +175,63 @@ const AdminTeams = () => {
     }
 
     try {
-      const { error } = await supabase
+      // Extract first name for login
+      const firstName = memberForm.name.split(' ')[0].toLowerCase();
+      const email = `${firstName}@guardshift.com`;
+      const password = '123456';
+
+      // Create user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: memberForm.name,
+            phone: memberForm.phone,
+          },
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Falha ao criar usuário');
+
+      // Create profile
+      const { error: profileError } = await supabase
         .from('profiles')
         .insert([{
+          user_id: authData.user.id,
           name: memberForm.name,
+          email,
           phone: memberForm.phone,
-          email: `${memberForm.phone}@temp.com`, // Email temporário
           team_id: selectedTeam.id,
-          role: 'GUARD'
         }]);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+
+      // Assign guard role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert([{
+          user_id: authData.user.id,
+          role: 'guard',
+        }]);
+
+      if (roleError) throw roleError;
 
       toast({
-        title: 'Membro criado',
-        description: 'O membro foi criado e atribuído à equipe com sucesso.',
+        title: 'Sucesso!',
+        description: `Membro criado! Login: ${firstName} | Senha: 123456`,
       });
 
       await fetchData();
       setIsCreateMemberDialogOpen(false);
       setMemberForm({ name: '', phone: '' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('[AdminTeams][CreateMember]', error);
       toast({
         title: 'Erro ao criar membro',
-        description: 'Não foi possível criar o membro.',
+        description: error.message || 'Não foi possível criar o membro.',
         variant: 'destructive',
       });
     }
@@ -381,12 +413,9 @@ const AdminTeams = () => {
                   {members.length > 0 ? (
                     members.map((member) => (
                       <div key={member.id} className="flex flex-col gap-1 p-2 bg-muted/50 rounded">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{member.name}</span>
-                          <Badge variant={member.role === 'ADMIN' ? 'default' : 'secondary'}>
-                            {member.role === 'ADMIN' ? 'Admin' : 'Segurança'}
-                          </Badge>
-                        </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{member.name}</span>
+                      </div>
                         {member.phone && (
                           <span className="text-xs text-muted-foreground">
                             WhatsApp: {member.phone}

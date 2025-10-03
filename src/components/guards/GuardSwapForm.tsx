@@ -37,7 +37,6 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
           *,
           team:teams(*)
         `)
-        .eq('role', 'GUARD')
         .neq('id', currentUser.id)
         .neq('team_id', currentUser.team_id || 'null');
 

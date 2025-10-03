@@ -3,7 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ProtectedRoute } from "@/components/guards/ProtectedRoute";
 import Index from "./pages/Index";
+import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminTeams from "./pages/AdminTeams";
 import AdminSwaps from "./pages/AdminSwaps";
@@ -20,10 +22,39 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/dashboard/admin" element={<AdminDashboard />} />
-          <Route path="/admin/equipes" element={<AdminTeams />} />
-          <Route path="/admin/trocas" element={<AdminSwaps />} />
-          <Route path="/dashboard/guard" element={<GuardDashboard />} />
+          <Route path="/login" element={<Login />} />
+          <Route 
+            path="/dashboard/admin" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/equipes" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminTeams />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/trocas" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminSwaps />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/guard" 
+            element={
+              <ProtectedRoute allowedRoles={['guard']}>
+                <GuardDashboard />
+              </ProtectedRoute>
+            } 
+          />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

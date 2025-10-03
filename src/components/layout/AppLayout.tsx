@@ -1,8 +1,9 @@
 import { ReactNode } from 'react';
-import { Bell, Users, Calendar, Shield, BarChart3 } from 'lucide-react';
+import { Bell, Users, Calendar, Shield, BarChart3, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -23,6 +24,8 @@ const navigation = [
 ];
 
 export function AppLayout({ children, title, user, notificationCount = 0 }: AppLayoutProps) {
+  const { signOut } = useAuth();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
       {/* Header */}
@@ -83,6 +86,9 @@ export function AppLayout({ children, title, user, notificationCount = 0 }: AppL
                     {user.name.charAt(0).toUpperCase()}
                   </span>
                 </div>
+                <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
+                  <LogOut className="h-4 w-4" />
+                </Button>
               </div>
             )}
           </div>

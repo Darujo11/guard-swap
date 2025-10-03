@@ -41,8 +41,7 @@ const Index = () => {
   ];
 
   if (selectedRole) {
-    // Redirect logic would go here in a real app
-    window.location.href = selectedRole === 'ADMIN' ? '/dashboard/admin' : '/dashboard/guard';
+    window.location.href = '/login';
     return null;
   }
 
