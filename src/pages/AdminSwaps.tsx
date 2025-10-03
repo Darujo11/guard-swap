@@ -383,9 +383,9 @@ const AdminSwaps = () => {
 
   const stats = getStats();
 
-  // Agrupar solicitações por mês
+  // Agrupar solicitações por mês da troca (requester_shift_date)
   const groupedByMonth = filteredRequests.reduce((acc, request) => {
-    const monthKey = format(startOfMonth(new Date(request.created_at)), 'yyyy-MM');
+    const monthKey = format(startOfMonth(new Date(request.requester_shift_date)), 'yyyy-MM');
     if (!acc[monthKey]) {
       acc[monthKey] = [];
     }
