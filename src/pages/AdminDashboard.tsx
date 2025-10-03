@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { TeamBadge } from '@/components/ui/team-badge';
+import { TeamScheduleCalendar } from '@/components/schedule/TeamScheduleCalendar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -230,6 +231,32 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Schedule Calendar */}
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Escala de Plantões - Todas as Equipes
+              </CardTitle>
+              <CardDescription>
+                Gerencie a escala completa de todas as equipes
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" className="gap-2" asChild>
+              <Link to="/admin/escala">
+                <Calendar className="h-4 w-4" />
+                Gerenciar Escala
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <TeamScheduleCalendar />
+        </CardContent>
+      </Card>
 
       {/* Swap Requests */}
       <Card>

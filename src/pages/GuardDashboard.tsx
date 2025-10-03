@@ -7,6 +7,7 @@ import { TeamBadge } from '@/components/ui/team-badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { GuardSwapForm } from '@/components/guards/GuardSwapForm';
 import { GuardSwapList } from '@/components/guards/GuardSwapList';
+import { TeamScheduleCalendar } from '@/components/schedule/TeamScheduleCalendar';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -126,49 +127,23 @@ const GuardDashboard = () => {
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* My Shifts */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Meus Próximos Plantões
-                </CardTitle>
-                <CardDescription>
-                  Seus turnos programados - {currentUser.team?.name || 'Sem equipe'}
-                </CardDescription>
-              </div>
-              <div className="flex gap-1">
-                <Button
-                  variant={viewMode === 'week' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('week')}
-                >
-                  Semana
-                </Button>
-                <Button
-                  variant={viewMode === 'month' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('month')}
-                >
-                  Mês
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>Escala de plantões em desenvolvimento</p>
-                <p className="text-sm">Os próximos plantões aparecerão aqui em breve</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Schedule Calendar */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Escala de Plantões - Todas as Equipes
+          </CardTitle>
+          <CardDescription>
+            Visualize a escala completa de todas as equipes
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TeamScheduleCalendar />
+        </CardContent>
+      </Card>
 
+      <div className="grid gap-6 lg:grid-cols-1">
         {/* Swap Requests */}
         <GuardSwapList currentUser={currentUser} />
       </div>
