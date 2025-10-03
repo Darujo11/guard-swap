@@ -254,6 +254,12 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                             {getRequestTypeLabel(request)}
                           </Badge>
                           <StatusBadge status={request.status} />
+                          {isRequester && request.status === 'PENDING' && (
+                            <Badge variant="outline" className="gap-1.5 border-amber-500 text-amber-700 bg-amber-50">
+                              <Clock className="h-3 w-3" />
+                              Aguardando aprovação de {otherUser?.name}
+                            </Badge>
+                          )}
                           {request.status === 'ACCEPTED' && !request.target_confirmation && (
                             <Badge variant="outline" className="text-warning border-warning">
                               Aguardando Admin
