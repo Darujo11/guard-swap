@@ -110,7 +110,7 @@ const GuardDashboard = () => {
               Solicitar Troca de Plantão
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Solicitar Troca de Plantão</DialogTitle>
             </DialogHeader>
