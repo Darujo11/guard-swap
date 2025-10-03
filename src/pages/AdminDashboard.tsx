@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { TeamBadge } from '@/components/ui/team-badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { SwapRequest } from '@/lib/types';
 import { 
   Users, 
   Clock, 
@@ -17,43 +23,137 @@ import {
   Filter
 } from 'lucide-react';
 
-// Mock data - será substituído por dados reais do Supabase
-const mockStats = {
-  pendingSwaps: 8,
-  approvedSwaps: 24,
-  rejectedSwaps: 3,
-  totalGuards: 20,
-  activeTeams: 4,
-};
-
-const mockSwapRequests = [
-  {
-    id: '1',
-    requester: { name: 'Carlos Silva', team: 'A' },
-    target: { name: 'Maria Santos', team: 'B' },
-    requesterShift: { date: '2024-01-15', period: 'DIURNO', location: 'Câmara Municipal' },
-    targetShift: { date: '2024-01-16', period: 'NOTURNO', location: 'Museu do Legislativo' },
-    status: 'PENDING' as const,
-    createdAt: '2024-01-10T10:30:00Z',
-  },
-  {
-    id: '2',
-    requester: { name: 'João Costa', team: 'C' },
-    target: { name: 'Ana Lima', team: 'D' },
-    requesterShift: { date: '2024-01-20', period: 'NOTURNO', location: 'Câmara Municipal' },
-    targetShift: { date: '2024-01-18', period: 'DIURNO', location: 'Câmara Municipal' },
-    status: 'PENDING' as const,
-    createdAt: '2024-01-09T15:45:00Z',
-  },
-];
-
 const AdminDashboard = () => {
-  const [filter, setFilter] = useState('all');
+  const [swapRequests, setSwapRequests] = useState<SwapRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    pendingSwaps: 0,
+    approvedSwaps: 0,
+    rejectedSwaps: 0,
+    totalGuards: 0,
+  });
+  const [decisionDialog, setDecisionDialog] = useState<{
+    open: boolean;
+    request: SwapRequest | null;
+    action: 'APPROVED' | 'REJECTED' | null;
+  }>({ open: false, request: null, action: null });
+  const [decisionReason, setDecisionReason] = useState('');
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      // Buscar solicitações de troca pendentes
+      const { data: swaps, error: swapsError } = await supabase
+        .from('swap_requests')
+        .select(`
+          *,
+          requester:profiles!swap_requests_requester_id_fkey(
+            id,
+            name,
+            team:teams(id, name)
+          ),
+          target:profiles!swap_requests_target_id_fkey(
+            id,
+            name,
+            team:teams(id, name)
+          )
+        `)
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (swapsError) throw swapsError;
+
+      setSwapRequests((swaps || []) as SwapRequest[]);
+
+      // Calcular estatísticas
+      const { data: allSwaps } = await supabase
+        .from('swap_requests')
+        .select('status');
+
+      const { data: guards } = await supabase
+        .from('profiles')
+        .select('id');
+
+      if (allSwaps) {
+        setStats({
+          pendingSwaps: allSwaps.filter(s => s.status === 'PENDING').length,
+          approvedSwaps: allSwaps.filter(s => s.status === 'APPROVED').length,
+          rejectedSwaps: allSwaps.filter(s => s.status === 'REJECTED').length,
+          totalGuards: guards?.length || 0,
+        });
+      }
+    } catch (error) {
+      console.error('[AdminDashboard][FetchData]', error);
+      toast({
+        title: 'Erro ao carregar dados',
+        description: 'Não foi possível carregar as solicitações.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openDecisionDialog = (request: SwapRequest, action: 'APPROVED' | 'REJECTED') => {
+    setDecisionDialog({ open: true, request, action });
+    setDecisionReason('');
+  };
+
+  const handleDecision = async () => {
+    if (!decisionDialog.request || !decisionDialog.action) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      const { error } = await supabase
+        .from('swap_requests')
+        .update({
+          status: decisionDialog.action,
+          admin_approved: decisionDialog.action === 'APPROVED',
+          admin_approved_by: user.id,
+          admin_approved_at: new Date().toISOString(),
+        })
+        .eq('id', decisionDialog.request.id);
+
+      if (error) throw error;
+
+      // Registrar no log de auditoria
+      await supabase.from('audit_logs').insert({
+        entity_type: 'swap_request',
+        entity_id: decisionDialog.request.id,
+        action: decisionDialog.action === 'APPROVED' ? 'approved' : 'rejected',
+        user_id: user.id,
+        details: { reason: decisionReason },
+      });
+
+      toast({
+        title: decisionDialog.action === 'APPROVED' ? 'Solicitação aprovada' : 'Solicitação rejeitada',
+        description: `A troca foi ${decisionDialog.action === 'APPROVED' ? 'aprovada' : 'rejeitada'} com sucesso.`,
+      });
+
+      setDecisionDialog({ open: false, request: null, action: null });
+      fetchData();
+    } catch (error) {
+      console.error('[AdminDashboard][HandleDecision]', error);
+      toast({
+        title: 'Erro ao processar decisão',
+        description: 'Não foi possível processar sua decisão.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
+      year: 'numeric'
     });
   };
 
@@ -63,6 +163,19 @@ const AdminDashboard = () => {
       minute: '2-digit',
     });
   };
+
+  if (loading) {
+    return (
+      <AppLayout title="Dashboard Administrativo" user={{ name: 'Admin', role: 'ADMIN' }}>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout
@@ -78,32 +191,30 @@ const AdminDashboard = () => {
             <Clock className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">{mockStats.pendingSwaps}</div>
+            <div className="text-2xl font-bold text-warning">{stats.pendingSwaps}</div>
             <p className="text-xs text-muted-foreground">Aguardando aprovação</p>
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aprovadas (Mês)</CardTitle>
+            <CardTitle className="text-sm font-medium">Aprovadas</CardTitle>
             <CheckCircle className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">{mockStats.approvedSwaps}</div>
-            <p className="text-xs text-muted-foreground">
-              +12% em relação ao mês anterior
-            </p>
+            <div className="text-2xl font-bold text-success">{stats.approvedSwaps}</div>
+            <p className="text-xs text-muted-foreground">Total aprovadas</p>
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rejeitadas (Mês)</CardTitle>
+            <CardTitle className="text-sm font-medium">Rejeitadas</CardTitle>
             <XCircle className="h-4 w-4 text-danger" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-danger">{mockStats.rejectedSwaps}</div>
-            <p className="text-xs text-muted-foreground">Taxa de rejeição: 11%</p>
+            <div className="text-2xl font-bold text-danger">{stats.rejectedSwaps}</div>
+            <p className="text-xs text-muted-foreground">Total rejeitadas</p>
           </CardContent>
         </Card>
 
@@ -113,8 +224,8 @@ const AdminDashboard = () => {
             <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockStats.totalGuards}</div>
-            <p className="text-xs text-muted-foreground">Distribuídos em 4 equipes</p>
+            <div className="text-2xl font-bold">{stats.totalGuards}</div>
+            <p className="text-xs text-muted-foreground">Cadastrados no sistema</p>
           </CardContent>
         </Card>
       </div>
@@ -147,55 +258,113 @@ const AdminDashboard = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {mockSwapRequests.map((request) => (
-              <div
-                key={request.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div className="space-y-2 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium">{request.requester.name}</span>
-                    <TeamBadge team={request.requester.team as any} />
-                    <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{request.target.name}</span>
-                    <TeamBadge team={request.target.team as any} />
+          {swapRequests.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>Nenhuma solicitação pendente</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {swapRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">{request.requester?.name}</span>
+                      <TeamBadge team={request.requester?.team?.name || 'Sem equipe'} />
+                      <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{request.target?.name}</span>
+                      <TeamBadge team={request.target?.team?.name || 'Sem equipe'} />
+                    </div>
+                    
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <div>
+                        <strong>Troca:</strong> {formatDate(request.requester_shift_date)} → {formatDate(request.target_shift_date)}
+                      </div>
+                      {request.reason && (
+                        <div>
+                          <strong>Motivo:</strong> {request.reason}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>Solicitado em {formatDate(request.created_at)} às {formatTime(request.created_at)}</span>
+                    </div>
                   </div>
                   
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <div>
-                      <strong>{request.requester.name}:</strong> {formatDate(request.requesterShift.date)} - 
-                      {request.requesterShift.period} na {request.requesterShift.location}
-                    </div>
-                    <div>
-                      <strong>{request.target.name}:</strong> {formatDate(request.targetShift.date)} - 
-                      {request.targetShift.period} na {request.targetShift.location}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>Solicitado em {formatDate(request.createdAt)} às {formatTime(request.createdAt)}</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3 mt-3 sm:mt-0">
-                  <StatusBadge status={request.status} />
-                  {request.status === 'PENDING' && (
+                  <div className="flex items-center gap-3 mt-3 sm:mt-0">
+                    <StatusBadge status={request.status} />
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline" className="text-success hover:bg-success hover:text-success-foreground">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-success hover:bg-success hover:text-success-foreground"
+                        onClick={() => openDecisionDialog(request, 'APPROVED')}
+                      >
                         Aprovar
                       </Button>
-                      <Button size="sm" variant="outline" className="text-danger hover:bg-danger hover:text-danger-foreground">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-danger hover:bg-danger hover:text-danger-foreground"
+                        onClick={() => openDecisionDialog(request, 'REJECTED')}
+                      >
                         Rejeitar
                       </Button>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Decision Dialog */}
+      <Dialog open={decisionDialog.open} onOpenChange={(open) => setDecisionDialog({ ...decisionDialog, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {decisionDialog.action === 'APPROVED' ? 'Aprovar Solicitação' : 'Rejeitar Solicitação'}
+            </DialogTitle>
+            <DialogDescription>
+              {decisionDialog.action === 'APPROVED' 
+                ? 'Você está prestes a aprovar esta troca de plantão. Deseja adicionar uma observação?'
+                : 'Você está prestes a rejeitar esta troca de plantão. Por favor, informe o motivo.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reason">
+                {decisionDialog.action === 'APPROVED' ? 'Observação (opcional)' : 'Motivo da rejeição'}
+              </Label>
+              <Textarea
+                id="reason"
+                placeholder={decisionDialog.action === 'APPROVED' 
+                  ? 'Adicione uma observação...'
+                  : 'Explique o motivo da rejeição...'}
+                value={decisionReason}
+                onChange={(e) => setDecisionReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDecisionDialog({ open: false, request: null, action: null })}>
+              Cancelar
+            </Button>
+            <Button
+              variant={decisionDialog.action === 'APPROVED' ? 'default' : 'destructive'}
+              onClick={handleDecision}
+            >
+              {decisionDialog.action === 'APPROVED' ? 'Aprovar' : 'Rejeitar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };
