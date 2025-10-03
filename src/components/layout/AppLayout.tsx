@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Bell, Users, Calendar, Shield, BarChart3, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,10 +18,10 @@ interface AppLayoutProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
-  { name: 'Equipes', href: '/teams', icon: Users },
-  { name: 'Plantões', href: '/shifts', icon: Calendar },
-  { name: 'Seguranças', href: '/guards', icon: Shield },
+  { name: 'Dashboard', href: '/dashboard/admin', icon: BarChart3 },
+  { name: 'Equipes', href: '/admin/equipes', icon: Users },
+  { name: 'Seguranças', href: '/admin/segurancas', icon: Shield },
+  { name: 'Trocas', href: '/admin/trocas', icon: Calendar },
 ];
 
 export function AppLayout({ children, title, user, notificationCount = 0 }: AppLayoutProps) {
@@ -45,9 +46,12 @@ export function AppLayout({ children, title, user, notificationCount = 0 }: AppL
                   variant="ghost"
                   size="sm"
                   className="gap-2"
+                  asChild
                 >
-                  <item.icon className="h-4 w-4" />
-                  {item.name}
+                  <Link to={item.href}>
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                  </Link>
                 </Button>
               ))}
             </div>
