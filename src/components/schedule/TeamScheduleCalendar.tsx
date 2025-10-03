@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Team } from "@/lib/types";
-import { TEAM_COLORS } from "@/lib/constants";
 import { format, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, Palette } from "lucide-react";
 
 interface TeamSchedule {
   id: string;
@@ -82,9 +83,12 @@ export function TeamScheduleCalendar() {
     return schedule?.team || null;
   };
 
-  const getTeamColor = (teamName: string): string => {
-    const config = TEAM_COLORS.find(t => t.name === teamName);
-    return config?.color || "bg-gray-100 text-gray-800";
+  const getTeamColorStyle = (color: string): React.CSSProperties => {
+    return {
+      backgroundColor: color + '20', // 20 = 12.5% opacity in hex
+      borderColor: color,
+      color: color,
+    };
   };
 
   const handleDateClick = async (date: Date) => {
@@ -149,55 +153,56 @@ export function TeamScheduleCalendar() {
   };
 
   const generatePattern24_72 = async () => {
-    if (!selectedTeam) {
+    if (teams.length === 0) {
       toast({
         variant: "destructive",
-        title: "Selecione uma equipe",
-        description: "Por favor, selecione uma equipe para gerar o padrão.",
+        title: "Nenhuma equipe disponível",
+        description: "Por favor, crie equipes antes de gerar o padrão.",
       });
       return;
     }
 
     setLoading(true);
 
-    const team = teams.find(t => t.id === selectedTeam);
     const start = startOfMonth(currentMonth);
     const end = addDays(endOfMonth(currentMonth), 365); // Generate for next year
 
-    // Pattern: 1 day work, 3 days off (24/72)
-    const schedulesToInsert = [];
-    let currentDate = start;
-    let isWorkDay = true;
-    let consecutiveDays = 0;
-
-    while (currentDate <= end) {
-      if (isWorkDay) {
-        schedulesToInsert.push({
-          team_id: selectedTeam,
-          shift_date: format(currentDate, "yyyy-MM-dd"),
-        });
-        consecutiveDays++;
-        if (consecutiveDays >= 1) {
-          isWorkDay = false;
-          consecutiveDays = 0;
-        }
-      } else {
-        consecutiveDays++;
-        if (consecutiveDays >= 3) {
-          isWorkDay = true;
-          consecutiveDays = 0;
-        }
-      }
-      currentDate = addDays(currentDate, 1);
-    }
-
-    // Delete existing schedules for this team in the period
+    // Delete existing schedules in the period
     await supabase
       .from("team_schedules")
       .delete()
-      .eq("team_id", selectedTeam)
       .gte("shift_date", format(start, "yyyy-MM-dd"))
       .lte("shift_date", format(end, "yyyy-MM-dd"));
+
+    // Generate pattern for all teams with offset
+    const schedulesToInsert = [];
+    
+    teams.forEach((team, teamIndex) => {
+      let currentDate = addDays(start, teamIndex); // Offset each team by 1 day
+      let isWorkDay = true;
+      let consecutiveDays = 0;
+
+      while (currentDate <= end) {
+        if (isWorkDay) {
+          schedulesToInsert.push({
+            team_id: team.id,
+            shift_date: format(currentDate, "yyyy-MM-dd"),
+          });
+          consecutiveDays++;
+          if (consecutiveDays >= 1) {
+            isWorkDay = false;
+            consecutiveDays = 0;
+          }
+        } else {
+          consecutiveDays++;
+          if (consecutiveDays >= 3) {
+            isWorkDay = true;
+            consecutiveDays = 0;
+          }
+        }
+        currentDate = addDays(currentDate, 1);
+      }
+    });
 
     // Insert new schedules in batches
     const batchSize = 100;
@@ -220,11 +225,34 @@ export function TeamScheduleCalendar() {
 
     toast({
       title: "Padrão 24/72 gerado",
-      description: `Padrão gerado para ${team?.name} até ${format(end, "dd/MM/yyyy")}`,
+      description: `Padrão gerado para todas as equipes até ${format(end, "dd/MM/yyyy")}`,
     });
 
     setLoading(false);
     fetchSchedules();
+  };
+
+  const updateTeamColor = async (teamId: string, color: string) => {
+    const { error } = await supabase
+      .from("teams")
+      .update({ color })
+      .eq("id", teamId);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar cor",
+        description: error.message,
+      });
+      return;
+    }
+
+    toast({
+      title: "Cor atualizada",
+      description: "A cor da equipe foi atualizada com sucesso.",
+    });
+
+    fetchTeams();
   };
 
   const renderDay = (date: Date) => {
@@ -233,12 +261,13 @@ export function TeamScheduleCalendar() {
     return (
       <div
         onClick={() => handleDateClick(date)}
+        style={team ? getTeamColorStyle(team.color || '#3b82f6') : {}}
         className={`
           relative w-full h-full min-h-[60px] p-2 cursor-pointer
-          border border-border rounded-md
+          border-2 rounded-md
           hover:ring-2 hover:ring-primary
           transition-all
-          ${team ? getTeamColor(team.name) : 'bg-background'}
+          ${!team ? 'bg-background border-border' : ''}
         `}
       >
         <div className="text-sm font-medium">
@@ -331,11 +360,11 @@ export function TeamScheduleCalendar() {
 
               <Button
                 onClick={generatePattern24_72}
-                disabled={!selectedTeam || loading}
+                disabled={loading}
                 className="w-full sm:w-auto"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Gerar Padrão 24/72
+                Gerar Padrão 24/72 para Todas
               </Button>
             </div>
           </div>
@@ -343,17 +372,53 @@ export function TeamScheduleCalendar() {
           {/* Calendar */}
           {renderCalendar()}
 
-          {/* Legend */}
-          <div className="flex flex-wrap gap-2">
-            {teams.map((team) => (
-              <Badge
-                key={team.id}
-                variant="secondary"
-                className={getTeamColor(team.name)}
-              >
-                {team.name}
-              </Badge>
-            ))}
+          {/* Legend with color editing */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">Equipes</h3>
+            <div className="flex flex-wrap gap-2">
+              {teams.map((team) => (
+                <Popover key={team.id}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      style={getTeamColorStyle(team.color || '#3b82f6')}
+                      className="gap-2 border-2"
+                    >
+                      <div
+                        className="w-4 h-4 rounded-full"
+                        style={{ backgroundColor: team.color || '#3b82f6' }}
+                      />
+                      {team.name}
+                      <Palette className="h-3 w-3" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Editar cor de {team.name}</h4>
+                      <div className="flex gap-2">
+                        <Input
+                          type="color"
+                          value={team.color || '#3b82f6'}
+                          onChange={(e) => updateTeamColor(team.id, e.target.value)}
+                          className="w-20 h-10 cursor-pointer"
+                        />
+                        <Input
+                          type="text"
+                          value={team.color || '#3b82f6'}
+                          onChange={(e) => updateTeamColor(team.id, e.target.value)}
+                          placeholder="#3b82f6"
+                          className="flex-1"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Escolha uma cor para {team.name}
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
