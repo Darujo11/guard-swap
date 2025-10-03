@@ -43,8 +43,14 @@ const Login = () => {
     setLoading(true);
 
     try {
+      // If input is only numbers (phone), format as login email
+      let loginEmail = email;
+      if (/^\d+$/.test(email)) {
+        loginEmail = `${email}@guard.local`;
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: loginEmail,
         password,
       });
 
@@ -57,7 +63,7 @@ const Login = () => {
       console.error('Login error:', error);
       toast({
         title: 'Erro no login',
-        description: error.message || 'Credenciais inválidas',
+        description: error.message || 'Credenciais inválidas. Verifique seu WhatsApp/Email e senha.',
         variant: 'destructive',
       });
     } finally {
@@ -85,15 +91,18 @@ const Login = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email / Login</Label>
+              <Label htmlFor="email">WhatsApp / Email</Label>
               <Input
                 id="email"
                 type="text"
-                placeholder="Digite seu email ou login"
+                placeholder="Digite seu WhatsApp ou email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
+              <p className="text-xs text-muted-foreground">
+                Seguranças: use apenas números do WhatsApp (ex: 11999999999)
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>

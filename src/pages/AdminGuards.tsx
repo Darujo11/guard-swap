@@ -81,32 +81,35 @@ const AdminGuards = () => {
   };
 
   const handleCreateGuard = async () => {
-    if (!guardForm.name.trim() || !guardForm.email.trim()) {
+    if (!guardForm.name.trim() || !guardForm.phone.trim()) {
       toast({
         title: 'Campos obrigatórios',
-        description: 'Nome e email são obrigatórios.',
+        description: 'Nome e WhatsApp são obrigatórios.',
         variant: 'destructive',
       });
       return;
     }
 
     try {
-      // Generate a temporary password
-      const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+      // Use phone as login (format: phone@guard.local)
+      const phoneClean = guardForm.phone.replace(/\D/g, '');
+      const loginEmail = `${phoneClean}@guard.local`;
+      const defaultPassword = '123456';
       
-      // Create user in auth
+      // Create user in auth using phone as email
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: guardForm.email,
-        password: tempPassword,
+        email: loginEmail,
+        password: defaultPassword,
         options: {
           data: {
             name: guardForm.name,
+            phone: guardForm.phone,
           }
         }
       });
 
       if (authError) throw authError;
-      if (!authData.user) throw new Error('Failed to create user');
+      if (!authData.user) throw new Error('Falha ao criar usuário');
 
       // Create profile
       const { error: profileError } = await supabase
@@ -114,8 +117,8 @@ const AdminGuards = () => {
         .insert({
           user_id: authData.user.id,
           name: guardForm.name,
-          email: guardForm.email,
-          phone: guardForm.phone || null,
+          email: guardForm.email || loginEmail,
+          phone: guardForm.phone,
           team_id: guardForm.team_id || null,
         });
 
@@ -133,7 +136,8 @@ const AdminGuards = () => {
 
       toast({
         title: 'Segurança cadastrado',
-        description: `${guardForm.name} foi cadastrado com sucesso. Senha temporária: ${tempPassword}`,
+        description: `${guardForm.name} foi cadastrado com sucesso.\n\nLogin: ${guardForm.phone}\nSenha: ${defaultPassword}`,
+        duration: 8000,
       });
 
       setIsCreateDialogOpen(false);
@@ -284,23 +288,27 @@ const AdminGuards = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">Email (opcional)</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="email@exemplo.com"
+                    placeholder="email@exemplo.com (opcional)"
                     value={guardForm.email}
                     onChange={(e) => setGuardForm({ ...guardForm, email: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
+                  <Label htmlFor="phone">WhatsApp (será usado como login) *</Label>
                   <Input
                     id="phone"
-                    placeholder="(00) 00000-0000"
+                    placeholder="11999999999 (apenas números)"
                     value={guardForm.phone}
                     onChange={(e) => setGuardForm({ ...guardForm, phone: e.target.value })}
+                    required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Este número será usado como login. Senha padrão: 123456
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="team">Equipe (opcional)</Label>
