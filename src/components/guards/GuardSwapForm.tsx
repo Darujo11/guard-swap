@@ -203,20 +203,14 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
                 <SelectValue placeholder="Selecione o membro para a troca" />
               </SelectTrigger>
               <SelectContent>
-                {availableGuards.length === 0 ? (
-                  <SelectItem value="" disabled>
-                    Nenhum guarda disponível
+                {availableGuards.map((guard) => (
+                  <SelectItem key={guard.id} value={guard.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{guard.name}</span>
+                      {guard.team && <span className="text-xs text-muted-foreground">({guard.team.name})</span>}
+                    </div>
                   </SelectItem>
-                ) : (
-                  availableGuards.map((guard) => (
-                    <SelectItem key={guard.id} value={guard.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{guard.name}</span>
-                        {guard.team && <span className="text-xs text-muted-foreground">({guard.team.name})</span>}
-                      </div>
-                    </SelectItem>
-                  ))
-                )}
+                ))}
               </SelectContent>
             </Select>
             {availableGuards.length === 0 && (
