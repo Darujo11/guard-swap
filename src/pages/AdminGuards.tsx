@@ -91,52 +91,21 @@ const AdminGuards = () => {
     }
 
     try {
-      // Use phone as login (format: phone@guard.local)
-      const phoneClean = guardForm.phone.replace(/\D/g, '');
-      const loginEmail = `${phoneClean}@guard.local`;
-      const defaultPassword = '123456';
-      
-      // Create user in auth using phone as email
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: loginEmail,
-        password: defaultPassword,
-        options: {
-          data: {
-            name: guardForm.name,
-            phone: guardForm.phone,
-          }
+      // Call edge function to create guard
+      const { data, error } = await supabase.functions.invoke('create-guard', {
+        body: {
+          name: guardForm.name,
+          email: guardForm.email || null,
+          phone: guardForm.phone,
+          team_id: guardForm.team_id || null,
         }
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Falha ao criar usuário');
-
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: authData.user.id,
-          name: guardForm.name,
-          email: guardForm.email || loginEmail,
-          phone: guardForm.phone,
-          team_id: guardForm.team_id || null,
-        });
-
-      if (profileError) throw profileError;
-
-      // Assign guard role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: 'guard',
-        });
-
-      if (roleError) throw roleError;
+      if (error) throw error;
 
       toast({
-        title: 'Segurança cadastrado',
-        description: `${guardForm.name} foi cadastrado com sucesso.\n\nLogin: ${guardForm.phone}\nSenha: ${defaultPassword}`,
+        title: 'Segurança cadastrado com sucesso!',
+        description: `Login: ${guardForm.phone}\nSenha: 123456`,
         duration: 8000,
       });
 
