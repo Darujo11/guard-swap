@@ -30,15 +30,14 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
 
   const fetchAvailableGuards = async () => {
     try {
-      // Fetch guards from different teams only
+      // Fetch all guards except the current user
       const { data, error } = await supabase
         .from('profiles')
         .select(`
           *,
           team:teams(*)
         `)
-        .neq('id', currentUser.id)
-        .neq('team_id', currentUser.team_id || 'null');
+        .neq('id', currentUser.id);
 
       if (error) throw error;
 
@@ -181,7 +180,7 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
           Solicitar Troca de Plantão
         </CardTitle>
         <CardDescription>
-          Preencha os dados para solicitar uma troca de plantão com outro membro de equipe diferente.
+          Preencha os dados para solicitar uma troca de plantão com outro segurança.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -222,7 +221,7 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
             </Select>
             {availableGuards.length === 0 && (
               <p className="text-sm text-muted-foreground">
-                Não há guardas de outras equipes disponíveis no momento.
+                Nenhum segurança disponível para troca no momento.
               </p>
             )}
           </div>
