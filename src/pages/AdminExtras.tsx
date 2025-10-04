@@ -592,26 +592,29 @@ export default function AdminExtras() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Período</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(filterMonth, "MMMM 'de' yyyy", { locale: ptBR })}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={filterMonth}
-                    onSelect={(date) => date && setFilterMonth(startOfMonth(date))}
-                    locale={ptBR}
-                    captionLayout="dropdown-buttons"
-                    fromYear={2020}
-                    toYear={2030}
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+              <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setFilterMonth(startOfMonth(subMonths(filterMonth, 1)))}
+                  className="h-8 w-8"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="text-center flex-1">
+                  <p className="text-lg font-semibold capitalize">
+                    {format(filterMonth, "MMMM yyyy", { locale: ptBR })}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setFilterMonth(startOfMonth(addMonths(filterMonth, 1)))}
+                  className="h-8 w-8"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
