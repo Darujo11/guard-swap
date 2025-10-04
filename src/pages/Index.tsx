@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import logoImage from '@/assets/logo.png';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 
 const Index = () => {
   const [selectedRole, setSelectedRole] = useState<'ADMIN' | 'GUARD' | null>(null);
+  const navigate = useNavigate();
   
   // Scroll animations
   const heroAnimation = useScrollAnimation();
@@ -541,18 +543,18 @@ const Index = () => {
                 size="lg" 
                 variant="secondary"
                 className="gap-2 text-lg px-8 py-7 shadow-2xl hover:shadow-xl hover:scale-105 transition-all"
-                onClick={() => setSelectedRole('ADMIN')}
+                onClick={() => navigate('/teste-gratuito')}
               >
-                Começar Gratuitamente
+                Teste Grátis 7 Dias
                 <ArrowRight className="h-5 w-5" />
               </Button>
               <Button 
                 size="lg" 
                 variant="outline" 
                 className="gap-2 text-lg px-8 py-7 border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground hover:text-primary hover:scale-105 transition-all backdrop-blur-sm bg-primary-foreground/5"
-                onClick={() => setSelectedRole('GUARD')}
+                onClick={() => navigate('/login')}
               >
-                Ver Demonstração
+                Já Tenho Conta
                 <Shield className="h-5 w-5" />
               </Button>
             </div>

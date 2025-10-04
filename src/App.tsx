@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/guards/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import TrialSignup from "./pages/TrialSignup";
 import CreateAdmin from "./pages/CreateAdmin";
 import CreateSuperAdmin from "./pages/CreateSuperAdmin";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -33,6 +34,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/teste-gratuito" element={<TrialSignup />} />
           <Route path="/criar-admin" element={<CreateAdmin />} />
           <Route path="/criar-super-admin" element={<CreateSuperAdmin />} />
           <Route 

@@ -3,6 +3,9 @@ project_id = "wyoysecfbmmidjiofymg"
 [functions.create-admin]
 verify_jwt = false
 
+[functions.create-trial-admin]
+verify_jwt = false
+
 [functions.create-guard]
 verify_jwt = true
 
