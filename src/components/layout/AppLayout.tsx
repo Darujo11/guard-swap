@@ -53,18 +53,16 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
             </div>
             <div className="hidden md:flex items-center gap-1 ml-6">
               {navigation.map((item) => (
-                <Button
-                  key={item.name}
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2"
-                  asChild
-                >
-                  <Link to={item.href}>
+                <Link key={item.name} to={item.href}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2"
+                  >
                     <item.icon className="h-4 w-4" />
                     {item.name}
-                  </Link>
-                </Button>
+                  </Button>
+                </Link>
               ))}
             </div>
           </div>
