@@ -44,12 +44,15 @@ const AdminDashboard = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (profile?.id) {
+      fetchData();
+    }
+  }, [profile?.id]);
 
   const fetchData = async () => {
+    if (!profile?.id) return;
     try {
-      // Buscar solicitações de troca pendentes (aguardando confirmação do segurança)
+      // Solicitações pendentes do admin atual
       const { data: swaps, error: swapsError } = await supabase
         .from('swap_requests')
         .select(`
@@ -67,6 +70,7 @@ const AdminDashboard = () => {
         `)
         .eq('status', 'PENDING')
         .is('target_confirmation', false)
+        .eq('admin_id', profile.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -74,23 +78,38 @@ const AdminDashboard = () => {
 
       setSwapRequests(((swaps || []) as unknown) as SwapRequest[]);
 
-      // Calcular estatísticas
-      const { data: allSwaps } = await supabase
-        .from('swap_requests')
-        .select('status');
+      // Buscar estatísticas (somente do admin atual)
+      const [{ data: allSwaps }, { data: guardRoles, error: rolesError }] = await Promise.all([
+        supabase
+          .from('swap_requests')
+          .select('status')
+          .eq('admin_id', profile.id),
+        supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'guard'),
+      ]);
 
-      const { data: guards } = await supabase
-        .from('profiles')
-        .select('id');
+      if (rolesError) throw rolesError;
 
-      if (allSwaps) {
-        setStats({
-          pendingSwaps: allSwaps.filter(s => s.status === 'PENDING').length,
-          approvedSwaps: allSwaps.filter(s => s.status === 'APPROVED').length,
-          rejectedSwaps: allSwaps.filter(s => s.status === 'REJECTED').length,
-          totalGuards: guards?.length || 0,
-        });
+      const guardUserIds = (guardRoles || []).map((r: any) => r.user_id);
+      let totalGuards = 0;
+      if (guardUserIds.length > 0) {
+        const { data: guardProfiles, error: guardsError } = await supabase
+          .from('profiles')
+          .select('id, user_id')
+          .eq('admin_id', profile.id)
+          .in('user_id', guardUserIds);
+        if (guardsError) throw guardsError;
+        totalGuards = guardProfiles?.length || 0;
       }
+
+      setStats({
+        pendingSwaps: (allSwaps || []).filter((s: any) => s.status === 'PENDING').length,
+        approvedSwaps: (allSwaps || []).filter((s: any) => s.status === 'APPROVED').length,
+        rejectedSwaps: (allSwaps || []).filter((s: any) => s.status === 'REJECTED').length,
+        totalGuards,
+      });
     } catch (error) {
       console.error('[AdminDashboard][FetchData]', error);
       toast({
