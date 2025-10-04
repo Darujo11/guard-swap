@@ -14,11 +14,12 @@ export default function CreateSuperAdmin() {
   const createSuperAdmin = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-super-admin', {
+      const { data, error } = await supabase.functions.invoke('create-super-admin-phone', {
         body: {
-          email: 'fabioventura84@yahoo.com',
+          phone: '22992242189',
           password: '123456',
-          name: 'Super Admin'
+          name: 'Super Admin',
+          email: '22992242189@guardshift.com'
         }
       });
 
@@ -61,8 +62,8 @@ export default function CreateSuperAdmin() {
             <>
               <div className="space-y-3 rounded-lg bg-muted p-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Email:</span>
-                  <span className="font-medium">fabioventura84@yahoo.com</span>
+                  <span className="text-muted-foreground">WhatsApp:</span>
+                  <span className="font-medium">22992242189</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Senha:</span>

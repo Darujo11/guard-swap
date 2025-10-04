@@ -49,21 +49,25 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // If input is only numbers (phone), format as login email
-      let loginEmail = email;
-      if (/^\d+$/.test(email)) {
-        loginEmail = `${email}@guardshift.com`;
-      }
+      const raw = email.trim();
+      const isPhone = /^\d+$/.test(raw);
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        await redirectUser(data.user.id);
+      if (isPhone) {
+        const digits = raw.replace(/\D/g, '');
+        const e164 = digits.startsWith('55') ? `+${digits}` : `+55${digits}`;
+        const { data, error } = await supabase.auth.signInWithPassword({
+          phone: e164,
+          password,
+        });
+        if (error) throw error;
+        if (data.user) await redirectUser(data.user.id);
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: raw,
+          password,
+        });
+        if (error) throw error;
+        if (data.user) await redirectUser(data.user.id);
       }
     } catch (error: any) {
       console.error('Login error:', error);
