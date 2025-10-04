@@ -5,15 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
-import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
 import { useAuth } from '@/hooks/useAuth';
+import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminSettings() {
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const { settings, updateSettings, isUpdating } = useOrganizationSettings();
   const { toast } = useToast();
-  
+
   const [formData, setFormData] = useState(settings);
 
   useEffect(() => {
@@ -25,162 +25,171 @@ export default function AdminSettings() {
     updateSettings(formData, {
       onSuccess: () => {
         toast({
-          title: 'Configurações salvas',
-          description: 'As configurações foram atualizadas com sucesso.',
+          title: 'Sucesso',
+          description: 'Configurações atualizadas com sucesso!',
         });
       },
-      onError: () => {
+      onError: (error) => {
         toast({
-          title: 'Erro ao salvar',
-          description: 'Ocorreu um erro ao salvar as configurações.',
+          title: 'Erro',
+          description: 'Falha ao atualizar configurações.',
           variant: 'destructive',
         });
+        console.error(error);
       },
     });
   };
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
   return (
     <AppLayout
-      title="Configurações do Sistema"
-      user={{
-        name: profile?.name || 'Admin',
+      title="Configurações da Organização"
+      user={profile ? {
+        name: profile.name,
         role: 'ADMIN',
-      }}
+      } : undefined}
     >
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
-            Personalização de Termos
+            Personalizar Terminologia
           </CardTitle>
           <CardDescription>
-            Personalize os termos usados no sistema para adaptar a diferentes setores (segurança, enfermagem, educação, etc.)
+            Adapte os termos do sistema para o seu setor (hospitais, escolas, empresas, etc.)
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Guard Labels */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Profissional (Singular) */}
               <div className="space-y-2">
-                <Label htmlFor="guard_label">Termo Singular (ex: Segurança)</Label>
+                <Label htmlFor="guard_label">Profissional (Singular)</Label>
                 <Input
                   id="guard_label"
                   value={formData.guard_label}
-                  onChange={(e) => handleChange('guard_label', e.target.value)}
-                  placeholder="Segurança"
+                  onChange={(e) => setFormData({ ...formData, guard_label: e.target.value })}
+                  placeholder="Ex: Segurança, Enfermeiro, Professor"
                 />
               </div>
+
+              {/* Profissionais (Plural) */}
               <div className="space-y-2">
-                <Label htmlFor="guards_label">Termo Plural (ex: Seguranças)</Label>
+                <Label htmlFor="guards_label">Profissionais (Plural)</Label>
                 <Input
                   id="guards_label"
                   value={formData.guards_label}
-                  onChange={(e) => handleChange('guards_label', e.target.value)}
-                  placeholder="Seguranças"
+                  onChange={(e) => setFormData({ ...formData, guards_label: e.target.value })}
+                  placeholder="Ex: Seguranças, Enfermeiros, Professores"
                 />
               </div>
 
-              {/* Team Labels */}
+              {/* Equipe (Singular) */}
               <div className="space-y-2">
-                <Label htmlFor="team_label">Grupo Singular (ex: Equipe)</Label>
+                <Label htmlFor="team_label">Equipe (Singular)</Label>
                 <Input
                   id="team_label"
                   value={formData.team_label}
-                  onChange={(e) => handleChange('team_label', e.target.value)}
-                  placeholder="Equipe"
+                  onChange={(e) => setFormData({ ...formData, team_label: e.target.value })}
+                  placeholder="Ex: Equipe, Turma, Setor"
                 />
               </div>
+
+              {/* Equipes (Plural) */}
               <div className="space-y-2">
-                <Label htmlFor="teams_label">Grupo Plural (ex: Equipes)</Label>
+                <Label htmlFor="teams_label">Equipes (Plural)</Label>
                 <Input
                   id="teams_label"
                   value={formData.teams_label}
-                  onChange={(e) => handleChange('teams_label', e.target.value)}
-                  placeholder="Equipes"
+                  onChange={(e) => setFormData({ ...formData, teams_label: e.target.value })}
+                  placeholder="Ex: Equipes, Turmas, Setores"
                 />
               </div>
 
-              {/* Shift Labels */}
+              {/* Plantão (Singular) */}
               <div className="space-y-2">
-                <Label htmlFor="shift_label">Turno Singular (ex: Plantão)</Label>
+                <Label htmlFor="shift_label">Turno/Plantão (Singular)</Label>
                 <Input
                   id="shift_label"
                   value={formData.shift_label}
-                  onChange={(e) => handleChange('shift_label', e.target.value)}
-                  placeholder="Plantão"
+                  onChange={(e) => setFormData({ ...formData, shift_label: e.target.value })}
+                  placeholder="Ex: Plantão, Turno, Período"
                 />
               </div>
+
+              {/* Plantões (Plural) */}
               <div className="space-y-2">
-                <Label htmlFor="shifts_label">Turno Plural (ex: Plantões)</Label>
+                <Label htmlFor="shifts_label">Turnos/Plantões (Plural)</Label>
                 <Input
                   id="shifts_label"
                   value={formData.shifts_label}
-                  onChange={(e) => handleChange('shifts_label', e.target.value)}
-                  placeholder="Plantões"
+                  onChange={(e) => setFormData({ ...formData, shifts_label: e.target.value })}
+                  placeholder="Ex: Plantões, Turnos, Períodos"
                 />
               </div>
 
-              {/* Schedule Labels */}
+              {/* Escala (Singular) */}
               <div className="space-y-2">
-                <Label htmlFor="schedule_label">Agenda Singular (ex: Escala)</Label>
+                <Label htmlFor="schedule_label">Escala (Singular)</Label>
                 <Input
                   id="schedule_label"
                   value={formData.schedule_label}
-                  onChange={(e) => handleChange('schedule_label', e.target.value)}
-                  placeholder="Escala"
+                  onChange={(e) => setFormData({ ...formData, schedule_label: e.target.value })}
+                  placeholder="Ex: Escala, Agenda, Cronograma"
                 />
               </div>
+
+              {/* Escalas (Plural) */}
               <div className="space-y-2">
-                <Label htmlFor="schedules_label">Agenda Plural (ex: Escalas)</Label>
+                <Label htmlFor="schedules_label">Escalas (Plural)</Label>
                 <Input
                   id="schedules_label"
                   value={formData.schedules_label}
-                  onChange={(e) => handleChange('schedules_label', e.target.value)}
-                  placeholder="Escalas"
+                  onChange={(e) => setFormData({ ...formData, schedules_label: e.target.value })}
+                  placeholder="Ex: Escalas, Agendas, Cronogramas"
                 />
               </div>
 
-              {/* Swap Labels */}
+              {/* Troca (Singular) */}
               <div className="space-y-2">
-                <Label htmlFor="swap_label">Alteração Singular (ex: Troca)</Label>
+                <Label htmlFor="swap_label">Troca (Singular)</Label>
                 <Input
                   id="swap_label"
                   value={formData.swap_label}
-                  onChange={(e) => handleChange('swap_label', e.target.value)}
-                  placeholder="Troca"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="swaps_label">Alteração Plural (ex: Trocas)</Label>
-                <Input
-                  id="swaps_label"
-                  value={formData.swaps_label}
-                  onChange={(e) => handleChange('swaps_label', e.target.value)}
-                  placeholder="Trocas"
+                  onChange={(e) => setFormData({ ...formData, swap_label: e.target.value })}
+                  placeholder="Ex: Troca, Permuta, Substituição"
                 />
               </div>
 
-              {/* Extra Labels */}
+              {/* Trocas (Plural) */}
               <div className="space-y-2">
-                <Label htmlFor="extra_label">Adicional Singular (ex: Extra)</Label>
+                <Label htmlFor="swaps_label">Trocas (Plural)</Label>
+                <Input
+                  id="swaps_label"
+                  value={formData.swaps_label}
+                  onChange={(e) => setFormData({ ...formData, swaps_label: e.target.value })}
+                  placeholder="Ex: Trocas, Permutas, Substituições"
+                />
+              </div>
+
+              {/* Extra (Singular) */}
+              <div className="space-y-2">
+                <Label htmlFor="extra_label">Extra (Singular)</Label>
                 <Input
                   id="extra_label"
                   value={formData.extra_label}
-                  onChange={(e) => handleChange('extra_label', e.target.value)}
-                  placeholder="Extra"
+                  onChange={(e) => setFormData({ ...formData, extra_label: e.target.value })}
+                  placeholder="Ex: Extra, Hora Extra, Adicional"
                 />
               </div>
+
+              {/* Extras (Plural) */}
               <div className="space-y-2">
-                <Label htmlFor="extras_label">Adicional Plural (ex: Extras)</Label>
+                <Label htmlFor="extras_label">Extras (Plural)</Label>
                 <Input
                   id="extras_label"
                   value={formData.extras_label}
-                  onChange={(e) => handleChange('extras_label', e.target.value)}
-                  placeholder="Extras"
+                  onChange={(e) => setFormData({ ...formData, extras_label: e.target.value })}
+                  placeholder="Ex: Extras, Horas Extras, Adicionais"
                 />
               </div>
             </div>
