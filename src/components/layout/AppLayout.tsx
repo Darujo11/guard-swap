@@ -113,13 +113,8 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
                     <Button variant="ghost" className="flex items-center gap-3">
                       <div className="text-right text-sm hidden md:block">
                         <div className="font-medium">{user.name}</div>
-                        <div className="text-muted-foreground flex items-center gap-1">
+                        <div className="text-muted-foreground">
                           {user.role === 'ADMIN' ? 'Administrador' : 'Segurança'}
-                          {user.teamName && (
-                            <Badge variant="secondary" className="ml-1">
-                              Equipe {user.teamName}
-                            </Badge>
-                          )}
                         </div>
                       </div>
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
