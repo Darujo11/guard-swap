@@ -223,7 +223,14 @@ export default function AdminExtras() {
       return extraKey === targetKey;
     });
 
-    setFilteredExtras(filtered);
+    // Ordenar por nome do guarda em ordem alfabética
+    const sorted = filtered.sort((a, b) => {
+      const nameA = a.guard?.name || "Desconhecido";
+      const nameB = b.guard?.name || "Desconhecido";
+      return nameA.localeCompare(nameB, 'pt-BR');
+    });
+
+    setFilteredExtras(sorted);
   };
 
 
@@ -376,7 +383,7 @@ export default function AdminExtras() {
       const totalExtras = filteredExtras.reduce((sum, extra) => sum + (Number(extra.quantity) || 1), 0);
       doc.text(`Total de extras no período: ${totalExtras}`, 14, 52);
 
-      // Table data
+      // Table data - já ordenado alfabeticamente em applyFilters
       const tableData = filteredExtras.map(extra => [
         extra.guard?.name || "Desconhecido",
         (extra.quantity || 1).toString(),
