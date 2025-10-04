@@ -13,7 +13,7 @@ interface Notification {
 }
 
 export function useSwapNotifications() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
@@ -21,15 +21,23 @@ export function useSwapNotifications() {
 
     // Fetch initial pending swap requests
     const fetchPendingSwaps = async () => {
-      const { data: swaps, error } = await supabase
+      let query = supabase
         .from('swap_requests')
         .select(`
           *,
           requester:profiles!swap_requests_requester_id_fkey(name),
           target:profiles!swap_requests_target_id_fkey(name)
         `)
-        .eq('status', 'PENDING')
-        .order('created_at', { ascending: false });
+        .eq('status', 'PENDING');
+
+      // For guards, only show swaps where they are involved
+      if (role === 'guard') {
+        query = query.or(`requester_id.eq.${user.id},target_id.eq.${user.id}`);
+      }
+
+      query = query.order('created_at', { ascending: false });
+
+      const { data: swaps, error } = await query;
 
       if (error) {
         console.error('Error fetching swaps:', error);
@@ -63,6 +71,17 @@ export function useSwapNotifications() {
         },
         async (payload) => {
           console.log('New swap request:', payload);
+          
+          // For guards, only show notifications if they are involved
+          if (role === 'guard') {
+            const isInvolved = 
+              payload.new.requester_id === user.id || 
+              payload.new.target_id === user.id;
+            
+            if (!isInvolved) {
+              return; // Skip this notification
+            }
+          }
           
           // Fetch the requester's name
           const { data: profile } = await supabase
@@ -110,7 +129,7 @@ export function useSwapNotifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, role]);
 
   const markAsRead = (id: string) => {
     setNotifications((prev) =>
