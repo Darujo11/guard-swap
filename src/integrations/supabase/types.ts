@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_subscriptions: {
+        Row: {
+          admin_id: string
+          created_at: string | null
+          end_date: string
+          id: string
+          payment_status: string | null
+          plan_id: string
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string | null
+          end_date: string
+          id?: string
+          payment_status?: string | null
+          plan_id: string
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string | null
+          end_date?: string
+          id?: string
+          payment_status?: string | null
+          plan_id?: string
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_subscriptions_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -146,6 +197,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      subscription_plans: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          description: string | null
+          duration_months: number
+          features: Json | null
+          id: string
+          max_guards: number | null
+          max_teams: number | null
+          name: string
+          price: number
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          duration_months: number
+          features?: Json | null
+          id?: string
+          max_guards?: number | null
+          max_teams?: number | null
+          name: string
+          price: number
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          duration_months?: number
+          features?: Json | null
+          id?: string
+          max_guards?: number | null
+          max_teams?: number | null
+          name?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       swap_requests: {
         Row: {
@@ -311,6 +404,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_super_admin: {
+        Args: { _user_id: string }
         Returns: boolean
       }
     }

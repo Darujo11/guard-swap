@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -27,17 +27,25 @@ interface AppLayoutProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard/admin', icon: BarChart3 },
-  { name: 'Equipes', href: '/admin/equipes', icon: Users },
-  { name: 'Seguranças', href: '/admin/segurancas', icon: Shield },
-  { name: 'Trocas', href: '/admin/trocas', icon: Calendar },
-  { name: 'Escalas', href: '/admin/escalas', icon: ClipboardList },
-  { name: 'Extras', href: '/admin/extras', icon: Clock },
+  { name: 'Dashboard', href: '/dashboard/admin', icon: BarChart3, roles: ['admin', 'super_admin'] },
+  { name: 'Equipes', href: '/admin/equipes', icon: Users, roles: ['admin', 'super_admin'] },
+  { name: 'Seguranças', href: '/admin/segurancas', icon: Shield, roles: ['admin', 'super_admin'] },
+  { name: 'Trocas', href: '/admin/trocas', icon: Calendar, roles: ['admin', 'super_admin'] },
+  { name: 'Escalas', href: '/admin/escalas', icon: ClipboardList, roles: ['admin', 'super_admin'] },
+  { name: 'Extras', href: '/admin/extras', icon: Clock, roles: ['admin', 'super_admin'] },
 ];
 
 export function AppLayout({ children, title, user }: AppLayoutProps) {
   const { signOut } = useAuth();
   const { notifications, markAsRead, markAllAsRead } = useSwapNotifications();
+  const location = useLocation();
+  
+  const superAdminNavigation = [
+    { name: 'Planos', href: '/super-admin/planos', icon: DollarSign },
+    { name: 'Administradores', href: '/super-admin/administradores', icon: Crown },
+  ];
+  
+  const isSuperAdmin = user?.role === 'ADMIN' && location.pathname.includes('super-admin');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
@@ -66,6 +74,27 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
                   </Link>
                 </Button>
               ))}
+              
+              {/* Super Admin Menu */}
+              {user?.role === 'ADMIN' && (
+                <>
+                  <div className="h-6 w-px bg-border mx-2" />
+                  {superAdminNavigation.map((item) => (
+                    <Button
+                      key={item.name}
+                      variant="ghost"
+                      size="sm"
+                      className="gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+                      asChild
+                    >
+                      <Link to={item.href}>
+                        <item.icon className="h-4 w-4" />
+                        {item.name}
+                      </Link>
+                    </Button>
+                  ))}
+                </>
+              )}
             </div>
           </div>
 

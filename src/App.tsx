@@ -8,12 +8,15 @@ import { ProtectedRoute } from "@/components/guards/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import CreateAdmin from "./pages/CreateAdmin";
+import CreateSuperAdmin from "./pages/CreateSuperAdmin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminTeams from "./pages/AdminTeams";
 import AdminSwaps from "./pages/AdminSwaps";
 import AdminGuards from "./pages/AdminGuards";
 import AdminSchedule from "./pages/AdminSchedule";
 import AdminExtras from "./pages/AdminExtras";
+import SuperAdminPlans from "./pages/SuperAdminPlans";
+import SuperAdminManagement from "./pages/SuperAdminManagement";
 import GuardDashboard from "./pages/GuardDashboard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -30,6 +33,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/criar-admin" element={<CreateAdmin />} />
+          <Route path="/criar-super-admin" element={<CreateSuperAdmin />} />
           <Route 
             path="/dashboard/admin" 
             element={
@@ -75,6 +79,22 @@ const App = () => (
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminExtras />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/super-admin/planos" 
+            element={
+              <ProtectedRoute allowedRoles={['super_admin']}>
+                <SuperAdminPlans />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/super-admin/administradores" 
+            element={
+              <ProtectedRoute allowedRoles={['super_admin']}>
+                <SuperAdminManagement />
               </ProtectedRoute>
             } 
           />

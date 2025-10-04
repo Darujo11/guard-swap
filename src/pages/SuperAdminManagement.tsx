@@ -1,0 +1,398 @@
+import { useState, useEffect } from 'react';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Plus, UserPlus, Calendar, CheckCircle, XCircle } from 'lucide-react';
+import { format, addMonths } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+interface Admin {
+  id: string;
+  name: string;
+  email: string;
+  created_at: string;
+  subscription?: {
+    id: string;
+    plan: {
+      name: string;
+      price: number;
+    };
+    end_date: string;
+    status: string;
+    payment_status: string;
+  };
+}
+
+interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  duration_months: number;
+}
+
+export default function SuperAdminManagement() {
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
+  const [isAssignPlanOpen, setIsAssignPlanOpen] = useState(false);
+  const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
+  const [adminForm, setAdminForm] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
+  const [selectedPlanId, setSelectedPlanId] = useState('');
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      // Fetch admins with their subscriptions
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          user_roles!inner(role)
+        `)
+        .eq('user_roles.role', 'admin');
+
+      if (profilesError) throw profilesError;
+
+      // For each admin, fetch their subscription
+      const adminsWithSubs = await Promise.all(
+        (profiles || []).map(async (profile: any) => {
+          const { data: subscription } = await supabase
+            .from('admin_subscriptions')
+            .select(`
+              *,
+              plan:subscription_plans(name, price)
+            `)
+            .eq('admin_id', profile.id)
+            .eq('status', 'active')
+            .single();
+
+          return {
+            ...profile,
+            subscription: subscription as any
+          };
+        })
+      );
+
+      setAdmins(adminsWithSubs);
+
+      // Fetch active plans
+      const { data: plansData, error: plansError } = await supabase
+        .from('subscription_plans')
+        .select('*')
+        .eq('active', true)
+        .order('price');
+
+      if (plansError) throw plansError;
+      setPlans(plansData || []);
+    } catch (error: any) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: 'Erro ao carregar dados',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateAdmin = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-admin', {
+        body: {
+          email: adminForm.email,
+          password: adminForm.password,
+          name: adminForm.name
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Administrador criado',
+        description: 'O administrador foi criado com sucesso.',
+      });
+
+      setIsCreateAdminOpen(false);
+      setAdminForm({ name: '', email: '', password: '' });
+      fetchData();
+    } catch (error: any) {
+      console.error('Error creating admin:', error);
+      toast({
+        title: 'Erro ao criar administrador',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleAssignPlan = async () => {
+    if (!selectedAdmin || !selectedPlanId) return;
+
+    try {
+      const plan = plans.find(p => p.id === selectedPlanId);
+      if (!plan) throw new Error('Plano não encontrado');
+
+      const endDate = addMonths(new Date(), plan.duration_months);
+
+      const { error } = await supabase
+        .from('admin_subscriptions')
+        .insert({
+          admin_id: selectedAdmin.id,
+          plan_id: selectedPlanId,
+          end_date: endDate.toISOString(),
+          status: 'active',
+          payment_status: 'paid'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Plano atribuído',
+        description: 'O plano foi atribuído com sucesso ao administrador.',
+      });
+
+      setIsAssignPlanOpen(false);
+      setSelectedAdmin(null);
+      setSelectedPlanId('');
+      fetchData();
+    } catch (error: any) {
+      console.error('Error assigning plan:', error);
+      toast({
+        title: 'Erro ao atribuir plano',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const openAssignPlanDialog = (admin: Admin) => {
+    setSelectedAdmin(admin);
+    setIsAssignPlanOpen(true);
+  };
+
+  if (loading) {
+    return (
+      <AppLayout title="Gerenciar Administradores" user={{ name: 'Super Admin', role: 'ADMIN' }}>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Carregando...</div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout title="Gerenciar Administradores" user={{ name: 'Super Admin', role: 'ADMIN' }}>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Administradores</h2>
+            <p className="text-muted-foreground">Gerencie os administradores e suas assinaturas</p>
+          </div>
+          <Dialog open={isCreateAdminOpen} onOpenChange={setIsCreateAdminOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Administrador
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Criar Administrador</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="admin-name">Nome Completo *</Label>
+                  <Input
+                    id="admin-name"
+                    value={adminForm.name}
+                    onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}
+                    placeholder="Nome do administrador"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="admin-email">Email *</Label>
+                  <Input
+                    id="admin-email"
+                    type="email"
+                    value={adminForm.email}
+                    onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="admin-password">Senha *</Label>
+                  <Input
+                    id="admin-password"
+                    type="password"
+                    value={adminForm.password}
+                    onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                    placeholder="Senha inicial"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateAdminOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleCreateAdmin}>
+                  Criar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Lista de Administradores</CardTitle>
+            <CardDescription>
+              Total: {admins.length} administradores
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Plano</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Validade</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {admins.map((admin) => (
+                  <TableRow key={admin.id}>
+                    <TableCell className="font-medium">{admin.name}</TableCell>
+                    <TableCell>{admin.email}</TableCell>
+                    <TableCell>
+                      {admin.subscription ? (
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium">{admin.subscription.plan.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            R$ {admin.subscription.plan.price.toFixed(2)}
+                          </span>
+                        </div>
+                      ) : (
+                        <Badge variant="outline">Sem plano</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {admin.subscription ? (
+                        <Badge 
+                          variant={admin.subscription.status === 'active' ? 'default' : 'secondary'}
+                        >
+                          {admin.subscription.status === 'active' ? (
+                            <>
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Ativo
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Inativo
+                            </>
+                          )}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">-</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {admin.subscription ? (
+                        <span className="text-sm">
+                          {format(new Date(admin.subscription.end_date), "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openAssignPlanDialog(admin)}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        {admin.subscription ? 'Renovar' : 'Atribuir'} Plano
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Assign Plan Dialog */}
+        <Dialog open={isAssignPlanOpen} onOpenChange={setIsAssignPlanOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Atribuir Plano</DialogTitle>
+            </DialogHeader>
+            {selectedAdmin && (
+              <div className="space-y-4 py-4">
+                <div className="rounded-lg bg-muted p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Administrador:</span>
+                    <span className="font-medium">{selectedAdmin.name}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="plan-select">Selecionar Plano *</Label>
+                  <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolha um plano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plans.map((plan) => (
+                        <SelectItem key={plan.id} value={plan.id}>
+                          {plan.name} - R$ {plan.price.toFixed(2)} ({plan.duration_months} {plan.duration_months === 1 ? 'mês' : 'meses'})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAssignPlanOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleAssignPlan}>
+                Atribuir Plano
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </AppLayout>
+  );
+}

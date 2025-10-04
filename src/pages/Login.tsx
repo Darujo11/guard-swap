@@ -33,8 +33,14 @@ const Login = () => {
       .eq('user_id', userId);
 
     if (roles && roles.length > 0) {
-      const isAdmin = roles.some(r => r.role === 'admin');
-      navigate(isAdmin ? '/dashboard/admin' : '/dashboard/guard');
+      // Prioridade: super_admin > admin > guard
+      if (roles.some(r => r.role === 'super_admin')) {
+        navigate('/super-admin/planos');
+      } else if (roles.some(r => r.role === 'admin')) {
+        navigate('/dashboard/admin');
+      } else {
+        navigate('/dashboard/guard');
+      }
     }
   };
 
@@ -125,12 +131,18 @@ const Login = () => {
                 'Entrar'
               )}
             </Button>
-            <div className="text-center mt-4">
+            <div className="text-center mt-4 space-y-2">
               <a
                 href="/criar-admin"
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                className="block text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 Criar primeiro administrador
+              </a>
+              <a
+                href="/criar-super-admin"
+                className="block text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition-colors font-medium"
+              >
+                Criar Super Administrador
               </a>
             </div>
           </form>

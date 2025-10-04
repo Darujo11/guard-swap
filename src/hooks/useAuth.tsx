@@ -4,7 +4,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { Profile } from '@/lib/types';
 
-export type UserRole = 'admin' | 'guard';
+export type UserRole = 'admin' | 'guard' | 'super_admin';
 
 interface AuthUser {
   user: User | null;
@@ -83,7 +83,10 @@ export const useAuth = () => {
       .eq('user_id', userId);
 
     if (roles && roles.length > 0) {
-      return roles.some(r => r.role === 'admin') ? 'admin' : 'guard';
+      // Prioridade: super_admin > admin > guard
+      if (roles.some(r => r.role === 'super_admin')) return 'super_admin';
+      if (roles.some(r => r.role === 'admin')) return 'admin';
+      return 'guard';
     }
     return null;
   };
