@@ -237,47 +237,101 @@ export default function AdminExtras() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[AdminExtras] handleSubmit iniciado', { selectedGuard, extraDate, justification, quantity, profile });
 
-    if (!selectedGuard || !extraDate || !justification || !quantity || quantity < 1) {
+    // Validações detalhadas
+    if (!selectedGuard) {
       toast({
         variant: "destructive",
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos e a quantidade deve ser maior que zero.",
+        title: "Segurança não selecionado",
+        description: "Por favor, selecione um segurança.",
       });
       return;
     }
 
-    const { error } = await supabase.from("extras").insert({
-      guard_id: selectedGuard,
-      extra_date: format(extraDate, "yyyy-MM-dd"),
-      month_reference: format(startOfMonth(extraDate), "yyyy-MM-dd"),
-      justification,
-      quantity,
-      created_by: profile?.id,
-      admin_id: profile?.id,
-    });
-
-    if (error) {
+    if (!extraDate) {
       toast({
         variant: "destructive",
-        title: "Erro ao cadastrar extra",
-        description: error.message,
+        title: "Data não selecionada",
+        description: "Por favor, selecione a data do extra.",
       });
       return;
     }
 
-    toast({
-      title: "Extra cadastrado",
-      description: "Plantão extra registrado com sucesso.",
-    });
+    if (!justification || justification.trim().length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Justificativa obrigatória",
+        description: "Por favor, informe a fundamentação/justificativa.",
+      });
+      return;
+    }
 
-    // Reset form
-    setSelectedGuard("");
-    setExtraDate(undefined);
-    setJustification("");
-    setQuantity(1);
-    
-    fetchExtras();
+    if (!quantity || quantity < 1) {
+      toast({
+        variant: "destructive",
+        title: "Quantidade inválida",
+        description: "A quantidade de horas deve ser maior que zero.",
+      });
+      return;
+    }
+
+    if (!profile?.id) {
+      toast({
+        variant: "destructive",
+        title: "Erro de autenticação",
+        description: "Perfil do administrador não encontrado. Por favor, faça login novamente.",
+      });
+      return;
+    }
+
+    try {
+      const insertData = {
+        guard_id: selectedGuard,
+        extra_date: format(extraDate, "yyyy-MM-dd"),
+        month_reference: format(startOfMonth(extraDate), "yyyy-MM-dd"),
+        justification: justification.trim(),
+        quantity,
+        created_by: profile.id,
+        admin_id: profile.id,
+      };
+
+      console.log('[AdminExtras] Inserindo dados:', insertData);
+
+      const { data, error } = await supabase.from("extras").insert(insertData).select();
+
+      if (error) {
+        console.error('[AdminExtras] Erro ao inserir:', error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao cadastrar extra",
+          description: error.message,
+        });
+        return;
+      }
+
+      console.log('[AdminExtras] Extra cadastrado com sucesso:', data);
+
+      toast({
+        title: "Extra cadastrado",
+        description: "Plantão extra registrado com sucesso.",
+      });
+
+      // Reset form
+      setSelectedGuard("");
+      setExtraDate(undefined);
+      setJustification("");
+      setQuantity(1);
+      
+      fetchExtras();
+    } catch (err) {
+      console.error('[AdminExtras] Erro inesperado:', err);
+      toast({
+        variant: "destructive",
+        title: "Erro inesperado",
+        description: "Ocorreu um erro ao cadastrar o extra. Tente novamente.",
+      });
+    }
   };
 
   const openEditDialog = (extra: Extra) => {
