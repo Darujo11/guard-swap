@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import logoImage from '@/assets/logo.png';
 
 const CreateAdmin = () => {
   const [loading, setLoading] = useState(false);
@@ -38,11 +39,9 @@ const CreateAdmin = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center">
-              <Shield className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-transparent">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <img src={logoImage} alt="Escala Smart" className="h-12 w-12" />
+            <h1 className="text-3xl font-bold">
               Escala Smart
             </h1>
           </div>
@@ -89,10 +88,7 @@ const CreateAdmin = () => {
                     Criando Administrador...
                   </>
                 ) : (
-                  <>
-                    <Shield className="mr-2 h-4 w-4" />
-                    Criar Administrador
-                  </>
+                  'Criar Administrador'
                 )}
               </Button>
             </>

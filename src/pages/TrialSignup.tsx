@@ -4,9 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Shield, CheckCircle, Loader2, Clock } from 'lucide-react';
+import { CheckCircle, Loader2, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import logoImage from '@/assets/logo.png';
 
 const TrialSignup = () => {
   const [formData, setFormData] = useState({
@@ -64,11 +65,9 @@ const TrialSignup = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center">
-              <Shield className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-transparent">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <img src={logoImage} alt="Escala Smart" className="h-12 w-12" />
+            <h1 className="text-3xl font-bold">
               Escala Smart
             </h1>
           </div>
