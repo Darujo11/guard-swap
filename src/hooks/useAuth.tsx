@@ -103,24 +103,23 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
-      // Clear local state first
-      setAuthState({
-        user: null,
-        session: null,
-        role: null,
-        profile: null,
-        loading: false,
-      });
-      
-      // Attempt to sign out from Supabase
+      // Sign out from Supabase
       await supabase.auth.signOut();
     } catch (error) {
-      // Ignore errors - we're logging out anyway
       console.error('[Auth] Erro ao fazer logout:', error);
-    } finally {
-      // Always redirect to login
-      navigate('/login', { replace: true });
     }
+    
+    // Clear local state
+    setAuthState({
+      user: null,
+      session: null,
+      role: null,
+      profile: null,
+      loading: false,
+    });
+    
+    // Redirect to login
+    window.location.href = '/login';
   };
 
   return {
