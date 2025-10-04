@@ -144,7 +144,7 @@ const GuardDashboard = () => {
       user={{ 
         name: currentUser.name, 
         role: 'GUARD', 
-        teamName: currentUser.team?.name || 'Sem equipe'
+        teamName: currentUser.team?.name
       }}
     >
       {/* Quick Actions */}

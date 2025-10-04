@@ -321,10 +321,10 @@ const AdminDashboard = () => {
                   <div className="space-y-2 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium">{request.requester?.name}</span>
-                      <TeamBadge team={request.requester?.team?.name || 'Sem equipe'} />
+                      {request.requester?.team && <TeamBadge team={request.requester.team} />}
                       <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">{request.target?.name}</span>
-                      <TeamBadge team={request.target?.team?.name || 'Sem equipe'} />
+                      {request.target?.team && <TeamBadge team={request.target.team} />}
                     </div>
                     
                     <div className="text-sm text-muted-foreground space-y-1">

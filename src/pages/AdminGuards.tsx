@@ -389,7 +389,7 @@ const AdminGuards = () => {
                         {guard.team ? (
                           <TeamBadge team={guard.team} />
                         ) : (
-                          <Badge variant="outline">Sem equipe</Badge>
+                          <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell>
