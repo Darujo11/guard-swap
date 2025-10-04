@@ -335,7 +335,7 @@ const AdminSwaps = () => {
                   <span class="value">${format(new Date(request.admin_approved_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.admin_approved_at), 'HH:mm', { locale: ptBR })}</span>
                 </div>
                 <div class="info-row">
-                  <span class="label">Decidido por:</span> 
+                  <span class="label">Aprovado por:</span> 
                   <span class="value">${request.admin_approver?.name || 'Coordenador'}</span>
                 </div>
               </div>
