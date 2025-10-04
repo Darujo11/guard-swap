@@ -63,6 +63,19 @@ export default function AdminExtras() {
     applyFilters();
   }, [extras, filterMonth]);
 
+  const monthlySummary = useMemo(() => {
+    const summary = guards.map(guard => {
+      const guardExtras = filteredExtras.filter(e => e.guard_id === guard.id);
+      const totalHours = guardExtras.reduce((sum, e) => sum + (Number(e.quantity) || 0), 0);
+      return {
+        guardId: guard.id,
+        guardName: guard.name,
+        totalHours
+      };
+    });
+    return summary.sort((a, b) => b.totalHours - a.totalHours);
+  }, [guards, filteredExtras]);
+
   const fetchGuards = async () => {
     // 1) Buscar todos os user_ids com papel de guard
     const { data: rolesData, error: rolesError } = await supabase
@@ -456,10 +469,46 @@ export default function AdminExtras() {
         </CardContent>
       </Card>
 
+      {/* Monthly Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Resumo Mensal - Ranking de Extras</CardTitle>
+          <CardDescription>
+            Total de horas de extras por segurança no período selecionado
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {extrasLoading ? (
+            <div className="text-center py-8">Carregando...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Posição</TableHead>
+                    <TableHead>Segurança</TableHead>
+                    <TableHead className="text-center">Total de Horas</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {monthlySummary.map((item, index) => (
+                    <TableRow key={item.guardId}>
+                      <TableCell className="font-medium">{index + 1}º</TableCell>
+                      <TableCell>{item.guardName}</TableCell>
+                      <TableCell className="text-center font-semibold">{item.totalHours}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Extras Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Registros de Extras</CardTitle>
+          <CardTitle>Registros Detalhados de Extras</CardTitle>
           <CardDescription>
             {filteredExtras.length} {filteredExtras.length === 1 ? "registro encontrado" : "registros encontrados"}
           </CardDescription>
