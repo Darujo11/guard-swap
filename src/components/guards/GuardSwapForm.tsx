@@ -431,8 +431,8 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
                     },
                     targetTeam: {
                       fontWeight: '600',
-                      backgroundColor: 'hsl(var(--secondary))',
-                      color: 'hsl(var(--secondary-foreground))',
+                      backgroundColor: 'hsl(142 76% 36%)',
+                      color: 'white',
                       borderRadius: '0.375rem'
                     }
                   }}
