@@ -109,25 +109,56 @@ export default function AdminExtras() {
 
   const fetchExtras = async () => {
     setExtrasLoading(true);
-    const { data, error } = await supabase
+
+    // 1) Buscar extras sem join
+    const { data: extrasData, error: extrasError } = await supabase
       .from("extras")
-      .select(`
-        *,
-        guard:profiles!extras_guard_id_fkey(*)
-      `)
+      .select("*")
       .order("extra_date", { ascending: false });
 
-    if (error) {
+    if (extrasError) {
       toast({
         variant: "destructive",
         title: "Erro ao carregar extras",
-        description: error.message,
+        description: extrasError.message,
       });
       setExtrasLoading(false);
       return;
     }
 
-    setExtras(data || []);
+    const extrasList = extrasData || [];
+
+    // 2) Buscar perfis dos guards usados nos extras
+    const guardIds = Array.from(new Set(extrasList.map((e) => e.guard_id).filter(Boolean)));
+
+    let profilesMap: Record<string, Profile> = {};
+    if (guardIds.length) {
+      const { data: profiles, error: profilesErr } = await supabase
+        .from("profiles")
+        .select("*")
+        .in("id", guardIds);
+
+      if (profilesErr) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar perfis",
+          description: profilesErr.message,
+        });
+      } else {
+        profilesMap = (profiles || []).reduce((acc, p) => {
+          acc[p.id] = p as Profile;
+          return acc;
+        }, {} as Record<string, Profile>);
+      }
+    }
+
+    const withGuards: Extra[] = extrasList.map((e) => ({
+      ...(e as any),
+      quantity: (e as any).quantity ?? 1,
+      guard: e.guard_id ? profilesMap[e.guard_id] : undefined,
+    }));
+
+    setExtras(withGuards);
     setExtrasLoading(false);
   };
 
@@ -239,19 +270,16 @@ export default function AdminExtras() {
     const monthCounts: { [key: string]: number } = {};
     
     extras.forEach(extra => {
-      const month = format(new Date(extra.month_reference), "MMM/yyyy", { locale: ptBR });
+      // Usar chave estável ISO para ordenar corretamente
+      const key = format(new Date(extra.month_reference), "yyyy-MM");
       const qty = Number(extra.quantity) || 1;
-      monthCounts[month] = (monthCounts[month] || 0) + qty;
+      monthCounts[key] = (monthCounts[key] || 0) + qty;
     });
 
     const result = Object.entries(monthCounts)
-      .sort((a, b) => {
-        const dateA = new Date(a[0].split("/").reverse().join("-"));
-        const dateB = new Date(b[0].split("/").reverse().join("-"));
-        return dateA.getTime() - dateB.getTime();
-      })
-      .map(([month, count]) => ({
-        month,
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([key, count]) => ({
+        month: format(new Date(`${key}-01`), "MMM/yyyy", { locale: ptBR }),
         extras: count,
       }));
     
@@ -297,7 +325,8 @@ export default function AdminExtras() {
 
       // Chart data summary
       const chartData = generateChartData();
-      let finalY = (doc as any).lastAutoTable.finalY + 10;
+      const lastY = (doc as any).lastAutoTable?.finalY ?? 60;
+      let finalY = lastY + 10;
 
       doc.setFontSize(14);
       doc.text("Distribuição por Segurança", 14, finalY);
