@@ -66,14 +66,27 @@ export default function SuperAdminManagement() {
 
   const fetchData = async () => {
     try {
-      // Fetch admins with their subscriptions
+      // Fetch admin role user IDs
+      const { data: adminRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
+
+      if (rolesError) throw rolesError;
+
+      if (!adminRoles || adminRoles.length === 0) {
+        setAdmins([]);
+        setLoading(false);
+        return;
+      }
+
+      const adminUserIds = adminRoles.map(r => r.user_id);
+
+      // Fetch profiles for those user IDs
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          user_roles!inner(role)
-        `)
-        .eq('user_roles.role', 'admin');
+        .select('*')
+        .in('user_id', adminUserIds);
 
       if (profilesError) throw profilesError;
 
@@ -88,7 +101,7 @@ export default function SuperAdminManagement() {
             `)
             .eq('admin_id', profile.id)
             .eq('status', 'active')
-            .single();
+            .maybeSingle();
 
           return {
             ...profile,
