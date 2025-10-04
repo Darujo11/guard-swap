@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import { z } from "zod";
 
 const profileSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("Email inválido").min(1, "Email é obrigatório"),
   phone: z.string().optional(),
 });
@@ -94,7 +95,7 @@ export default function Profile() {
     
     try {
       // Validate profile data
-      profileSchema.parse({ email, phone });
+      profileSchema.parse({ name, email, phone });
       
       setLoading(true);
 
@@ -112,10 +113,11 @@ export default function Profile() {
         });
       }
 
-      // Update phone in profiles table
+      // Update name, phone and email in profiles table
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
+          name: name,
           phone: phone,
           email: email,
         })
@@ -232,12 +234,12 @@ export default function Profile() {
                 <Input
                   id="name"
                   value={name}
-                  disabled
-                  className="bg-muted"
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Seu nome completo"
                 />
-                <p className="text-xs text-muted-foreground">
-                  O nome não pode ser alterado aqui
-                </p>
+                {errors.name && (
+                  <p className="text-xs text-destructive">{errors.name}</p>
+                )}
               </div>
 
               <div className="space-y-2">
