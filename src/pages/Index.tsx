@@ -191,8 +191,8 @@ const Index = () => {
       <nav className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <img src={logoImage} alt="Escala Smart" className="h-8 w-auto" />
+            <div className="flex items-center gap-3">
+              <img src={logoImage} alt="Escala Smart" className="h-10 w-10" />
               <span className="text-2xl font-bold">Escala Smart</span>
             </div>
             <Button onClick={() => setSelectedRole('ADMIN')}>

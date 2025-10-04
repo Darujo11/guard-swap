@@ -104,8 +104,8 @@ const Login = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <img src={logoImage} alt="Escala Smart" className="h-10 w-auto" />
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <img src={logoImage} alt="Escala Smart" className="h-12 w-12" />
             <h1 className="text-2xl font-bold">Escala Smart</h1>
           </div>
           <CardTitle>Login</CardTitle>
