@@ -222,13 +222,17 @@ export default function AdminExtras() {
     
     filteredExtras.forEach(extra => {
       const guardName = extra.guard?.name || "Desconhecido";
-      guardCounts[guardName] = (guardCounts[guardName] || 0) + (extra.quantity || 1);
+      const qty = Number(extra.quantity) || 1;
+      guardCounts[guardName] = (guardCounts[guardName] || 0) + qty;
     });
 
-    return Object.entries(guardCounts).map(([name, count]) => ({
+    const result = Object.entries(guardCounts).map(([name, count]) => ({
       name,
       extras: count,
     }));
+    
+    console.log("Chart Data:", result, "Filtered Extras:", filteredExtras);
+    return result;
   };
 
   const generateMonthlyData = () => {
@@ -236,10 +240,11 @@ export default function AdminExtras() {
     
     extras.forEach(extra => {
       const month = format(new Date(extra.month_reference), "MMM/yyyy", { locale: ptBR });
-      monthCounts[month] = (monthCounts[month] || 0) + (extra.quantity || 1);
+      const qty = Number(extra.quantity) || 1;
+      monthCounts[month] = (monthCounts[month] || 0) + qty;
     });
 
-    return Object.entries(monthCounts)
+    const result = Object.entries(monthCounts)
       .sort((a, b) => {
         const dateA = new Date(a[0].split("/").reverse().join("-"));
         const dateB = new Date(b[0].split("/").reverse().join("-"));
@@ -249,76 +254,88 @@ export default function AdminExtras() {
         month,
         extras: count,
       }));
+    
+    console.log("Monthly Data:", result, "All Extras:", extras);
+    return result;
   };
 
   const generatePDF = () => {
-    const doc = new jsPDF();
-    
-    // Header
-    doc.setFontSize(18);
-    doc.text("Relatório de Plantões Extras", 14, 20);
-    
-    doc.setFontSize(11);
-    doc.text(`Período: ${format(filterMonth, "MMMM 'de' yyyy", { locale: ptBR })}`, 14, 30);
-    doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 36);
+    try {
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFontSize(18);
+      doc.text("Relatório de Plantões Extras", 14, 20);
+      
+      doc.setFontSize(11);
+      doc.text(`Período: ${format(filterMonth, "MMMM 'de' yyyy", { locale: ptBR })}`, 14, 30);
+      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 36);
 
-    // Summary
-    doc.setFontSize(14);
-    doc.text("Resumo", 14, 46);
-    doc.setFontSize(10);
-    const totalExtras = filteredExtras.reduce((sum, extra) => sum + (extra.quantity || 1), 0);
-    doc.text(`Total de extras no período: ${totalExtras}`, 14, 52);
+      // Summary
+      doc.setFontSize(14);
+      doc.text("Resumo", 14, 46);
+      doc.setFontSize(10);
+      const totalExtras = filteredExtras.reduce((sum, extra) => sum + (Number(extra.quantity) || 1), 0);
+      doc.text(`Total de extras no período: ${totalExtras}`, 14, 52);
 
-    // Table data
-    const tableData = filteredExtras.map(extra => [
-      extra.guard?.name || "Desconhecido",
-      format(new Date(extra.extra_date), "dd/MM/yyyy", { locale: ptBR }),
-      format(new Date(extra.month_reference), "MMM/yyyy", { locale: ptBR }),
-      extra.quantity?.toString() || "1",
-      extra.justification,
-    ]);
+      // Table data
+      const tableData = filteredExtras.map(extra => [
+        extra.guard?.name || "Desconhecido",
+        format(new Date(extra.extra_date), "dd/MM/yyyy", { locale: ptBR }),
+        format(new Date(extra.month_reference), "MMM/yyyy", { locale: ptBR }),
+        (extra.quantity || 1).toString(),
+        extra.justification,
+      ]);
 
-    autoTable(doc, {
-      startY: 60,
-      head: [["Segurança", "Data do Extra", "Mês Ref.", "Qtd", "Fundamentação"]],
-      body: tableData,
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [59, 130, 246] },
-    });
+      autoTable(doc, {
+        startY: 60,
+        head: [["Segurança", "Data do Extra", "Mês Ref.", "Qtd", "Fundamentação"]],
+        body: tableData,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [59, 130, 246] },
+      });
 
-    // Chart data summary
-    const chartData = generateChartData();
-    let finalY = (doc as any).lastAutoTable.finalY + 10;
+      // Chart data summary
+      const chartData = generateChartData();
+      let finalY = (doc as any).lastAutoTable.finalY + 10;
 
-    doc.setFontSize(14);
-    doc.text("Distribuição por Segurança", 14, finalY);
-    
-    finalY += 6;
-    doc.setFontSize(10);
-    chartData.forEach(item => {
-      doc.text(`${item.name}: ${item.extras} extras`, 14, finalY);
+      doc.setFontSize(14);
+      doc.text("Distribuição por Segurança", 14, finalY);
+      
       finalY += 6;
-    });
+      doc.setFontSize(10);
+      chartData.forEach(item => {
+        doc.text(`${item.name}: ${item.extras} extras`, 14, finalY);
+        finalY += 6;
+      });
 
-    // Footer
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.text(
-        `Página ${i} de ${pageCount}`,
-        doc.internal.pageSize.getWidth() / 2,
-        doc.internal.pageSize.getHeight() - 10,
-        { align: "center" }
-      );
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.text(
+          `Página ${i} de ${pageCount}`,
+          doc.internal.pageSize.getWidth() / 2,
+          doc.internal.pageSize.getHeight() - 10,
+          { align: "center" }
+        );
+      }
+
+      doc.save(`relatorio-extras-${format(filterMonth, "MM-yyyy")}.pdf`);
+      
+      toast({
+        title: "PDF gerado",
+        description: "Relatório exportado com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao gerar PDF",
+        description: "Ocorreu um erro ao gerar o relatório. Verifique o console.",
+      });
     }
-
-    doc.save(`relatorio-extras-${format(filterMonth, "MM-yyyy")}.pdf`);
-    
-    toast({
-      title: "PDF gerado",
-      description: "Relatório exportado com sucesso.",
-    });
   };
 
   return (
