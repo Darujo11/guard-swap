@@ -26,7 +26,7 @@ const passwordSchema = z.object({
 });
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -46,13 +46,13 @@ export default function Profile() {
   const [errors, setErrors] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
+    if (authLoading) return; // espere auth carregar
     if (!user) {
       navigate("/login");
       return;
     }
-    
     fetchProfile();
-  }, [user, navigate]);
+  }, [authLoading, user, navigate]);
 
   const fetchProfile = async () => {
     if (!user) return;
