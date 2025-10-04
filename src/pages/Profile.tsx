@@ -99,8 +99,28 @@ export default function Profile() {
       
       setLoading(true);
 
-      // Update email in auth if changed
-      if (email !== user?.email) {
+      // Get current profile to check what changed
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("phone, email")
+        .eq("user_id", user!.id)
+        .single();
+
+      // If phone changed and user originally logged in with phone, update auth email
+      if (phone && currentProfile?.phone !== phone) {
+        // Check if current auth email is in the guardshift.com format (phone login)
+        if (user?.email?.endsWith('@guardshift.com')) {
+          const newAuthEmail = `${phone}@guardshift.com`;
+          const { error: authError } = await supabase.auth.updateUser({
+            email: newAuthEmail,
+          });
+
+          if (authError) throw authError;
+        }
+      }
+
+      // Update regular email in auth if changed and not a phone-based email
+      if (email !== user?.email && !email.endsWith('@guardshift.com')) {
         const { error: authError } = await supabase.auth.updateUser({
           email: email,
         });
@@ -257,17 +277,20 @@ export default function Profile() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefone</Label>
+                <Label htmlFor="phone">Telefone (WhatsApp)</Label>
                 <Input
                   id="phone"
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="(00) 00000-0000"
+                  placeholder="11999999999"
                 />
                 {errors.phone && (
                   <p className="text-xs text-destructive">{errors.phone}</p>
                 )}
+                <p className="text-xs text-muted-foreground">
+                  Se você faz login com WhatsApp, alterar este número atualizará suas credenciais
+                </p>
               </div>
 
               <Button
