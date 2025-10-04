@@ -14,9 +14,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Plus, FileText, BarChart3, Trash2 } from "lucide-react";
+import { CalendarIcon, Plus, FileText, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
+
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Profile } from "@/lib/types";
@@ -48,7 +48,6 @@ export default function AdminExtras() {
   const [quantity, setQuantity] = useState<number>(1);
   
   // Filter state
-  const [filterGuard, setFilterGuard] = useState<string>("all");
   const [filterMonth, setFilterMonth] = useState<Date>(new Date());
 
   useEffect(() => {
@@ -63,7 +62,7 @@ export default function AdminExtras() {
 
   useEffect(() => {
     applyFilters();
-  }, [extras, filterGuard, filterMonth]);
+  }, [extras, filterMonth]);
 
   const fetchGuards = async () => {
     // 1) Buscar todos os user_ids com papel de guard
@@ -163,15 +162,9 @@ export default function AdminExtras() {
   };
 
   const applyFilters = () => {
-    let filtered = [...extras];
-
-    if (filterGuard !== "all") {
-      filtered = filtered.filter(extra => extra.guard_id === filterGuard);
-    }
-
     const startMonth = startOfMonth(filterMonth);
     const endMonth = endOfMonth(filterMonth);
-    filtered = filtered.filter(extra => {
+    const filtered = extras.filter(extra => {
       const extraMonth = new Date(extra.month_reference);
       return extraMonth >= startMonth && extraMonth <= endMonth;
     });
@@ -248,52 +241,13 @@ export default function AdminExtras() {
     fetchExtras();
   };
 
-  const generateChartData = () => {
-    const guardCounts: { [key: string]: number } = {};
-    
-    filteredExtras.forEach(extra => {
-      const guardName = extra.guard?.name || "Desconhecido";
-      const qty = Number(extra.quantity) || 1;
-      guardCounts[guardName] = (guardCounts[guardName] || 0) + qty;
-    });
-
-    const result = Object.entries(guardCounts).map(([name, count]) => ({
-      name,
-      extras: count,
-    }));
-    
-    console.log("Chart Data:", result, "Filtered Extras:", filteredExtras);
-    return result;
-  };
-
-  const generateMonthlyData = () => {
-    const monthCounts: { [key: string]: number } = {};
-    
-    extras.forEach(extra => {
-      // Usar chave estável ISO para ordenar corretamente
-      const key = format(new Date(extra.month_reference), "yyyy-MM");
-      const qty = Number(extra.quantity) || 1;
-      monthCounts[key] = (monthCounts[key] || 0) + qty;
-    });
-
-    const result = Object.entries(monthCounts)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([key, count]) => ({
-        month: format(new Date(`${key}-01`), "MMM/yyyy", { locale: ptBR }),
-        extras: count,
-      }));
-    
-    console.log("Monthly Data:", result, "All Extras:", extras);
-    return result;
-  };
-
   const generatePDF = () => {
     try {
       const doc = new jsPDF();
       
       // Header
       doc.setFontSize(18);
-      doc.text("Relatório de Plantões Extras", 14, 20);
+      doc.text("Relatório Mensal de Plantões Extras", 14, 20);
       
       doc.setFontSize(11);
       doc.text(`Período: ${format(filterMonth, "MMMM 'de' yyyy", { locale: ptBR })}`, 14, 30);
@@ -309,33 +263,23 @@ export default function AdminExtras() {
       // Table data
       const tableData = filteredExtras.map(extra => [
         extra.guard?.name || "Desconhecido",
-        format(new Date(extra.extra_date), "dd/MM/yyyy", { locale: ptBR }),
-        format(new Date(extra.month_reference), "MMM/yyyy", { locale: ptBR }),
         (extra.quantity || 1).toString(),
+        format(new Date(extra.extra_date), "dd/MM/yyyy", { locale: ptBR }),
         extra.justification,
       ]);
 
       autoTable(doc, {
         startY: 60,
-        head: [["Segurança", "Data do Extra", "Mês Ref.", "Qtd", "Fundamentação"]],
+        head: [["Segurança", "Quantidade", "Dia", "Fundamentação"]],
         body: tableData,
         styles: { fontSize: 9 },
         headStyles: { fillColor: [59, 130, 246] },
-      });
-
-      // Chart data summary
-      const chartData = generateChartData();
-      const lastY = (doc as any).lastAutoTable?.finalY ?? 60;
-      let finalY = lastY + 10;
-
-      doc.setFontSize(14);
-      doc.text("Distribuição por Segurança", 14, finalY);
-      
-      finalY += 6;
-      doc.setFontSize(10);
-      chartData.forEach(item => {
-        doc.text(`${item.name}: ${item.extras} extras`, 14, finalY);
-        finalY += 6;
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 25, halign: 'center' },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 'auto' }
+        }
       });
 
       // Footer
@@ -362,7 +306,7 @@ export default function AdminExtras() {
       toast({
         variant: "destructive",
         title: "Erro ao gerar PDF",
-        description: "Ocorreu um erro ao gerar o relatório. Verifique o console.",
+        description: "Ocorreu um erro ao gerar o relatório.",
       });
     }
   };
@@ -490,27 +434,11 @@ export default function AdminExtras() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle>Relatório Mensal</CardTitle>
+          <CardDescription>Selecione o período e gere o relatório em PDF</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Segurança</Label>
-              <Select value={filterGuard} onValueChange={setFilterGuard}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {guards.map(guard => (
-                    <SelectItem key={guard.id} value={guard.id}>
-                      {guard.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Período</Label>
               <Popover>
@@ -543,53 +471,6 @@ export default function AdminExtras() {
         </CardContent>
       </Card>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Extras por Segurança
-            </CardTitle>
-            <CardDescription>Distribuição de plantões extras no período selecionado</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={generateChartData()}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="extras" fill="hsl(var(--primary))" name="Quantidade de Extras" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Evolução Mensal
-            </CardTitle>
-            <CardDescription>Quantidade de extras ao longo dos meses</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={generateMonthlyData()}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="extras" stroke="hsl(var(--primary))" name="Quantidade de Extras" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Extras Table */}
       <Card>
         <CardHeader>
@@ -611,9 +492,8 @@ export default function AdminExtras() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Segurança</TableHead>
-                    <TableHead>Data do Extra</TableHead>
-                    <TableHead>Mês Ref.</TableHead>
-                    <TableHead className="text-center">Qtd</TableHead>
+                    <TableHead className="text-center">Quantidade</TableHead>
+                    <TableHead>Dias</TableHead>
                     <TableHead>Fundamentação</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -621,11 +501,10 @@ export default function AdminExtras() {
                 <TableBody>
                   {filteredExtras.map((extra) => (
                     <TableRow key={extra.id}>
-                      <TableCell className="font-medium">{extra.guard?.name}</TableCell>
-                      <TableCell>{format(new Date(extra.extra_date), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
-                      <TableCell>{format(new Date(extra.month_reference), "MMM/yyyy", { locale: ptBR })}</TableCell>
+                      <TableCell className="font-medium">{extra.guard?.name || "Desconhecido"}</TableCell>
                       <TableCell className="text-center font-semibold">{extra.quantity || 1}</TableCell>
-                      <TableCell className="max-w-md truncate">{extra.justification}</TableCell>
+                      <TableCell>{format(new Date(extra.extra_date), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
+                      <TableCell className="max-w-md">{extra.justification}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
