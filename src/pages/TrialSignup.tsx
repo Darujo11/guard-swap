@@ -67,9 +67,7 @@ const TrialSignup = () => {
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <img src={logoImage} alt="Escala Smart" className="h-10 w-auto" />
-            <h1 className="text-2xl font-bold">
-              Escala Smart
-            </h1>
+            <h1 className="text-2xl font-bold">Escala Smart</h1>
           </div>
           <CardTitle>Teste Grátis de 7 Dias</CardTitle>
           <CardDescription>
