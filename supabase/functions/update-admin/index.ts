@@ -1,9 +1,9 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -13,69 +13,36 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Verify the caller is a super admin
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'No authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check if user is super admin
-    const { data: roles } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'super_admin')
-      .single();
-
-    if (!roles) {
-      return new Response(
-        JSON.stringify({ error: 'Only super admins can update admins' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     const { admin_id, name, email, is_active } = await req.json();
 
     if (!admin_id) {
       return new Response(
-        JSON.stringify({ error: 'admin_id is required' }),
+        JSON.stringify({ error: 'admin_id é obrigatório' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get the user_id from profile
+    console.log('Atualizando administrador:', admin_id);
+
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('user_id')
+      .select('user_id, email')
       .eq('id', admin_id)
       .single();
 
-    if (profileError || !profile?.user_id) {
+    if (profileError || !profile) {
+      console.error('Erro ao buscar perfil:', profileError);
       return new Response(
-        JSON.stringify({ error: 'Admin profile not found' }),
+        JSON.stringify({ error: 'Administrador não encontrado' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Update profile
     const profileUpdates: any = {};
     if (name !== undefined) profileUpdates.name = name;
-    if (email !== undefined) profileUpdates.email = email;
     if (is_active !== undefined) profileUpdates.is_active = is_active;
 
     if (Object.keys(profileUpdates).length > 0) {
@@ -85,38 +52,42 @@ Deno.serve(async (req) => {
         .eq('id', admin_id);
 
       if (updateProfileError) {
-        console.error('Error updating profile:', updateProfileError);
+        console.error('Erro ao atualizar perfil:', updateProfileError);
         return new Response(
-          JSON.stringify({ error: updateProfileError.message }),
+          JSON.stringify({ error: 'Erro ao atualizar perfil' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
     }
 
-    // Update auth email if provided
-    if (email) {
+    if (email && email !== profile.email) {
       const { error: updateEmailError } = await supabase.auth.admin.updateUserById(
         profile.user_id,
-        { email }
+        { email: email }
       );
 
       if (updateEmailError) {
-        console.error('Error updating email:', updateEmailError);
+        console.error('Erro ao atualizar email:', updateEmailError);
         return new Response(
-          JSON.stringify({ error: updateEmailError.message }),
+          JSON.stringify({ error: 'Erro ao atualizar email' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      await supabase
+        .from('profiles')
+        .update({ email: email })
+        .eq('id', admin_id);
     }
 
-    console.log(`Admin updated successfully: ${admin_id}`);
+    console.log('Administrador atualizado com sucesso');
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Admin updated successfully' }),
+      JSON.stringify({ success: true, message: 'Administrador atualizado com sucesso' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in update-admin function:', error);
+    console.error('Erro:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

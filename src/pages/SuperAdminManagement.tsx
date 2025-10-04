@@ -63,7 +63,8 @@ export default function SuperAdminManagement() {
   });
   const [editForm, setEditForm] = useState({
     name: '',
-    email: ''
+    email: '',
+    is_active: true
   });
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const { toast } = useToast();
@@ -221,11 +222,105 @@ export default function SuperAdminManagement() {
 
   const openEditDialog = (admin: Admin) => {
     setSelectedAdmin(admin);
-    setEditForm({ name: admin.name, email: admin.email });
+    setEditForm({
+      name: admin.name,
+      email: admin.email,
+      is_active: admin.is_active
+    });
     setIsEditAdminOpen(true);
   };
 
   const handleEditAdmin = async () => {
+    if (!selectedAdmin) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('update-admin', {
+        body: {
+          admin_id: selectedAdmin.id,
+          name: editForm.name,
+          email: editForm.email,
+          is_active: editForm.is_active
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Administrador atualizado',
+        description: 'As informações foram atualizadas com sucesso.',
+      });
+
+      setIsEditAdminOpen(false);
+      setSelectedAdmin(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error updating admin:', error);
+      toast({
+        title: 'Erro ao atualizar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteAdmin = async (admin: Admin) => {
+    if (!confirm(`Tem certeza que deseja excluir o administrador ${admin.name}?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke('delete-admin', {
+        body: {
+          admin_id: admin.id
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Administrador excluído',
+        description: 'O administrador foi removido com sucesso.',
+      });
+
+      fetchData();
+    } catch (error: any) {
+      console.error('Error deleting admin:', error);
+      toast({
+        title: 'Erro ao excluir',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleToggleActive = async (admin: Admin) => {
+    try {
+      const { error } = await supabase.functions.invoke('update-admin', {
+        body: {
+          admin_id: admin.id,
+          is_active: !admin.is_active
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: admin.is_active ? 'Admin suspenso' : 'Admin ativado',
+        description: `O administrador foi ${admin.is_active ? 'suspenso' : 'ativado'} com sucesso.`,
+      });
+
+      fetchData();
+    } catch (error: any) {
+      console.error('Error toggling active:', error);
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (loading) {
     if (!selectedAdmin) return;
 
     try {
@@ -510,6 +605,53 @@ export default function SuperAdminManagement() {
           </CardContent>
         </Card>
 
+        {/* Edit Admin Dialog */}
+        <Dialog open={isEditAdminOpen} onOpenChange={setIsEditAdminOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Administrador</DialogTitle>
+            </DialogHeader>
+            {selectedAdmin && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Nome</Label>
+                  <Input
+                    id="edit-name"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">Email</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="edit-active">Status Ativo</Label>
+                  <input
+                    id="edit-active"
+                    type="checkbox"
+                    checked={editForm.is_active}
+                    onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditAdminOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleEditAdmin}>
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Assign Plan Dialog */}
         <Dialog open={isAssignPlanOpen} onOpenChange={setIsAssignPlanOpen}>
           <DialogContent>
@@ -548,46 +690,6 @@ export default function SuperAdminManagement() {
               </Button>
               <Button onClick={handleAssignPlan}>
                 Atribuir Plano
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Admin Dialog */}
-        <Dialog open={isEditAdminOpen} onOpenChange={setIsEditAdminOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Editar Administrador</DialogTitle>
-            </DialogHeader>
-            {selectedAdmin && (
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Nome *</Label>
-                  <Input
-                    id="edit-name"
-                    value={editForm.name}
-                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                    placeholder="Nome completo"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-email">Email *</Label>
-                  <Input
-                    id="edit-email"
-                    type="email"
-                    value={editForm.email}
-                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                    placeholder="email@exemplo.com"
-                  />
-                </div>
-              </div>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditAdminOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleEditAdmin}>
-                Salvar Alterações
               </Button>
             </DialogFooter>
           </DialogContent>
