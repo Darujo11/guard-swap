@@ -27,6 +27,7 @@ interface Extra {
   extra_date: string;
   month_reference: string;
   justification: string;
+  quantity: number;
   created_at: string;
   guard?: Profile;
 }
@@ -44,6 +45,7 @@ export default function AdminExtras() {
   const [extraDate, setExtraDate] = useState<Date>();
   const [monthReference, setMonthReference] = useState<Date>(new Date());
   const [justification, setJustification] = useState("");
+  const [quantity, setQuantity] = useState<number>(1);
   
   // Filter state
   const [filterGuard, setFilterGuard] = useState<string>("all");
@@ -149,11 +151,11 @@ export default function AdminExtras() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedGuard || !extraDate || !monthReference || !justification) {
+    if (!selectedGuard || !extraDate || !monthReference || !justification || !quantity || quantity < 1) {
       toast({
         variant: "destructive",
         title: "Campos obrigatórios",
-        description: "Preencha todos os campos antes de cadastrar.",
+        description: "Preencha todos os campos e a quantidade deve ser maior que zero.",
       });
       return;
     }
@@ -163,6 +165,7 @@ export default function AdminExtras() {
       extra_date: format(extraDate, "yyyy-MM-dd"),
       month_reference: format(startOfMonth(monthReference), "yyyy-MM-dd"),
       justification,
+      quantity,
       created_by: profile?.id,
     });
 
@@ -185,6 +188,7 @@ export default function AdminExtras() {
     setExtraDate(undefined);
     setMonthReference(new Date());
     setJustification("");
+    setQuantity(1);
     
     fetchExtras();
   };
@@ -218,7 +222,7 @@ export default function AdminExtras() {
     
     filteredExtras.forEach(extra => {
       const guardName = extra.guard?.name || "Desconhecido";
-      guardCounts[guardName] = (guardCounts[guardName] || 0) + 1;
+      guardCounts[guardName] = (guardCounts[guardName] || 0) + (extra.quantity || 1);
     });
 
     return Object.entries(guardCounts).map(([name, count]) => ({
@@ -232,7 +236,7 @@ export default function AdminExtras() {
     
     extras.forEach(extra => {
       const month = format(new Date(extra.month_reference), "MMM/yyyy", { locale: ptBR });
-      monthCounts[month] = (monthCounts[month] || 0) + 1;
+      monthCounts[month] = (monthCounts[month] || 0) + (extra.quantity || 1);
     });
 
     return Object.entries(monthCounts)
@@ -262,19 +266,21 @@ export default function AdminExtras() {
     doc.setFontSize(14);
     doc.text("Resumo", 14, 46);
     doc.setFontSize(10);
-    doc.text(`Total de extras no período: ${filteredExtras.length}`, 14, 52);
+    const totalExtras = filteredExtras.reduce((sum, extra) => sum + (extra.quantity || 1), 0);
+    doc.text(`Total de extras no período: ${totalExtras}`, 14, 52);
 
     // Table data
     const tableData = filteredExtras.map(extra => [
       extra.guard?.name || "Desconhecido",
       format(new Date(extra.extra_date), "dd/MM/yyyy", { locale: ptBR }),
       format(new Date(extra.month_reference), "MMM/yyyy", { locale: ptBR }),
+      extra.quantity?.toString() || "1",
       extra.justification,
     ]);
 
     autoTable(doc, {
       startY: 60,
-      head: [["Segurança", "Data do Extra", "Mês Ref.", "Fundamentação"]],
+      head: [["Segurança", "Data do Extra", "Mês Ref.", "Qtd", "Fundamentação"]],
       body: tableData,
       styles: { fontSize: 9 },
       headStyles: { fillColor: [59, 130, 246] },
@@ -401,6 +407,18 @@ export default function AdminExtras() {
                     />
                   </PopoverContent>
                 </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Quantidade de Extras *</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                  placeholder="1"
+                />
               </div>
             </div>
 
@@ -549,6 +567,7 @@ export default function AdminExtras() {
                     <TableHead>Segurança</TableHead>
                     <TableHead>Data do Extra</TableHead>
                     <TableHead>Mês Ref.</TableHead>
+                    <TableHead className="text-center">Qtd</TableHead>
                     <TableHead>Fundamentação</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -559,6 +578,7 @@ export default function AdminExtras() {
                       <TableCell className="font-medium">{extra.guard?.name}</TableCell>
                       <TableCell>{format(new Date(extra.extra_date), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
                       <TableCell>{format(new Date(extra.month_reference), "MMM/yyyy", { locale: ptBR })}</TableCell>
+                      <TableCell className="text-center font-semibold">{extra.quantity || 1}</TableCell>
                       <TableCell className="max-w-md truncate">{extra.justification}</TableCell>
                       <TableCell className="text-right">
                         <Button
