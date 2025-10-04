@@ -99,8 +99,23 @@ export default function Profile() {
       
       setLoading(true);
 
+      const isPhoneLogin = user?.email?.endsWith('@guardshift.com');
+      const cleanedPhone = (phone || '').replace(/\D/g, '');
+      const currentLocalPart = (user?.email || '').split('@')[0];
+
+      // If user logs in with phone and phone changed, update auth email via Edge Function (no confirmation)
+      if (isPhoneLogin && cleanedPhone && cleanedPhone !== currentLocalPart) {
+        if (!/^\d{10,13}$/.test(cleanedPhone)) {
+          throw new Error('Telefone inválido. Use apenas números (10 a 13 dígitos).');
+        }
+        const { error: fnError } = await supabase.functions.invoke('update-auth-email', {
+          body: { user_id: user!.id, phone: cleanedPhone },
+        });
+        if (fnError) throw fnError;
+      }
+
       // Update regular email in auth if changed and not a phone-based email
-      if (email !== user?.email && !user?.email?.endsWith('@guardshift.com')) {
+      if (email !== user?.email && !isPhoneLogin) {
         const { error: authError } = await supabase.auth.updateUser({
           email: email,
         });
@@ -118,7 +133,7 @@ export default function Profile() {
         .from("profiles")
         .update({
           name: name,
-          phone: phone,
+          phone: cleanedPhone || phone,
           email: email,
         })
         .eq("user_id", user!.id);
