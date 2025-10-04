@@ -365,6 +365,7 @@ const AdminTeams = () => {
           email: null,
           phone: phoneClean,
           team_id: selectedTeam.id,
+          admin_id: profile?.id || null,
         },
       });
 
