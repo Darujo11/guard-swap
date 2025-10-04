@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign } from 'lucide-react';
+import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign, Settings } from 'lucide-react';
 import logoImage from '@/assets/logo.png';
+import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -27,19 +28,22 @@ interface AppLayoutProps {
   };
 }
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard/admin', icon: BarChart3, roles: ['admin', 'super_admin'] },
-  { name: 'Equipes', href: '/admin/equipes', icon: Users, roles: ['admin', 'super_admin'] },
-  { name: 'Seguranças', href: '/admin/segurancas', icon: Shield, roles: ['admin', 'super_admin'] },
-  { name: 'Trocas', href: '/admin/trocas', icon: Calendar, roles: ['admin', 'super_admin'] },
-  { name: 'Escalas', href: '/admin/escalas', icon: ClipboardList, roles: ['admin', 'super_admin'] },
-  { name: 'Extras', href: '/admin/extras', icon: Clock, roles: ['admin', 'super_admin'] },
-];
-
 export function AppLayout({ children, title, user }: AppLayoutProps) {
   const { signOut, role } = useAuth();
   const { notifications, markAsRead, markAllAsRead } = useSwapNotifications();
   const location = useLocation();
+  const { settings } = useOrganizationSettings();
+  
+  const navigation = [
+    { name: 'Dashboard', href: '/dashboard/admin', icon: BarChart3, roles: ['admin', 'super_admin'] },
+    { name: settings.teams_label, href: '/admin/equipes', icon: Users, roles: ['admin', 'super_admin'] },
+    { name: settings.guards_label, href: '/admin/segurancas', icon: Shield, roles: ['admin', 'super_admin'] },
+    { name: settings.swaps_label, href: '/admin/trocas', icon: Calendar, roles: ['admin', 'super_admin'] },
+    { name: settings.schedules_label, href: '/admin/escalas', icon: ClipboardList, roles: ['admin', 'super_admin'] },
+    { name: settings.extras_label, href: '/admin/extras', icon: Clock, roles: ['admin', 'super_admin'] },
+    { name: 'Configurações', href: '/admin/configuracoes', icon: Settings, roles: ['admin', 'super_admin'] },
+  ];
+
   
   const superAdminNavigation = [
     { name: 'Planos', href: '/super-admin/planos', icon: DollarSign },

@@ -157,6 +157,71 @@ export type Database = {
           },
         ]
       }
+      organization_settings: {
+        Row: {
+          admin_id: string | null
+          created_at: string | null
+          extra_label: string
+          extras_label: string
+          guard_label: string
+          guards_label: string
+          id: string
+          schedule_label: string
+          schedules_label: string
+          shift_label: string
+          shifts_label: string
+          swap_label: string
+          swaps_label: string
+          team_label: string
+          teams_label: string
+          updated_at: string | null
+        }
+        Insert: {
+          admin_id?: string | null
+          created_at?: string | null
+          extra_label?: string
+          extras_label?: string
+          guard_label?: string
+          guards_label?: string
+          id?: string
+          schedule_label?: string
+          schedules_label?: string
+          shift_label?: string
+          shifts_label?: string
+          swap_label?: string
+          swaps_label?: string
+          team_label?: string
+          teams_label?: string
+          updated_at?: string | null
+        }
+        Update: {
+          admin_id?: string | null
+          created_at?: string | null
+          extra_label?: string
+          extras_label?: string
+          guard_label?: string
+          guards_label?: string
+          id?: string
+          schedule_label?: string
+          schedules_label?: string
+          shift_label?: string
+          shifts_label?: string
+          swap_label?: string
+          swaps_label?: string
+          team_label?: string
+          teams_label?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_settings_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           admin_id: string | null

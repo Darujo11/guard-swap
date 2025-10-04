@@ -15,6 +15,7 @@ import AdminSwaps from "./pages/AdminSwaps";
 import AdminGuards from "./pages/AdminGuards";
 import AdminSchedule from "./pages/AdminSchedule";
 import AdminExtras from "./pages/AdminExtras";
+import AdminSettings from "./pages/AdminSettings";
 import SuperAdminPlans from "./pages/SuperAdminPlans";
 import SuperAdminManagement from "./pages/SuperAdminManagement";
 import GuardDashboard from "./pages/GuardDashboard";
@@ -83,6 +84,14 @@ const App = () => (
             } 
           />
           <Route 
+            path="/admin/configuracoes" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminSettings />
+              </ProtectedRoute>
+            } 
+          />
+          <Route
             path="/super-admin/planos" 
             element={
               <ProtectedRoute allowedRoles={['super_admin']}>
