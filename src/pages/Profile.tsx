@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft, X } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 const passwordSchema = z.object({
@@ -132,11 +132,31 @@ export default function Profile() {
   return (
     <AppLayout title="Meu Perfil">
       <div className="container mx-auto p-3 md:p-6 max-w-4xl">
-        <div className="mb-4 md:mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold">Meu Perfil</h1>
-          <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
-            Gerencie suas informações pessoais e segurança
-          </p>
+        <div className="mb-4 md:mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">Meu Perfil</h1>
+            <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
+              Gerencie suas informações pessoais e segurança
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate(-1)}
+              title="Voltar"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate(-1)}
+              title="Fechar"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <Card>
