@@ -13,9 +13,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Plus, FileText, Trash2, Download, BarChart3 } from "lucide-react";
+import { CalendarIcon, Plus, FileText, Trash2, Download, BarChart3, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
@@ -726,26 +726,29 @@ export default function AdminExtras() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Selecione o Mês</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {format(rankingDate, "MMMM 'de' yyyy", { locale: ptBR })}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={rankingDate}
-                        onSelect={(date) => date && setRankingDate(startOfMonth(date))}
-                        locale={ptBR}
-                        captionLayout="dropdown-buttons"
-                        fromYear={2020}
-                        toYear={2030}
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setRankingDate(subMonths(rankingDate, 1))}
+                      className="h-8 w-8"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="text-center flex-1">
+                      <p className="text-lg font-semibold capitalize">
+                        {format(rankingDate, "MMMM yyyy", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setRankingDate(addMonths(rankingDate, 1))}
+                      className="h-8 w-8"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="p-4 bg-muted rounded-lg">
