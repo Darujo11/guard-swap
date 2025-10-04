@@ -9,22 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
-import { z } from "zod";
-
-const profileSchema = z.object({
-  name: z.string().min(1, "Nome é obrigatório"),
-  email: z.string().email("Email inválido").min(1, "Email é obrigatório"),
-  phone: z.string().optional(),
-});
-
-const passwordSchema = z.object({
-  currentPassword: z.string().min(6, "A senha deve ter no mínimo 6 caracteres"),
-  newPassword: z.string().min(6, "A senha deve ter no mínimo 6 caracteres"),
-  confirmPassword: z.string().min(6, "A senha deve ter no mínimo 6 caracteres"),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "As senhas não coincidem",
-  path: ["confirmPassword"],
-});
 
 export default function Profile() {
   const { user, loading: authLoading } = useAuth();
@@ -35,16 +19,8 @@ export default function Profile() {
   const [profileLoading, setProfileLoading] = useState(true);
   
   // Profile data
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
-  
-  // Password fields
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [role, setRole] = useState("");
 
   useEffect(() => {
     if (authLoading) return; // espere auth carregar
@@ -63,21 +39,27 @@ export default function Profile() {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select(`
+          *,
+          team:teams(name)
+        `)
         .eq("user_id", user.id)
         .maybeSingle();
 
       if (error) throw error;
 
       if (data) {
-        setEmail(data.email || user.email || "");
-        setPhone(data.phone || "");
         setName(data.name || "");
-      } else {
-        // Se não encontrar perfil, usa dados do auth
-        setEmail(user.email || "");
-        setPhone("");
-        setName("");
+        
+        // Determine role based on shift chief status and team
+        let roleText = "Segurança";
+        if (data.is_shift_chief) {
+          roleText = "Chefe de Plantão";
+        }
+        if (data.team) {
+          roleText += ` - ${data.team.name}`;
+        }
+        setRole(roleText);
       }
     } catch (error: any) {
       toast({
@@ -90,129 +72,6 @@ export default function Profile() {
     }
   };
 
-  const handleUpdateProfile = async () => {
-    setErrors({});
-    
-    try {
-      // Validate profile data
-      profileSchema.parse({ name, email, phone });
-      
-      setLoading(true);
-
-      const isPhoneLogin = user?.email?.endsWith('@guardshift.com');
-      const cleanedPhone = (phone || '').replace(/\D/g, '');
-      const currentLocalPart = (user?.email || '').split('@')[0];
-
-      // If user logs in with phone and phone changed, update auth email via Edge Function (no confirmation)
-      if (isPhoneLogin && cleanedPhone && cleanedPhone !== currentLocalPart) {
-        if (!/^\d{10,13}$/.test(cleanedPhone)) {
-          throw new Error('Telefone inválido. Use apenas números (10 a 13 dígitos).');
-        }
-        const { error: fnError } = await supabase.functions.invoke('update-auth-email', {
-          body: { user_id: user!.id, phone: cleanedPhone },
-        });
-        if (fnError) throw fnError;
-      }
-
-      // Update regular email in auth if changed and not a phone-based email
-      if (email !== user?.email && !isPhoneLogin) {
-        const { error: authError } = await supabase.auth.updateUser({
-          email: email,
-        });
-
-        if (authError) throw authError;
-
-        toast({
-          title: "Confirmação necessária",
-          description: "Um email de confirmação foi enviado para o novo endereço.",
-        });
-      }
-
-      // Update name, phone and email in profiles table
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          name: name,
-          phone: cleanedPhone || phone,
-          email: email,
-        })
-        .eq("user_id", user!.id);
-
-      if (profileError) throw profileError;
-
-      toast({
-        title: "Perfil atualizado",
-        description: "Suas informações foram atualizadas com sucesso.",
-      });
-      
-      // Refresh profile data
-      await fetchProfile();
-    } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        const fieldErrors: {[key: string]: string} = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) {
-            fieldErrors[err.path[0].toString()] = err.message;
-          }
-        });
-        setErrors(fieldErrors);
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Erro ao atualizar perfil",
-          description: error.message,
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleChangePassword = async () => {
-    setErrors({});
-    
-    try {
-      // Validate password data
-      passwordSchema.parse({ currentPassword, newPassword, confirmPassword });
-      
-      setLoading(true);
-
-      // Update password
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Senha atualizada",
-        description: "Sua senha foi alterada com sucesso.",
-      });
-
-      // Clear password fields
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        const fieldErrors: {[key: string]: string} = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) {
-            fieldErrors[err.path[0].toString()] = err.message;
-          }
-        });
-        setErrors(fieldErrors);
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Erro ao alterar senha",
-          description: error.message,
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (profileLoading) {
     return (
@@ -234,130 +93,37 @@ export default function Profile() {
           </p>
         </div>
 
-        <div className="space-y-4 md:space-y-6">
-          {/* Profile Information Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Informações do Perfil</CardTitle>
-              <CardDescription>
-                Atualize seu email e telefone
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Seu nome completo"
-                />
-                {errors.name && (
-                  <p className="text-xs text-destructive">{errors.name}</p>
-                )}
-              </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações do Perfil</CardTitle>
+            <CardDescription>
+              Suas informações como segurança
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome</Label>
+              <Input
+                id="name"
+                value={name}
+                readOnly
+                disabled
+                className="bg-muted"
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu.email@exemplo.com"
-                />
-                {errors.email && (
-                  <p className="text-xs text-destructive">{errors.email}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefone (WhatsApp)</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="11999999999"
-                />
-                {errors.phone && (
-                  <p className="text-xs text-destructive">{errors.phone}</p>
-                )}
-              </div>
-
-              <Button
-                onClick={handleUpdateProfile}
-                disabled={loading}
-                className="w-full md:w-auto"
-              >
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Atualizar Perfil
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Change Password Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Alterar Senha</CardTitle>
-              <CardDescription>
-                Atualize sua senha para manter sua conta segura
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Senha Atual</Label>
-                <Input
-                  id="currentPassword"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
-                {errors.currentPassword && (
-                  <p className="text-xs text-destructive">{errors.currentPassword}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">Nova Senha</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
-                {errors.newPassword && (
-                  <p className="text-xs text-destructive">{errors.newPassword}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
-                {errors.confirmPassword && (
-                  <p className="text-xs text-destructive">{errors.confirmPassword}</p>
-                )}
-              </div>
-
-              <Button
-                onClick={handleChangePassword}
-                disabled={loading || !currentPassword || !newPassword || !confirmPassword}
-                className="w-full md:w-auto"
-              >
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Alterar Senha
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Cargo</Label>
+              <Input
+                id="role"
+                value={role}
+                readOnly
+                disabled
+                className="bg-muted"
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </AppLayout>
   );
