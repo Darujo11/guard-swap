@@ -240,7 +240,7 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
 
       toast({
         title: 'Solicitação enviada',
-        description: 'Sua solicitação de troca foi enviada com sucesso. O membro convidado receberá uma notificação.',
+        description: 'Sua solicitação de troca foi enviada com sucesso e aparecerá como pendente em suas solicitações.',
       });
 
       setSelectedTarget('');
@@ -248,9 +248,12 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
       setTargetShiftDate(undefined);
       setReason('');
       
-      if (onClose) {
-        onClose();
-      }
+      // Force a small delay to ensure the real-time subscription catches the change
+      setTimeout(() => {
+        if (onClose) {
+          onClose();
+        }
+      }, 100);
     } catch (error) {
       console.error('[GuardSwapForm][Submit]', error);
       toast({

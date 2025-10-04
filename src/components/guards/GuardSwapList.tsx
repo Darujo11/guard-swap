@@ -38,6 +38,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
     fetchSwapRequests();
     
     // Set up real-time subscription for swap requests
+    // Listen to all changes and filter in the query
     const channel = supabase
       .channel('swap-requests-changes')
       .on(
@@ -45,11 +46,14 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
         {
           event: '*',
           schema: 'public',
-          table: 'swap_requests',
-          filter: `requester_id=eq.${currentUser.id},target_id=eq.${currentUser.id}`
+          table: 'swap_requests'
         },
-        () => {
-          fetchSwapRequests();
+        (payload) => {
+          // Check if the change affects the current user
+          const record = payload.new as any;
+          if (record && (record.requester_id === currentUser.id || record.target_id === currentUser.id)) {
+            fetchSwapRequests();
+          }
         }
       )
       .subscribe();
