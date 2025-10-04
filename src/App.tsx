@@ -13,6 +13,7 @@ import AdminTeams from "./pages/AdminTeams";
 import AdminSwaps from "./pages/AdminSwaps";
 import AdminGuards from "./pages/AdminGuards";
 import AdminSchedule from "./pages/AdminSchedule";
+import AdminExtras from "./pages/AdminExtras";
 import GuardDashboard from "./pages/GuardDashboard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -66,6 +67,14 @@ const App = () => (
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminSchedule />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/extras" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminExtras />
               </ProtectedRoute>
             } 
           />

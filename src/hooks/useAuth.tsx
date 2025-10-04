@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
+import { Profile } from '@/lib/types';
 
 export type UserRole = 'admin' | 'guard';
 
@@ -9,6 +10,7 @@ interface AuthUser {
   user: User | null;
   session: Session | null;
   role: UserRole | null;
+  profile: Profile | null;
   loading: boolean;
 }
 
@@ -17,6 +19,7 @@ export const useAuth = () => {
     user: null,
     session: null,
     role: null,
+    profile: null,
     loading: true,
   });
   const navigate = useNavigate();
@@ -27,10 +30,12 @@ export const useAuth = () => {
       async (event, session) => {
         if (session?.user) {
           const role = await getUserRole(session.user.id);
+          const profile = await getUserProfile(session.user.id);
           setAuthState({
             user: session.user,
             session,
             role,
+            profile,
             loading: false,
           });
         } else {
@@ -38,6 +43,7 @@ export const useAuth = () => {
             user: null,
             session: null,
             role: null,
+            profile: null,
             loading: false,
           });
         }
@@ -48,10 +54,12 @@ export const useAuth = () => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         const role = await getUserRole(session.user.id);
+        const profile = await getUserProfile(session.user.id);
         setAuthState({
           user: session.user,
           session,
           role,
+          profile,
           loading: false,
         });
       } else {
@@ -59,6 +67,7 @@ export const useAuth = () => {
           user: null,
           session: null,
           role: null,
+          profile: null,
           loading: false,
         });
       }
@@ -79,6 +88,16 @@ export const useAuth = () => {
     return null;
   };
 
+  const getUserProfile = async (userId: string): Promise<Profile | null> => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    return profile || null;
+  };
+
   const signOut = async () => {
     try {
       // Clear local state first
@@ -86,6 +105,7 @@ export const useAuth = () => {
         user: null,
         session: null,
         role: null,
+        profile: null,
         loading: false,
       });
       

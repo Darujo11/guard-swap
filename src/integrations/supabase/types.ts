@@ -52,6 +52,54 @@ export type Database = {
           },
         ]
       }
+      extras: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          extra_date: string
+          guard_id: string
+          id: string
+          justification: string
+          month_reference: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          extra_date: string
+          guard_id: string
+          id?: string
+          justification: string
+          month_reference: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          extra_date?: string
+          guard_id?: string
+          id?: string
+          justification?: string
+          month_reference?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extras_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extras_guard_id_fkey"
+            columns: ["guard_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
