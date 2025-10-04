@@ -63,20 +63,22 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
               <span className="font-semibold text-xl">Escala Smart</span>
             </div>
             <div className="hidden md:flex items-center gap-1 ml-6">
-              {navigation.map((item) => (
-                <Button
-                  key={item.name}
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2"
-                  asChild
-                >
-                  <Link to={item.href}>
-                    <item.icon className="h-4 w-4" />
-                    {item.name}
-                  </Link>
-                </Button>
-              ))}
+              {navigation
+                .filter((item) => !role || item.roles.includes(role))
+                .map((item) => (
+                  <Button
+                    key={item.name}
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2"
+                    asChild
+                  >
+                    <Link to={item.href}>
+                      <item.icon className="h-4 w-4" />
+                      {item.name}
+                    </Link>
+                  </Button>
+                ))}
               
               {/* Super Admin Menu */}
               {isSuperAdmin && (
