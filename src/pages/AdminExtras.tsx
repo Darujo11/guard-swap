@@ -411,8 +411,11 @@ export default function AdminExtras() {
                     <Calendar
                       mode="single"
                       selected={monthReference}
-                      onSelect={(date) => date && setMonthReference(date)}
+                      onSelect={(date) => date && setMonthReference(startOfMonth(date))}
                       locale={ptBR}
+                      captionLayout="dropdown-buttons"
+                      fromYear={2020}
+                      toYear={2030}
                       className="pointer-events-auto"
                     />
                   </PopoverContent>
@@ -472,8 +475,11 @@ export default function AdminExtras() {
                   <Calendar
                     mode="single"
                     selected={filterMonth}
-                    onSelect={(date) => date && setFilterMonth(date)}
+                    onSelect={(date) => date && setFilterMonth(startOfMonth(date))}
                     locale={ptBR}
+                    captionLayout="dropdown-buttons"
+                    fromYear={2020}
+                    toYear={2030}
                     className="pointer-events-auto"
                   />
                 </PopoverContent>
