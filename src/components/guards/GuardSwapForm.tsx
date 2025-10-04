@@ -210,7 +210,8 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
             requester_shift_date: requesterDateStr,
             target_shift_date: targetDateStr,
             reason: reason.trim(),
-            status: 'PENDING'
+            status: 'PENDING',
+            admin_id: currentUser.admin_id
           }
         ]);
 
