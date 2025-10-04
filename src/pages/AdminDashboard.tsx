@@ -70,7 +70,7 @@ const AdminDashboard = () => {
 
       if (swapsError) throw swapsError;
 
-      setSwapRequests((swaps || []) as SwapRequest[]);
+      setSwapRequests(((swaps || []) as unknown) as SwapRequest[]);
 
       // Calcular estatísticas
       const { data: allSwaps } = await supabase
