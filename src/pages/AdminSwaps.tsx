@@ -167,165 +167,127 @@ const AdminSwaps = () => {
             <meta charset="UTF-8">
             <style>
               body { 
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; 
                 margin: 40px;
-                color: #333;
-                line-height: 1.6;
+                color: #1f2937;
+                line-height: 1.8;
+                font-size: 14px;
               }
               .header { 
-                border-bottom: 3px solid #2563eb;
-                padding-bottom: 20px;
                 margin-bottom: 30px;
               }
               .header h1 {
-                margin: 0 0 10px 0;
-                color: #1e40af;
-                font-size: 24px;
+                margin: 0 0 5px 0;
+                color: #111827;
+                font-size: 20px;
+                font-weight: 600;
               }
               .protocol {
                 color: #6b7280;
-                font-size: 14px;
+                font-size: 13px;
+                margin-top: 5px;
               }
               .section { 
                 margin-bottom: 25px;
-                padding: 15px;
-                border-left: 4px solid #e5e7eb;
-                background: #f9fafb;
               }
               .section h3 {
-                margin: 0 0 15px 0;
-                color: #1f2937;
-                font-size: 16px;
+                margin: 0 0 10px 0;
+                color: #111827;
+                font-size: 15px;
+                font-weight: 600;
               }
               .info-row {
-                margin: 8px 0;
+                margin: 5px 0;
                 font-size: 14px;
+                line-height: 1.6;
               }
               .label { 
-                font-weight: 600;
-                color: #4b5563;
+                font-weight: 500;
+                color: #374151;
               }
               .value {
                 color: #1f2937;
               }
               .dates {
-                font-size: 18px;
-                font-weight: 600;
-                color: #2563eb;
-                text-align: center;
-                padding: 10px;
-                background: #eff6ff;
-                border-radius: 6px;
-                margin: 15px 0;
+                font-size: 15px;
+                font-weight: 500;
+                color: #1f2937;
+                margin: 8px 0;
               }
-              .status-badge {
-                display: inline-block;
-                padding: 6px 12px;
-                border-radius: 6px;
-                font-weight: 600;
-                font-size: 14px;
-              }
-              .status-pending { background: #fef3c7; color: #d97706; }
-              .status-accepted { background: #dcfce7; color: #16a34a; }
-              .status-approved { background: #dcfce7; color: #16a34a; }
-              .status-rejected { background: #fecaca; color: #dc2626; }
-              .status-cancelled { background: #f3f4f6; color: #6b7280; }
-              .reason-box {
-                background: white;
-                padding: 15px;
-                border-radius: 6px;
-                border: 1px solid #e5e7eb;
-                font-style: italic;
+              .reason-text {
                 color: #4b5563;
+                margin: 8px 0;
+                line-height: 1.6;
+              }
+              .reason-footer {
+                margin-top: 8px;
+                font-size: 12px;
+                color: #9ca3af;
               }
               .footer { 
                 margin-top: 40px;
-                padding-top: 20px;
-                border-top: 2px solid #e5e7eb;
-                text-align: center;
+                padding-top: 15px;
+                border-top: 1px solid #e5e7eb;
                 color: #6b7280;
                 font-size: 12px;
               }
-              .confirmation {
-                display: inline-block;
-                padding: 4px 8px;
-                border-radius: 4px;
-                font-weight: 600;
-                font-size: 13px;
-              }
-              .confirmation-yes { background: #dcfce7; color: #16a34a; }
-              .confirmation-no { background: #fef3c7; color: #d97706; }
             </style>
           </head>
           <body>
             <div class="header">
               <h1>📄 Solicitação de Troca de Plantão</h1>
-              <p class="protocol"><strong>Protocolo:</strong> ${request.id}</p>
+              <p class="protocol">Protocolo: ${request.id}</p>
             </div>
             
             <div class="section">
               <h3>📅 Informações da Solicitação</h3>
-              <div class="dates">
-                ${format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })} → ${format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+              <div class="info-row dates">
+                Período da Troca: ${format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })} → ${format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
               </div>
               <div class="info-row">
-                <span class="label">Status:</span> 
-                <span class="status-badge status-${request.status.toLowerCase()}">
-                  ${statusEmoji} ${SWAP_STATUS_CONFIG[request.status as keyof typeof SWAP_STATUS_CONFIG]?.label}
-                </span>
+                <span class="label">Status:</span> ${statusEmoji} ${SWAP_STATUS_CONFIG[request.status as keyof typeof SWAP_STATUS_CONFIG]?.label}
               </div>
               <div class="info-row">
-                <span class="label">Data da Solicitação:</span> 
-                <span class="value">${format(new Date(request.created_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.created_at), 'HH:mm', { locale: ptBR })}</span>
+                <span class="label">Data da Solicitação:</span> ${format(new Date(request.created_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.created_at), 'HH:mm', { locale: ptBR })}
               </div>
             </div>
 
             <div class="section">
               <h3>👤 Solicitante</h3>
               <div class="info-row">
-                <span class="label">Nome:</span> 
-                <span class="value">${request.requester?.name}</span>
+                <span class="label">Nome:</span> ${request.requester?.name}
               </div>
               <div class="info-row">
-                <span class="label">E-mail:</span> 
-                <span class="value">${request.requester?.email}</span>
+                <span class="label">E-mail:</span> ${request.requester?.email}
               </div>
               <div class="info-row">
-                <span class="label">Equipe:</span> 
-                <span class="value">${request.requester?.team?.name}</span>
+                <span class="label">Equipe:</span> ${request.requester?.team?.name}
               </div>
             </div>
 
             <div class="section">
               <h3>👥 Troca Solicitada com</h3>
               <div class="info-row">
-                <span class="label">Nome:</span> 
-                <span class="value">${request.target?.name}</span>
+                <span class="label">Nome:</span> ${request.target?.name}
               </div>
               <div class="info-row">
-                <span class="label">E-mail:</span> 
-                <span class="value">${request.target?.email}</span>
+                <span class="label">E-mail:</span> ${request.target?.email}
               </div>
               <div class="info-row">
-                <span class="label">Equipe:</span> 
-                <span class="value">${request.target?.team?.name}</span>
+                <span class="label">Equipe:</span> ${request.target?.team?.name}
               </div>
               <div class="info-row">
-                <span class="label">Confirmação de Ciência:</span> 
-                <span class="confirmation ${request.target_confirmation ? 'confirmation-yes' : 'confirmation-no'}">
-                  ${request.target_confirmation ? 'Confirmada ✅' : 'Pendente ⏳'}
-                </span>
+                <span class="label">Confirmação de Ciência:</span> ${request.target_confirmation ? '✅ Confirmada' : '⏳ Pendente'}
               </div>
             </div>
 
             <div class="section">
               <h3>📝 Motivo da Troca</h3>
-              <div class="reason-box">
+              <div class="reason-text">
                 ${request.reason}
               </div>
-              <div class="info-row" style="margin-top: 10px; font-size: 12px; color: #6b7280;">
-                Solicitação registrada em ${format(new Date(request.created_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.created_at), 'HH:mm', { locale: ptBR })}
-                (Protocolo: ${request.id})
+              <div class="reason-footer">
+                (registrado em ${format(new Date(request.created_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.created_at), 'HH:mm', { locale: ptBR })})
               </div>
             </div>
 
@@ -333,18 +295,16 @@ const AdminSwaps = () => {
               <div class="section">
                 <h3>⚖️ Decisão Administrativa</h3>
                 <div class="info-row">
-                  <span class="label">Decidido em:</span> 
-                  <span class="value">${format(new Date(request.admin_approved_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.admin_approved_at), 'HH:mm', { locale: ptBR })}</span>
+                  <span class="label">Decidido em:</span> ${format(new Date(request.admin_approved_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.admin_approved_at), 'HH:mm', { locale: ptBR })}
                 </div>
                 <div class="info-row">
-                  <span class="label">Aprovado por:</span> 
-                  <span class="value">${request.admin_approver?.name || 'Coordenador'}</span>
+                  <span class="label">Aprovado por:</span> ${request.admin_approver?.name || 'Coordenador'}
                 </div>
               </div>
             ` : ''}
 
             <div class="footer">
-              <p>📄 Documento gerado em ${format(new Date(), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(), 'HH:mm', { locale: ptBR })}</p>
+              📄 Documento gerado em: ${format(new Date(), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(), 'HH:mm', { locale: ptBR })}
             </div>
           </body>
         </html>
