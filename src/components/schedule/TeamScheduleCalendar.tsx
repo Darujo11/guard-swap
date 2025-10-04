@@ -20,9 +20,16 @@ interface TeamSchedule {
   team?: Team;
 }
 
+interface Profile {
+  id: string;
+  name: string;
+  team_id: string | null;
+}
+
 export function TeamScheduleCalendar() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [schedules, setSchedules] = useState<TeamSchedule[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [selectedTeam, setSelectedTeam] = useState<string>("");
@@ -32,6 +39,7 @@ export function TeamScheduleCalendar() {
   useEffect(() => {
     fetchTeams();
     fetchSchedules();
+    fetchProfiles();
   }, [currentMonth]);
 
   const fetchTeams = async () => {
@@ -75,6 +83,28 @@ export function TeamScheduleCalendar() {
     }
 
     setSchedules(data || []);
+  };
+
+  const fetchProfiles = async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, name, team_id")
+      .order("name");
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar integrantes",
+        description: error.message,
+      });
+      return;
+    }
+
+    setProfiles(data || []);
+  };
+
+  const getTeamMembers = (teamId: string): Profile[] => {
+    return profiles.filter(p => p.team_id === teamId);
   };
 
   const getTeamForDate = (date: Date): Team | null => {
@@ -383,52 +413,79 @@ export function TeamScheduleCalendar() {
           {/* Calendar */}
           {renderCalendar()}
 
-          {/* Legend with color editing */}
-          <div className="space-y-2">
-            <h3 className="text-xs md:text-sm font-medium">Equipes</h3>
-            <div className="flex flex-wrap gap-1.5 md:gap-2">
-              {teams.map((team) => (
-                <Popover key={team.id}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      style={getTeamColorStyle(team.color || '#3b82f6')}
-                      className="gap-1 md:gap-2 border md:border-2 text-xs h-7 md:h-8 px-2 md:px-3"
-                    >
-                      <div
-                        className="w-3 h-3 md:w-4 md:h-4 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: team.color || '#3b82f6' }}
-                      />
-                      <span className="truncate max-w-[80px] md:max-w-none">{team.name}</span>
-                      <Palette className="h-2.5 w-2.5 md:h-3 md:w-3 flex-shrink-0" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64">
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Editar cor de {team.name}</h4>
-                      <div className="flex gap-2">
-                        <Input
-                          type="color"
-                          value={team.color || '#3b82f6'}
-                          onChange={(e) => updateTeamColor(team.id, e.target.value)}
-                          className="w-20 h-10 cursor-pointer"
-                        />
-                        <Input
-                          type="text"
-                          value={team.color || '#3b82f6'}
-                          onChange={(e) => updateTeamColor(team.id, e.target.value)}
-                          placeholder="#3b82f6"
-                          className="flex-1"
-                        />
+          {/* Legend with team members */}
+          <div className="space-y-3">
+            <h3 className="text-xs md:text-sm font-medium">Equipes e Integrantes</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {teams.map((team) => {
+                const members = getTeamMembers(team.id);
+                return (
+                  <Card key={team.id} className="overflow-hidden">
+                    <CardContent className="p-3 md:p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 md:w-4 md:h-4 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: team.color || '#3b82f6' }}
+                          />
+                          <span className="font-medium text-sm md:text-base">{team.name}</span>
+                        </div>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                            >
+                              <Palette className="h-3 w-3" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64">
+                            <div className="space-y-2">
+                              <h4 className="font-medium text-sm">Editar cor de {team.name}</h4>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="color"
+                                  value={team.color || '#3b82f6'}
+                                  onChange={(e) => updateTeamColor(team.id, e.target.value)}
+                                  className="w-20 h-10 cursor-pointer"
+                                />
+                                <Input
+                                  type="text"
+                                  value={team.color || '#3b82f6'}
+                                  onChange={(e) => updateTeamColor(team.id, e.target.value)}
+                                  placeholder="#3b82f6"
+                                  className="flex-1"
+                                />
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Escolha uma cor para {team.name}
+                              </p>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Escolha uma cor para {team.name}
-                      </p>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              ))}
+                      
+                      {members.length > 0 ? (
+                        <div className="space-y-1">
+                          {members.map((member) => (
+                            <div
+                              key={member.id}
+                              className="text-xs md:text-sm text-muted-foreground pl-5 md:pl-6"
+                            >
+                              • {member.name}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground pl-5 md:pl-6">
+                          Nenhum integrante nesta equipe
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         </CardContent>
