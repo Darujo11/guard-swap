@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Team } from "@/lib/types";
 import { format, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -39,12 +40,15 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
   const [selectedTeam, setSelectedTeam] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   useEffect(() => {
     fetchTeams();
-    fetchSchedules();
     fetchProfiles();
-  }, [currentMonth]);
+    if (profile?.id) {
+      fetchSchedules();
+    }
+  }, [currentMonth, profile?.id]);
 
   const fetchTeams = async () => {
     const { data, error } = await supabase
@@ -75,7 +79,8 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
         team:teams(*)
       `)
       .gte("shift_date", format(start, "yyyy-MM-dd"))
-      .lte("shift_date", format(end, "yyyy-MM-dd"));
+      .lte("shift_date", format(end, "yyyy-MM-dd"))
+      .eq("admin_id", profile?.id as string);
 
     if (error) {
       toast({
@@ -198,6 +203,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
         .insert({
           team_id: selectedTeam,
           shift_date: dateStr,
+          admin_id: profile?.id as string,
         });
 
       if (error) {
@@ -239,7 +245,8 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
       .from("team_schedules")
       .delete()
       .gte("shift_date", format(start, "yyyy-MM-dd"))
-      .lte("shift_date", format(end, "yyyy-MM-dd"));
+      .lte("shift_date", format(end, "yyyy-MM-dd"))
+      .eq("admin_id", profile?.id as string);
 
     // Generate pattern for all teams with offset
     const schedulesToInsert = [];
@@ -254,6 +261,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
           schedulesToInsert.push({
             team_id: team.id,
             shift_date: format(currentDate, "yyyy-MM-dd"),
+            admin_id: profile?.id as string,
           });
           consecutiveDays++;
           if (consecutiveDays >= 1) {
