@@ -43,7 +43,6 @@ export default function AdminExtras() {
   // Form state
   const [selectedGuard, setSelectedGuard] = useState<string>("");
   const [extraDate, setExtraDate] = useState<Date>();
-  const [monthReference, setMonthReference] = useState<Date>(new Date());
   const [justification, setJustification] = useState("");
   const [quantity, setQuantity] = useState<number>(1);
   
@@ -187,7 +186,7 @@ export default function AdminExtras() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedGuard || !extraDate || !monthReference || !justification || !quantity || quantity < 1) {
+    if (!selectedGuard || !extraDate || !justification || !quantity || quantity < 1) {
       toast({
         variant: "destructive",
         title: "Campos obrigatórios",
@@ -199,7 +198,7 @@ export default function AdminExtras() {
     const { error } = await supabase.from("extras").insert({
       guard_id: selectedGuard,
       extra_date: format(extraDate, "yyyy-MM-dd"),
-      month_reference: format(startOfMonth(monthReference), "yyyy-MM-dd"),
+      month_reference: format(startOfMonth(extraDate), "yyyy-MM-dd"),
       justification,
       quantity,
       created_by: profile?.id,
@@ -222,7 +221,6 @@ export default function AdminExtras() {
     // Reset form
     setSelectedGuard("");
     setExtraDate(undefined);
-    setMonthReference(new Date());
     setJustification("");
     setQuantity(1);
     
@@ -389,33 +387,6 @@ export default function AdminExtras() {
                       selected={extraDate}
                       onSelect={setExtraDate}
                       locale={ptBR}
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Mês de Referência *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(monthReference, "MMMM 'de' yyyy", { locale: ptBR })}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={monthReference}
-                      onSelect={(date) => date && setMonthReference(startOfMonth(date))}
-                      locale={ptBR}
-                      captionLayout="dropdown-buttons"
-                      fromYear={2020}
-                      toYear={2030}
                       className="pointer-events-auto"
                     />
                   </PopoverContent>
