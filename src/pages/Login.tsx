@@ -73,21 +73,57 @@ const Login = () => {
 
         if (!signedIn) {
           const alias = `${digits}@guardshift.com`;
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email: alias,
-            password,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: alias,
+        password,
+      });
+      if (error) throw error;
+      if (data.user) {
+        // Check if user is active before redirecting
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_active')
+          .eq('user_id', data.user.id)
+          .single();
+
+        if (profile && !profile.is_active) {
+          await supabase.auth.signOut();
+          toast({
+            title: 'Acesso bloqueado',
+            description: 'Seu período de teste expirou. Entre em contato para renovar sua assinatura.',
+            variant: 'destructive',
           });
-          if (error) throw error;
-          if (data.user) await redirectUser(data.user.id);
+          return;
         }
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: raw,
-          password,
-        });
-        if (error) throw error;
-        if (data.user) await redirectUser(data.user.id);
+        await redirectUser(data.user.id);
       }
+    }
+  } else {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: raw,
+      password,
+    });
+    if (error) throw error;
+    if (data.user) {
+      // Check if user is active before redirecting
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_active')
+        .eq('user_id', data.user.id)
+        .single();
+
+      if (profile && !profile.is_active) {
+        await supabase.auth.signOut();
+        toast({
+          title: 'Acesso bloqueado',
+          description: 'Seu período de teste expirou. Entre em contato para renovar sua assinatura.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      await redirectUser(data.user.id);
+    }
+  }
     } catch (error: any) {
       console.error('Login error:', error);
       toast({
@@ -150,6 +186,19 @@ const Login = () => {
                 'Entrar'
               )}
             </Button>
+
+            <div className="text-center mt-6 pt-6 border-t">
+              <p className="text-sm text-muted-foreground mb-3">
+                Ainda não tem uma conta?
+              </p>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => navigate('/teste-gratuito')}
+              >
+                Iniciar Teste Grátis de 7 Dias
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
