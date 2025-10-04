@@ -55,12 +55,30 @@ const Login = () => {
       if (isPhone) {
         const digits = raw.replace(/\D/g, '');
         const e164 = digits.startsWith('55') ? `+${digits}` : `+55${digits}`;
-        const { data, error } = await supabase.auth.signInWithPassword({
-          phone: e164,
-          password,
-        });
-        if (error) throw error;
-        if (data.user) await redirectUser(data.user.id);
+
+        let signedIn = false;
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            phone: e164,
+            password,
+          });
+          if (!error && data.user) {
+            await redirectUser(data.user.id);
+            signedIn = true;
+          }
+        } catch (err) {
+          // If phone login is disabled, we will fallback to email alias below
+        }
+
+        if (!signedIn) {
+          const alias = `${digits}@guardshift.com`;
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: alias,
+            password,
+          });
+          if (error) throw error;
+          if (data.user) await redirectUser(data.user.id);
+        }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: raw,

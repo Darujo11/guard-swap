@@ -49,8 +49,10 @@ serve(async (req) => {
     // 1. Create auth user with phone (idempotency best-effort)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       phone: e164,
+      email: profileEmail,
       password,
       phone_confirm: true,
+      email_confirm: true,
       user_metadata: { name }
     })
 
