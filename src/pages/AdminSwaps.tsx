@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { SwapRequest, Profile } from '@/lib/types';
 import { SWAP_STATUS_CONFIG } from '@/lib/constants';
@@ -29,6 +30,7 @@ import { format, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const AdminSwaps = () => {
+  const { profile } = useAuth();
   const [swapRequests, setSwapRequests] = useState<SwapRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -398,7 +400,7 @@ const AdminSwaps = () => {
 
   if (loading) {
     return (
-      <AppLayout title="Gerenciar Trocas" user={{ name: 'Admin Sistema', role: 'ADMIN' }}>
+      <AppLayout title="Gerenciar Trocas" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -410,7 +412,7 @@ const AdminSwaps = () => {
   }
 
   return (
-    <AppLayout title="Gerenciar Trocas" user={{ name: 'Admin Sistema', role: 'ADMIN' }}>
+    <AppLayout title="Gerenciar Trocas" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>

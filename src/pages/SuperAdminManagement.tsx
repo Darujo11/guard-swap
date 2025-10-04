@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, UserPlus, Calendar, CheckCircle, XCircle } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
@@ -46,6 +47,7 @@ interface Plan {
 }
 
 export default function SuperAdminManagement() {
+  const { profile } = useAuth();
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,7 +212,7 @@ export default function SuperAdminManagement() {
 
   if (loading) {
     return (
-      <AppLayout title="Gerenciar Administradores" user={{ name: 'Super Admin', role: 'ADMIN' }}>
+      <AppLayout title="Gerenciar Administradores" user={{ name: profile?.name || 'Super Admin', role: 'ADMIN' }}>
         <div className="flex items-center justify-center h-64">
           <div className="text-lg">Carregando...</div>
         </div>
@@ -219,7 +221,7 @@ export default function SuperAdminManagement() {
   }
 
   return (
-    <AppLayout title="Gerenciar Administradores" user={{ name: 'Super Admin', role: 'ADMIN' }}>
+    <AppLayout title="Gerenciar Administradores" user={{ name: profile?.name || 'Super Admin', role: 'ADMIN' }}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>

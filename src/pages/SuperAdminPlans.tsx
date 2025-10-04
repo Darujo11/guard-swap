@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Edit, Trash2, DollarSign, Users, Calendar } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -27,6 +28,7 @@ interface SubscriptionPlan {
 }
 
 export default function SuperAdminPlans() {
+  const { profile } = useAuth();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -177,7 +179,7 @@ export default function SuperAdminPlans() {
 
   if (loading) {
     return (
-      <AppLayout title="Gerenciar Planos" user={{ name: 'Super Admin', role: 'ADMIN' }}>
+      <AppLayout title="Gerenciar Planos" user={{ name: profile?.name || 'Super Admin', role: 'ADMIN' }}>
         <div className="flex items-center justify-center h-64">
           <div className="text-lg">Carregando...</div>
         </div>
@@ -186,7 +188,7 @@ export default function SuperAdminPlans() {
   }
 
   return (
-    <AppLayout title="Gerenciar Planos" user={{ name: 'Super Admin', role: 'ADMIN' }}>
+    <AppLayout title="Gerenciar Planos" user={{ name: profile?.name || 'Super Admin', role: 'ADMIN' }}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>

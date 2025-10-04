@@ -434,7 +434,7 @@ const AdminTeams = () => {
 
   if (loading) {
     return (
-      <AppLayout title="Gerenciar Equipes" user={{ name: 'Admin Sistema', role: 'ADMIN' }}>
+      <AppLayout title="Gerenciar Equipes" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -446,7 +446,7 @@ const AdminTeams = () => {
   }
 
   return (
-    <AppLayout title="Gerenciar Equipes" user={{ name: 'Admin Sistema', role: 'ADMIN' }}>
+    <AppLayout title="Gerenciar Equipes" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
       <DndContext onDragEnd={handleDragEnd}>
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">

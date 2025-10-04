@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { SwapRequest } from '@/lib/types';
 import { 
   Users, 
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react';
 
 const AdminDashboard = () => {
+  const { profile } = useAuth();
   const [swapRequests, setSwapRequests] = useState<SwapRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -168,7 +170,7 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <AppLayout title="Dashboard Administrativo" user={{ name: 'Admin', role: 'ADMIN' }}>
+      <AppLayout title="Dashboard Administrativo" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -182,7 +184,7 @@ const AdminDashboard = () => {
   return (
     <AppLayout
       title="Dashboard Administrativo"
-      user={{ name: 'Admin Sistema', role: 'ADMIN' }}
+      user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}
     >
       {/* Stats Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">

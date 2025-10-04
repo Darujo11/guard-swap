@@ -222,7 +222,7 @@ const AdminGuards = () => {
 
   if (loading) {
     return (
-      <AppLayout title="Seguranças">
+      <AppLayout title="Seguranças" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
         <div className="flex items-center justify-center h-64">
           <div className="text-lg">Carregando...</div>
         </div>
@@ -231,7 +231,7 @@ const AdminGuards = () => {
   }
 
   return (
-    <AppLayout title="Gerenciar Seguranças">
+    <AppLayout title="Gerenciar Seguranças" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
       <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex items-center justify-between gap-4">
