@@ -64,22 +64,45 @@ export default function AdminExtras() {
   }, [extras, filterGuard, filterMonth]);
 
   const fetchGuards = async () => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*, user_roles!inner(role)")
-      .eq("user_roles.role", "guard")
-      .order("name");
+    // 1) Buscar todos os user_ids com papel de guard
+    const { data: rolesData, error: rolesError } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "guard");
 
-    if (error) {
+    if (rolesError) {
       toast({
         variant: "destructive",
         title: "Erro ao carregar seguranças",
-        description: error.message,
+        description: rolesError.message,
       });
       return;
     }
 
-    setGuards(data || []);
+    const userIds = (rolesData || []).map((r: { user_id: string }) => r.user_id).filter(Boolean);
+
+    if (!userIds.length) {
+      setGuards([]);
+      return;
+    }
+
+    // 2) Buscar perfis desses usuários
+    const { data: profilesData, error: profilesError } = await supabase
+      .from("profiles")
+      .select("*")
+      .in("user_id", userIds)
+      .order("name");
+
+    if (profilesError) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar seguranças",
+        description: profilesError.message,
+      });
+      return;
+    }
+
+    setGuards(profilesData || []);
   };
 
   const fetchExtras = async () => {
