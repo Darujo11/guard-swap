@@ -371,31 +371,34 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
 
   const renderDay = (date: Date) => {
     const team = getTeamForDate(date);
-    const teamColor = team?.color || '#3b82f6';
+    const dayNumber = format(date, "d");
     
     return (
       <div
         onClick={() => !readOnly && handleDateClick(date)}
-        style={team ? getTeamColorStyle(teamColor) : {}}
         className={`
-          relative w-full h-full min-h-[70px] md:min-h-[80px] p-2 md:p-3 ${!readOnly ? 'cursor-pointer' : ''}
-          border-2 rounded-lg
-          ${!readOnly ? 'hover:shadow-md' : ''}
+          relative w-full min-h-[90px] md:min-h-[100px] p-3 md:p-4
+          border-2 rounded-xl
+          ${!readOnly ? 'cursor-pointer hover:shadow-md' : ''}
           transition-all duration-200
-          ${!team ? 'bg-background border-border hover:border-primary/30' : ''}
-          flex flex-col items-start justify-start gap-1
+          flex flex-col items-start justify-start
+          ${team ? '' : 'bg-background border-border/50 hover:border-primary/30'}
         `}
+        style={team ? {
+          backgroundColor: `${team.color}15`,
+          borderColor: team.color,
+        } : {}}
       >
         <div 
-          className="text-base md:text-lg font-bold"
-          style={{ color: team ? teamColor : 'inherit' }}
+          className="text-2xl md:text-3xl font-bold mb-2"
+          style={{ color: team ? team.color : 'hsl(var(--foreground))' }}
         >
-          {format(date, "d")}
+          {dayNumber}
         </div>
         {team && (
           <div 
-            className="text-xs md:text-sm font-medium leading-tight"
-            style={{ color: teamColor }}
+            className="text-sm md:text-base font-medium"
+            style={{ color: team.color }}
           >
             {team.name}
           </div>
@@ -414,25 +417,30 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
     const paddingDays = Array(firstDayOfWeek).fill(null);
 
     return (
-      <div className="grid grid-cols-7 gap-2 md:gap-3">
+      <div className="space-y-3">
         {/* Week days header */}
-        {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => (
-          <div key={day} className="text-center text-sm md:text-base font-semibold text-muted-foreground p-2">
-            {day}
-          </div>
-        ))}
+        <div className="grid grid-cols-7 gap-2 md:gap-3">
+          {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => (
+            <div key={day} className="text-center text-sm md:text-base font-semibold text-muted-foreground py-2">
+              {day}
+            </div>
+          ))}
+        </div>
         
-        {/* Padding days */}
-        {paddingDays.map((_, idx) => (
-          <div key={`padding-${idx}`} className="min-h-[70px] md:min-h-[80px]" />
-        ))}
-        
-        {/* Calendar days */}
-        {days.map((day) => (
-          <div key={day.toISOString()}>
-            {renderDay(day)}
-          </div>
-        ))}
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7 gap-2 md:gap-3">
+          {/* Padding days */}
+          {paddingDays.map((_, idx) => (
+            <div key={`padding-${idx}`} className="min-h-[90px] md:min-h-[100px]" />
+          ))}
+          
+          {/* Calendar days */}
+          {days.map((day) => (
+            <div key={day.toISOString()}>
+              {renderDay(day)}
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
