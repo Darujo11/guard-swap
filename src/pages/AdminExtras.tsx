@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -549,13 +550,8 @@ export default function AdminExtras() {
 
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Plantões Extras</h1>
-          <p className="text-muted-foreground">Gerencie e visualize os plantões extras realizados</p>
-        </div>
-      </div>
+    <AppLayout title="Plantões Extras" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
+      <div className="space-y-6">
 
       <Tabs defaultValue="register" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
@@ -1074,6 +1070,7 @@ export default function AdminExtras() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
