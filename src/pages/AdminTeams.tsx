@@ -287,11 +287,19 @@ const AdminTeams = () => {
       await fetchData();
       setIsTeamDialogOpen(false);
       resetTeamForm();
-    } catch (error) {
+    } catch (error: any) {
       console.error('[AdminTeams][SaveTeam]', error);
+      
+      let errorMessage = 'Não foi possível salvar a equipe.';
+      
+      // Check for duplicate name error
+      if (error?.message?.includes('duplicate key') || error?.code === '23505') {
+        errorMessage = 'Já existe uma equipe com este nome. Por favor, escolha outro nome.';
+      }
+      
       toast({
         title: 'Erro ao salvar',
-        description: 'Não foi possível salvar a equipe.',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
