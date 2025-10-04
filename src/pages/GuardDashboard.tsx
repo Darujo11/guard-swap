@@ -30,6 +30,7 @@ const GuardDashboard = () => {
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [isSwapFormOpen, setIsSwapFormOpen] = useState(false);
+  const [isFullScheduleOpen, setIsFullScheduleOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [extrasMonth, setExtrasMonth] = useState(startOfMonth(new Date()));
   const [extras, setExtras] = useState<any[]>([]);
@@ -166,11 +167,25 @@ const GuardDashboard = () => {
             />
           </DialogContent>
         </Dialog>
-        <Button variant="outline" className="gap-2">
+        <Button 
+          variant="outline" 
+          className="gap-2"
+          onClick={() => setIsFullScheduleOpen(true)}
+        >
           <Eye className="h-4 w-4" />
           Ver Escala Completa
         </Button>
       </div>
+
+      {/* Full Schedule Dialog */}
+      <Dialog open={isFullScheduleOpen} onOpenChange={setIsFullScheduleOpen}>
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Escala Completa de Plantões</DialogTitle>
+          </DialogHeader>
+          <TeamScheduleCalendar readOnly />
+        </DialogContent>
+      </Dialog>
 
       {/* My Extras */}
       <Card className="mb-6">
@@ -240,21 +255,6 @@ const GuardDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Schedule Calendar */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Escala de Plantões - Todas as Equipes
-          </CardTitle>
-          <CardDescription>
-            Visualize a escala completa de todas as equipes
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <TeamScheduleCalendar readOnly />
-        </CardContent>
-      </Card>
 
       <div className="grid gap-6 lg:grid-cols-1">
         {/* Swap Requests */}
