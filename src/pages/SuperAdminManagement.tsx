@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, UserPlus, Calendar, CheckCircle, XCircle, Pencil, Trash2, Ban, CheckCircle2 } from 'lucide-react';
+import { Plus, UserPlus, CheckCircle, XCircle, Pencil, Trash2, Ban, CheckCircle2 } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -314,95 +314,6 @@ export default function SuperAdminManagement() {
       console.error('Error toggling active:', error);
       toast({
         title: 'Erro',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  };
-
-  if (loading) {
-    if (!selectedAdmin) return;
-
-    try {
-      const { error } = await supabase.functions.invoke('update-admin', {
-        body: {
-          admin_id: selectedAdmin.id,
-          name: editForm.name,
-          email: editForm.email
-        }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Administrador atualizado',
-        description: 'As informações foram atualizadas com sucesso.',
-      });
-
-      setIsEditAdminOpen(false);
-      setSelectedAdmin(null);
-      fetchData();
-    } catch (error: any) {
-      console.error('Error updating admin:', error);
-      toast({
-        title: 'Erro ao atualizar',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleToggleActive = async (admin: Admin) => {
-    try {
-      const { error } = await supabase.functions.invoke('update-admin', {
-        body: {
-          admin_id: admin.id,
-          is_active: !admin.is_active
-        }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: admin.is_active ? 'Administrador suspenso' : 'Administrador ativado',
-        description: `O acesso foi ${admin.is_active ? 'suspenso' : 'ativado'} com sucesso.`,
-      });
-
-      fetchData();
-    } catch (error: any) {
-      console.error('Error toggling admin status:', error);
-      toast({
-        title: 'Erro',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleDeleteAdmin = async (admin: Admin) => {
-    if (!confirm(`Tem certeza que deseja deletar o administrador ${admin.name}? Esta ação não pode ser desfeita.`)) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase.functions.invoke('delete-admin', {
-        body: {
-          admin_id: admin.id
-        }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Administrador deletado',
-        description: 'O administrador foi removido com sucesso.',
-      });
-
-      fetchData();
-    } catch (error: any) {
-      console.error('Error deleting admin:', error);
-      toast({
-        title: 'Erro ao deletar',
         description: error.message,
         variant: 'destructive',
       });
