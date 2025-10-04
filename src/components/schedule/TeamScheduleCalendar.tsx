@@ -68,6 +68,8 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
 
+    console.log('[TeamScheduleCalendar] Fetching schedules from', format(start, "yyyy-MM-dd"), 'to', format(end, "yyyy-MM-dd"));
+
     const { data, error } = await supabase
       .from("team_schedules")
       .select(`
@@ -86,6 +88,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
       return;
     }
 
+    console.log('[TeamScheduleCalendar] Loaded schedules:', data?.length, 'records');
     setSchedules(data || []);
   };
 
@@ -300,6 +303,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
 
   const renderDay = (date: Date) => {
     const team = getTeamForDate(date);
+    console.log('[TeamScheduleCalendar] Rendering date:', format(date, "yyyy-MM-dd"), 'Team:', team?.name, 'Color:', team?.color);
     
     return (
       <div
