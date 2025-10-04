@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -162,15 +162,27 @@ export default function AdminExtras() {
   };
 
   const applyFilters = () => {
-    const startMonth = startOfMonth(filterMonth);
-    const endMonth = endOfMonth(filterMonth);
-    const filtered = extras.filter(extra => {
-      const extraMonth = new Date(extra.month_reference);
-      return extraMonth >= startMonth && extraMonth <= endMonth;
+    const targetKey = format(startOfMonth(filterMonth), "yyyy-MM");
+    const filtered = extras.filter((extra) => {
+      const extraKey = format(new Date(`${extra.month_reference}T00:00:00`), "yyyy-MM");
+      return extraKey === targetKey;
     });
 
     setFilteredExtras(filtered);
   };
+
+  const groupedExtras = useMemo(() => {
+    const map: Record<string, { guardName: string; total: number; days: string[] }> = {};
+    filteredExtras.forEach((extra) => {
+      const id = extra.guard_id;
+      const name = extra.guard?.name || "Desconhecido";
+      const qty = Number(extra.quantity) || 1;
+      if (!map[id]) map[id] = { guardName: name, total: 0, days: [] };
+      map[id].total += qty;
+      map[id].days.push(format(new Date(extra.extra_date), "dd/MM", { locale: ptBR }));
+    });
+    return Object.entries(map).map(([guardId, v]) => ({ guardId, ...v }));
+  }, [filteredExtras]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,6 +255,14 @@ export default function AdminExtras() {
 
   const generatePDF = () => {
     try {
+      if (filteredExtras.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Sem dados",
+          description: "Nenhum registro no período selecionado.",
+        });
+        return;
+      }
       const doc = new jsPDF();
       
       // Header
@@ -494,26 +514,14 @@ export default function AdminExtras() {
                     <TableHead>Segurança</TableHead>
                     <TableHead className="text-center">Quantidade</TableHead>
                     <TableHead>Dias</TableHead>
-                    <TableHead>Fundamentação</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredExtras.map((extra) => (
-                    <TableRow key={extra.id}>
-                      <TableCell className="font-medium">{extra.guard?.name || "Desconhecido"}</TableCell>
-                      <TableCell className="text-center font-semibold">{extra.quantity || 1}</TableCell>
-                      <TableCell>{format(new Date(extra.extra_date), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
-                      <TableCell className="max-w-md">{extra.justification}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(extra.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
+                  {groupedExtras.map((group) => (
+                    <TableRow key={group.guardId}>
+                      <TableCell className="font-medium">{group.guardName}</TableCell>
+                      <TableCell className="text-center font-semibold">{group.total}</TableCell>
+                      <TableCell className="max-w-md">{group.days.join(", ")}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
