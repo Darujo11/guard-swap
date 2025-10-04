@@ -91,6 +91,13 @@ export function TeamScheduleCalendar() {
     };
   };
 
+  const getTeamShortLabel = (name: string) => {
+    if (!name) return "";
+    const parts = name.trim().split(/\s+/);
+    const last = parts[parts.length - 1];
+    return last.charAt(0).toUpperCase();
+  };
+
   const handleDateClick = async (date: Date) => {
     if (!selectedTeam) {
       toast({
@@ -275,7 +282,7 @@ export function TeamScheduleCalendar() {
         </div>
         {team && (
           <div className="text-[0.65rem] md:text-xs mt-0.5 md:mt-1 font-medium truncate leading-tight">
-            <span className="md:hidden">{team.name.charAt(0)}</span>
+            <span className="md:hidden">{getTeamShortLabel(team.name)}</span>
             <span className="hidden md:inline">{team.name}</span>
           </div>
         )}
