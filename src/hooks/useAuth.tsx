@@ -105,6 +105,18 @@ export const useAuth = () => {
     try {
       // Sign out from Supabase with global scope to clear all sessions
       await supabase.auth.signOut({ scope: 'global' });
+
+      // Extra cleanup: remove any persisted Supabase auth tokens
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key) continue;
+          if (key.startsWith('sb-') && key.endsWith('-auth-token')) keysToRemove.push(key);
+          if (key.startsWith('supabase.auth.')) keysToRemove.push(key);
+        }
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+      } catch {}
       
       // Clear local state
       setAuthState({
@@ -116,9 +128,21 @@ export const useAuth = () => {
       });
       
       // Redirect to login
-      window.location.href = '/login';
+      window.location.replace('/login');
     } catch (error) {
       console.error('[Auth] Erro ao fazer logout:', error);
+
+      // Fallback cleanup even if API signOut fails
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key) continue;
+          if (key.startsWith('sb-') && key.endsWith('-auth-token')) keysToRemove.push(key);
+          if (key.startsWith('supabase.auth.')) keysToRemove.push(key);
+        }
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+      } catch {}
       
       // Even if logout fails, clear local state and redirect
       setAuthState({
@@ -128,7 +152,7 @@ export const useAuth = () => {
         profile: null,
         loading: false,
       });
-      window.location.href = '/login';
+      window.location.replace('/login');
     }
   };
 
