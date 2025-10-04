@@ -149,27 +149,50 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
     const existingSchedule = schedules.find(s => s.shift_date === dateStr);
 
     if (existingSchedule) {
-      // Remove schedule
-      const { error } = await supabase
-        .from("team_schedules")
-        .delete()
-        .eq("id", existingSchedule.id);
+      // Se a escala existente é da mesma equipe selecionada, remove
+      if (existingSchedule.team_id === selectedTeam) {
+        const { error } = await supabase
+          .from("team_schedules")
+          .delete()
+          .eq("id", existingSchedule.id);
 
-      if (error) {
+        if (error) {
+          toast({
+            variant: "destructive",
+            title: "Erro ao remover escala",
+            description: error.message,
+          });
+          return;
+        }
+
         toast({
-          variant: "destructive",
-          title: "Erro ao remover escala",
-          description: error.message,
+          title: "Escala removida",
+          description: `A escala foi removida de ${format(date, "dd/MM/yyyy")}`,
         });
-        return;
-      }
+      } else {
+        // Se é de outra equipe, substitui
+        const { error } = await supabase
+          .from("team_schedules")
+          .update({ team_id: selectedTeam })
+          .eq("id", existingSchedule.id);
 
-      toast({
-        title: "Escala removida",
-        description: `A escala foi removida de ${format(date, "dd/MM/yyyy")}`,
-      });
+        if (error) {
+          toast({
+            variant: "destructive",
+            title: "Erro ao atualizar escala",
+            description: error.message,
+          });
+          return;
+        }
+
+        const newTeam = teams.find(t => t.id === selectedTeam);
+        toast({
+          title: "Escala atualizada",
+          description: `${format(date, "dd/MM/yyyy")} agora está com ${newTeam?.name}`,
+        });
+      }
     } else {
-      // Add schedule
+      // Adiciona nova escala
       const { error } = await supabase
         .from("team_schedules")
         .insert({
@@ -186,9 +209,10 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
         return;
       }
 
+      const newTeam = teams.find(t => t.id === selectedTeam);
       toast({
         title: "Escala adicionada",
-        description: `A escala foi adicionada para ${format(date, "dd/MM/yyyy")}`,
+        description: `${newTeam?.name} foi atribuída para ${format(date, "dd/MM/yyyy")}`,
       });
     }
 
