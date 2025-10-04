@@ -252,7 +252,7 @@ const GuardDashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <TeamScheduleCalendar />
+          <TeamScheduleCalendar readOnly />
         </CardContent>
       </Card>
 

@@ -26,7 +26,11 @@ interface Profile {
   team_id: string | null;
 }
 
-export function TeamScheduleCalendar() {
+interface TeamScheduleCalendarProps {
+  readOnly?: boolean;
+}
+
+export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [schedules, setSchedules] = useState<TeamSchedule[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -129,6 +133,8 @@ export function TeamScheduleCalendar() {
   };
 
   const handleDateClick = async (date: Date) => {
+    if (readOnly) return; // Don't allow edits in read-only mode
+    
     if (!selectedTeam) {
       toast({
         variant: "destructive",
@@ -297,12 +303,12 @@ export function TeamScheduleCalendar() {
     
     return (
       <div
-        onClick={() => handleDateClick(date)}
+        onClick={() => !readOnly && handleDateClick(date)}
         style={team ? getTeamColorStyle(team.color || '#3b82f6') : {}}
         className={`
-          relative w-full h-full min-h-[50px] md:min-h-[60px] p-1 md:p-2 cursor-pointer
+          relative w-full h-full min-h-[50px] md:min-h-[60px] p-1 md:p-2 ${!readOnly ? 'cursor-pointer' : ''}
           border rounded md:border-2 md:rounded-md
-          hover:ring-1 md:hover:ring-2 hover:ring-primary
+          ${!readOnly ? 'hover:ring-1 md:hover:ring-2 hover:ring-primary' : ''}
           transition-all
           ${!team ? 'bg-background border-border' : ''}
         `}
@@ -383,31 +389,33 @@ export function TeamScheduleCalendar() {
               </Button>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione uma equipe" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teams.map((team) => (
-                    <SelectItem key={team.id} value={team.id}>
-                      {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {!readOnly && (
+              <div className="flex flex-col gap-2">
+                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione uma equipe" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              <Button
-                onClick={generatePattern24_72}
-                disabled={loading}
-                className="w-full"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Gerar Padrão 24/72 para Todas</span>
-                <span className="sm:hidden">Gerar Padrão 24/72</span>
-              </Button>
-            </div>
+                <Button
+                  onClick={generatePattern24_72}
+                  disabled={loading}
+                  className="w-full"
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Gerar Padrão 24/72 para Todas</span>
+                  <span className="sm:hidden">Gerar Padrão 24/72</span>
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Calendar */}
@@ -430,40 +438,42 @@ export function TeamScheduleCalendar() {
                           />
                           <span className="font-medium text-sm md:text-base">{team.name}</span>
                         </div>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                            >
-                              <Palette className="h-3 w-3" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-64">
-                            <div className="space-y-2">
-                              <h4 className="font-medium text-sm">Editar cor de {team.name}</h4>
-                              <div className="flex gap-2">
-                                <Input
-                                  type="color"
-                                  value={team.color || '#3b82f6'}
-                                  onChange={(e) => updateTeamColor(team.id, e.target.value)}
-                                  className="w-20 h-10 cursor-pointer"
-                                />
-                                <Input
-                                  type="text"
-                                  value={team.color || '#3b82f6'}
-                                  onChange={(e) => updateTeamColor(team.id, e.target.value)}
-                                  placeholder="#3b82f6"
-                                  className="flex-1"
-                                />
+                        {!readOnly && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                              >
+                                <Palette className="h-3 w-3" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64">
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm">Editar cor de {team.name}</h4>
+                                <div className="flex gap-2">
+                                  <Input
+                                    type="color"
+                                    value={team.color || '#3b82f6'}
+                                    onChange={(e) => updateTeamColor(team.id, e.target.value)}
+                                    className="w-20 h-10 cursor-pointer"
+                                  />
+                                  <Input
+                                    type="text"
+                                    value={team.color || '#3b82f6'}
+                                    onChange={(e) => updateTeamColor(team.id, e.target.value)}
+                                    placeholder="#3b82f6"
+                                    className="flex-1"
+                                  />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Escolha uma cor para {team.name}
+                                </p>
                               </div>
-                              <p className="text-xs text-muted-foreground">
-                                Escolha uma cor para {team.name}
-                              </p>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
+                            </PopoverContent>
+                          </Popover>
+                        )}
                       </div>
                       
                       {members.length > 0 ? (
