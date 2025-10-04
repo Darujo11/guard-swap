@@ -64,13 +64,20 @@ export default function Profile() {
         .from("profiles")
         .select("*")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
-      setEmail(data.email || user.email || "");
-      setPhone(data.phone || "");
-      setName(data.name || "");
+      if (data) {
+        setEmail(data.email || user.email || "");
+        setPhone(data.phone || "");
+        setName(data.name || "");
+      } else {
+        // Se não encontrar perfil, usa dados do auth
+        setEmail(user.email || "");
+        setPhone("");
+        setName("");
+      }
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -120,6 +127,9 @@ export default function Profile() {
         title: "Perfil atualizado",
         description: "Suas informações foram atualizadas com sucesso.",
       });
+      
+      // Refresh profile data
+      await fetchProfile();
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         const fieldErrors: {[key: string]: string} = {};
