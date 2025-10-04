@@ -108,6 +108,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_shift_chief: boolean
           name: string
           phone: string | null
           team_id: string | null
@@ -118,6 +119,7 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
+          is_shift_chief?: boolean
           name: string
           phone?: string | null
           team_id?: string | null
@@ -128,6 +130,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          is_shift_chief?: boolean
           name?: string
           phone?: string | null
           team_id?: string | null

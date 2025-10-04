@@ -19,8 +19,10 @@ import {
   Search,
   UserPlus,
   Mail,
-  Phone
+  Phone,
+  Crown
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -42,7 +44,8 @@ const AdminGuards = () => {
     name: '',
     email: '',
     phone: '',
-    team_id: ''
+    team_id: '',
+    is_shift_chief: false
   });
   const { toast } = useToast();
 
@@ -98,6 +101,7 @@ const AdminGuards = () => {
           email: guardForm.email || null,
           phone: guardForm.phone,
           team_id: guardForm.team_id || null,
+          is_shift_chief: guardForm.is_shift_chief || false,
         }
       });
 
@@ -110,7 +114,7 @@ const AdminGuards = () => {
       });
 
       setIsCreateDialogOpen(false);
-      setGuardForm({ name: '', email: '', phone: '', team_id: '' });
+      setGuardForm({ name: '', email: '', phone: '', team_id: '', is_shift_chief: false });
       fetchData();
     } catch (error: any) {
       console.error('[AdminGuards][CreateGuard]', error);
@@ -139,6 +143,7 @@ const AdminGuards = () => {
           name: guardForm.name,
           phone: guardForm.phone || null,
           team_id: guardForm.team_id || null,
+          is_shift_chief: guardForm.is_shift_chief || false,
         })
         .eq('id', editingGuard.id);
 
@@ -151,7 +156,7 @@ const AdminGuards = () => {
 
       setIsEditDialogOpen(false);
       setEditingGuard(null);
-      setGuardForm({ name: '', email: '', phone: '', team_id: '' });
+      setGuardForm({ name: '', email: '', phone: '', team_id: '', is_shift_chief: false });
       fetchData();
     } catch (error: any) {
       console.error('[AdminGuards][UpdateGuard]', error);
@@ -197,12 +202,13 @@ const AdminGuards = () => {
       email: guard.email,
       phone: guard.phone || '',
       team_id: guard.team_id || '',
+      is_shift_chief: guard.is_shift_chief || false,
     });
     setIsEditDialogOpen(true);
   };
 
   const resetForm = () => {
-    setGuardForm({ name: '', email: '', phone: '', team_id: '' });
+    setGuardForm({ name: '', email: '', phone: '', team_id: '', is_shift_chief: false });
     setEditingGuard(null);
   };
 
@@ -297,6 +303,19 @@ const AdminGuards = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is_shift_chief"
+                    checked={guardForm.is_shift_chief}
+                    onCheckedChange={(checked) => 
+                      setGuardForm({ ...guardForm, is_shift_chief: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="is_shift_chief" className="flex items-center gap-2 cursor-pointer">
+                    <Crown className="h-4 w-4 text-amber-500" />
+                    Chefe de Plantão
+                  </Label>
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
@@ -335,6 +354,7 @@ const AdminGuards = () => {
                     <TableHead>Email</TableHead>
                     <TableHead>Telefone</TableHead>
                     <TableHead>Equipe</TableHead>
+                    <TableHead>Cargo</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -363,6 +383,18 @@ const AdminGuards = () => {
                           <TeamBadge team={guard.team} />
                         ) : (
                           <Badge variant="outline">Sem equipe</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {guard.is_shift_chief ? (
+                          <Badge variant="secondary" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
+                            <Crown className="h-3 w-3 mr-1" />
+                            Chefe
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Segurança
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -444,6 +476,19 @@ const AdminGuards = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit_is_shift_chief"
+                    checked={guardForm.is_shift_chief}
+                    onCheckedChange={(checked) => 
+                      setGuardForm({ ...guardForm, is_shift_chief: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="edit_is_shift_chief" className="flex items-center gap-2 cursor-pointer">
+                    <Crown className="h-4 w-4 text-amber-500" />
+                    Chefe de Plantão
+                  </Label>
                 </div>
             </div>
             <DialogFooter>

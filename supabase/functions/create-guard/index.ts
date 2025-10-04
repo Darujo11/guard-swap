@@ -23,7 +23,7 @@ serve(async (req) => {
       }
     });
 
-    const { name, email, phone, team_id } = await req.json();
+    const { name, email, phone, team_id, is_shift_chief } = await req.json();
 
     console.log('[create-guard] Creating guard:', { name, phone });
 
@@ -75,6 +75,7 @@ serve(async (req) => {
         email: email || loginEmail,
         phone: phone,
         team_id: team_id || null,
+        is_shift_chief: is_shift_chief || false,
       });
 
     if (profileError) {

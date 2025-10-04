@@ -18,7 +18,8 @@ import {
   Edit,
   Trash2,
   Search,
-  UserPlus
+  UserPlus,
+  Crown
 } from 'lucide-react';
 
 const AdminTeams = () => {
@@ -382,10 +383,22 @@ const AdminTeams = () => {
                 <div className="space-y-2">
                   {members.length > 0 ? (
                     members.map((member) => (
-                      <div key={member.id} className="flex flex-col gap-1 p-2 bg-muted/50 rounded">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{member.name}</span>
-                      </div>
+                      <div 
+                        key={member.id} 
+                        className={`flex flex-col gap-1 p-2 rounded ${
+                          member.is_shift_chief 
+                            ? 'bg-amber-500/10 border border-amber-500/20' 
+                            : 'bg-muted/50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium flex items-center gap-2">
+                            {member.is_shift_chief && (
+                              <Crown className="h-4 w-4 text-amber-500" />
+                            )}
+                            {member.name}
+                          </span>
+                        </div>
                         {member.phone && (
                           <span className="text-xs text-muted-foreground">
                             WhatsApp: {member.phone}

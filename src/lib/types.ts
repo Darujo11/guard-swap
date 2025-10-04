@@ -18,6 +18,7 @@ export interface Profile {
   phone?: string | null;
   team_id?: string | null;
   team?: Team;
+  is_shift_chief?: boolean;
   created_at: string;
   updated_at: string;
 }
