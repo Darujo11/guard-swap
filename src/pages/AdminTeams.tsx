@@ -19,8 +19,131 @@ import {
   Trash2,
   Search,
   UserPlus,
-  Crown
+  Crown,
+  GripVertical
 } from 'lucide-react';
+import { DndContext, DragEndEvent, DragOverlay, useDraggable, useDroppable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+
+// Component for draggable member
+const DraggableMember = ({ member, teamId }: { member: Profile; teamId: string }) => {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: member.id,
+    data: { member, fromTeamId: teamId }
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div 
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={`flex flex-col gap-1 p-2 rounded cursor-move ${
+        member.is_shift_chief 
+          ? 'bg-amber-500/10 border border-amber-500/20' 
+          : 'bg-muted/50'
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <span className="font-medium flex items-center gap-2">
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+          {member.is_shift_chief && (
+            <Crown className="h-4 w-4 text-amber-500" />
+          )}
+          {member.name}
+        </span>
+      </div>
+      {member.phone && (
+        <span className="text-xs text-muted-foreground ml-8">
+          WhatsApp: {member.phone}
+        </span>
+      )}
+    </div>
+  );
+};
+
+// Component for droppable team card
+const DroppableTeamCard = ({ 
+  team, 
+  members, 
+  onEdit, 
+  onDelete, 
+  onAssign 
+}: { 
+  team: Team; 
+  members: Profile[]; 
+  onEdit: (team: Team) => void; 
+  onDelete: (team: Team) => void; 
+  onAssign: (team: Team) => void;
+}) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: team.id,
+    data: { team }
+  });
+
+  return (
+    <Card 
+      ref={setNodeRef}
+      className={`hover:shadow-md transition-shadow ${isOver ? 'ring-2 ring-primary' : ''}`}
+    >
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <TeamBadge team={team} />
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onAssign(team)}
+            >
+              <UserPlus className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(team)}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(team)}
+              className="text-danger hover:text-danger"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <CardTitle className="text-lg">{team.name}</CardTitle>
+        {team.description && (
+          <CardDescription>{team.description}</CardDescription>
+        )}
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+          <Users className="h-4 w-4" />
+          <span>{members.length} membros</span>
+        </div>
+        <div className="space-y-2 min-h-[60px]">
+          {members.length > 0 ? (
+            members.map((member) => (
+              <DraggableMember key={member.id} member={member} teamId={team.id} />
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              Nenhum membro atribuído
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const AdminTeams = () => {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -32,6 +155,7 @@ const AdminTeams = () => {
   const [isCreateMemberDialogOpen, setIsCreateMemberDialogOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [activeMember, setActiveMember] = useState<Profile | null>(null);
   const [teamForm, setTeamForm] = useState({
     name: '',
     description: ''
@@ -45,6 +169,49 @@ const AdminTeams = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) {
+      setActiveMember(null);
+      return;
+    }
+
+    const member = active.data.current?.member as Profile;
+    const fromTeamId = active.data.current?.fromTeamId as string;
+    const toTeamId = over.id as string;
+
+    if (!member || fromTeamId === toTeamId) {
+      setActiveMember(null);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ team_id: toTeamId })
+        .eq('id', member.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Membro transferido',
+        description: `${member.name} foi movido para a nova equipe com sucesso.`,
+      });
+
+      await fetchData();
+    } catch (error) {
+      console.error('[AdminTeams][DragEnd]', error);
+      toast({
+        title: 'Erro ao transferir',
+        description: 'Não foi possível mover o membro para a nova equipe.',
+        variant: 'destructive',
+      });
+    } finally {
+      setActiveMember(null);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -275,162 +442,99 @@ const AdminTeams = () => {
 
   return (
     <AppLayout title="Gerenciar Equipes" user={{ name: 'Admin Sistema', role: 'ADMIN' }}>
-      {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar equipes..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-        <Dialog open={isTeamDialogOpen} onOpenChange={setIsTeamDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetTeamForm}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Equipe
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingTeam ? 'Editar Equipe' : 'Nova Equipe'}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="teamName">Nome da Equipe</Label>
-                <Input
-                  id="teamName"
-                  value={teamForm.name}
-                  onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
-                  placeholder="Ex: Equipe A"
-                />
-              </div>
-              <div>
-                <Label htmlFor="teamDescription">Descrição</Label>
-                <Textarea
-                  id="teamDescription"
-                  value={teamForm.description}
-                  onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })}
-                  placeholder="Descrição opcional da equipe"
-                />
-              </div>
+      <DndContext onDragEnd={handleDragEnd}>
+        {/* Header Actions */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar equipes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsTeamDialogOpen(false)}>
-                Cancelar
+          </div>
+          <Dialog open={isTeamDialogOpen} onOpenChange={setIsTeamDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetTeamForm}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Equipe
               </Button>
-              <Button onClick={handleSaveTeam}>
-                {editingTeam ? 'Atualizar' : 'Criar'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {editingTeam ? 'Editar Equipe' : 'Nova Equipe'}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="teamName">Nome da Equipe</Label>
+                  <Input
+                    id="teamName"
+                    value={teamForm.name}
+                    onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
+                    placeholder="Ex: Equipe A"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="teamDescription">Descrição</Label>
+                  <Textarea
+                    id="teamDescription"
+                    value={teamForm.description}
+                    onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })}
+                    placeholder="Descrição opcional da equipe"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsTeamDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveTeam}>
+                  {editingTeam ? 'Atualizar' : 'Criar'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
 
-      {/* Teams Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredTeams.map((team) => {
-          const members = getTeamMembers(team.id);
-          return (
-            <Card key={team.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <TeamBadge team={team} />
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedTeam(team);
-                        setIsAssignDialogOpen(true);
-                      }}
-                    >
-                      <UserPlus className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEditDialog(team)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteTeam(team)}
-                      className="text-danger hover:text-danger"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <CardTitle className="text-lg">{team.name}</CardTitle>
-                {team.description && (
-                  <CardDescription>{team.description}</CardDescription>
-                )}
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                  <Users className="h-4 w-4" />
-                  <span>{members.length} membros</span>
-                </div>
-                <div className="space-y-2">
-                  {members.length > 0 ? (
-                    members.map((member) => (
-                      <div 
-                        key={member.id} 
-                        className={`flex flex-col gap-1 p-2 rounded ${
-                          member.is_shift_chief 
-                            ? 'bg-amber-500/10 border border-amber-500/20' 
-                            : 'bg-muted/50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium flex items-center gap-2">
-                            {member.is_shift_chief && (
-                              <Crown className="h-4 w-4 text-amber-500" />
-                            )}
-                            {member.name}
-                          </span>
-                        </div>
-                        {member.phone && (
-                          <span className="text-xs text-muted-foreground">
-                            WhatsApp: {member.phone}
-                          </span>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">
-                      Nenhum membro atribuído
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+        {/* Teams Grid */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredTeams.map((team) => {
+            const members = getTeamMembers(team.id);
+            return (
+              <DroppableTeamCard 
+                key={team.id}
+                team={team}
+                members={members}
+                onEdit={openEditDialog}
+                onDelete={handleDeleteTeam}
+                onAssign={(team) => {
+                  setSelectedTeam(team);
+                  setIsAssignDialogOpen(true);
+                }}
+              />
+            );
+          })}
+        </div>
 
-      {filteredTeams.length === 0 && (
-        <Card className="text-center py-8">
-          <CardContent>
-            <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <CardTitle className="mb-2">Nenhuma equipe encontrada</CardTitle>
-            <CardDescription>
-              {searchTerm
-                ? 'Nenhuma equipe corresponde aos critérios de busca.'
-                : 'Comece criando sua primeira equipe.'}
-            </CardDescription>
-          </CardContent>
-        </Card>
-      )}
+        {filteredTeams.length === 0 && (
+          <Card className="text-center py-8">
+            <CardContent>
+              <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <CardTitle className="mb-2">Nenhuma equipe encontrada</CardTitle>
+              <CardDescription>
+                {searchTerm
+                  ? 'Nenhuma equipe corresponde aos critérios de busca.'
+                  : 'Comece criando sua primeira equipe.'}
+              </CardDescription>
+            </CardContent>
+          </Card>
+        )}
+      </DndContext>
 
       {/* Assign Member Dialog */}
       <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
