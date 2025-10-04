@@ -16,7 +16,9 @@ import {
   XCircle,
   Clock,
   ArrowRightLeft,
-  MessageSquare
+  MessageSquare,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -32,6 +34,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
   const [isResponseDialogOpen, setIsResponseDialogOpen] = useState(false);
   const [responseAction, setResponseAction] = useState<'accept' | 'reject' | null>(null);
   const [responseReason, setResponseReason] = useState('');
+  const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -206,6 +209,13 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
     return request.requester_id === currentUser.id && request.status === 'PENDING';
   };
 
+  const toggleMonth = (monthKey: string) => {
+    setExpandedMonths(prev => ({
+      ...prev,
+      [monthKey]: !prev[monthKey]
+    }));
+  };
+
   // Agrupar solicitações por mês da troca (target_shift_date)
   const groupedByMonth = swapRequests.reduce((acc, request) => {
     const monthKey = format(startOfMonth(new Date(request.target_shift_date)), 'yyyy-MM');
@@ -218,6 +228,17 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
 
   // Ordenar as chaves dos meses (mais recente primeiro)
   const sortedMonthKeys = Object.keys(groupedByMonth).sort((a, b) => b.localeCompare(a));
+
+  // Inicializar todos os meses como expandidos na primeira renderização
+  useEffect(() => {
+    if (sortedMonthKeys.length > 0 && Object.keys(expandedMonths).length === 0) {
+      const initialExpanded: Record<string, boolean> = {};
+      sortedMonthKeys.forEach(key => {
+        initialExpanded[key] = true;
+      });
+      setExpandedMonths(initialExpanded);
+    }
+  }, [sortedMonthKeys.length]);
 
   if (loading) {
     return (
@@ -259,18 +280,28 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                 const monthRequests = groupedByMonth[monthKey];
                 const monthDate = new Date(monthKey + '-01');
                 const monthLabel = format(monthDate, 'MMMM yyyy', { locale: ptBR });
+                const isExpanded = expandedMonths[monthKey] ?? true;
                 
                 return (
                   <div key={monthKey} className="space-y-3">
-                    <div className="flex items-center gap-2 pb-2 border-b">
+                    <button
+                      onClick={() => toggleMonth(monthKey)}
+                      className="flex items-center gap-2 pb-2 border-b w-full hover:bg-muted/50 transition-colors rounded-t px-2 -mx-2"
+                    >
                       <Calendar className="h-4 w-4 text-primary" />
                       <h3 className="font-semibold text-sm capitalize">{monthLabel}</h3>
                       <Badge variant="secondary" className="ml-auto">
                         {monthRequests.length} {monthRequests.length === 1 ? 'solicitação' : 'solicitações'}
                       </Badge>
-                    </div>
+                      {isExpanded ? (
+                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
                     
-                    <div className="space-y-3">
+                    {isExpanded && (
+                      <div className="space-y-3">
                       {monthRequests.map((request) => {
                         const isRequester = request.requester_id === currentUser.id;
                         const otherUser = isRequester ? request.target : request.requester;
@@ -393,7 +424,8 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                           </div>
                         );
                       })}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
