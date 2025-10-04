@@ -52,19 +52,23 @@ const AdminGuards = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (profile?.id) {
+      fetchData();
+    }
+  }, [profile?.id]);
 
   const fetchData = async () => {
+    if (!profile?.id) return;
     try {
       const [teamsResult, profilesResult] = await Promise.all([
-        supabase.from('teams').select('*').order('name'),
+        supabase.from('teams').select('*').eq('admin_id', profile.id).order('name'),
         supabase
           .from('profiles')
           .select(`
             *,
             team:teams(*)
           `)
+          .eq('admin_id', profile.id)
           .order('name')
       ]);
 
