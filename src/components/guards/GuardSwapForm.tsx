@@ -46,13 +46,31 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
 
   const fetchAvailableGuards = async () => {
     try {
+      // Buscar apenas usuários com role 'guard'
+      const { data: guardRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'guard');
+
+      if (rolesError) throw rolesError;
+
+      const guardUserIds = (guardRoles || []).map((r: any) => r.user_id);
+
+      if (guardUserIds.length === 0) {
+        setAvailableGuards([]);
+        return;
+      }
+
+      // Buscar profiles que são guardas, têm equipe e não são o próprio usuário
       const { data, error } = await supabase
         .from('profiles')
         .select(`
           *,
           team:teams(*)
         `)
-        .neq('id', currentUser.id);
+        .in('user_id', guardUserIds)
+        .neq('id', currentUser.id)
+        .not('team_id', 'is', null);
 
       if (error) throw error;
       setAvailableGuards((data || []) as Profile[]);
