@@ -153,20 +153,6 @@ const Login = () => {
                 'Entrar'
               )}
             </Button>
-            <div className="text-center mt-4 space-y-2">
-              <a
-                href="/criar-admin"
-                className="block text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                Criar primeiro administrador
-              </a>
-              <a
-                href="/criar-super-admin"
-                className="block text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition-colors font-medium"
-              >
-                Criar Super Administrador
-              </a>
-            </div>
           </form>
         </CardContent>
       </Card>
