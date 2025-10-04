@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TeamBadge } from '@/components/ui/team-badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Team, Profile } from '@/lib/types';
 import { 
@@ -146,6 +147,7 @@ const DroppableTeamCard = ({
 };
 
 const AdminTeams = () => {
+  const { profile } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -269,7 +271,10 @@ const AdminTeams = () => {
       } else {
         const { error } = await supabase
           .from('teams')
-          .insert([teamForm]);
+          .insert([{
+            ...teamForm,
+            admin_id: profile?.id || null
+          }]);
 
         if (error) throw error;
 

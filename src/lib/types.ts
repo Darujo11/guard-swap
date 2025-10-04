@@ -19,6 +19,7 @@ export interface Profile {
   team_id?: string | null;
   team?: Team;
   is_shift_chief?: boolean;
+  admin_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -35,6 +36,7 @@ export interface SwapRequest {
   admin_approved: boolean;
   admin_approved_by?: string;
   admin_approved_at?: string;
+  admin_id?: string | null;
   requester?: Profile;
   target?: Profile;
   admin_approver?: Profile;

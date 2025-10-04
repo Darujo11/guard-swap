@@ -23,9 +23,9 @@ serve(async (req) => {
       }
     });
 
-    const { name, email, phone, team_id, is_shift_chief } = await req.json();
+    const { name, email, phone, team_id, is_shift_chief, admin_id } = await req.json();
 
-    console.log('[create-guard] Creating guard:', { name, phone });
+    console.log('[create-guard] Creating guard:', { name, phone, admin_id });
 
     // Validate required fields
     if (!name || !phone) {
@@ -76,6 +76,7 @@ serve(async (req) => {
         phone: phone,
         team_id: team_id || null,
         is_shift_chief: is_shift_chief || false,
+        admin_id: admin_id || null,
       });
 
     if (profileError) {

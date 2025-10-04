@@ -71,18 +71,39 @@ serve(async (req) => {
       .eq('user_id', userId)
       .maybeSingle();
 
+    let profileId: string;
+
     if (!existingProfile) {
-      const { error: profileError } = await supabaseAdmin
+      const { data: newProfile, error: profileError } = await supabaseAdmin
         .from('profiles')
-        .insert({ user_id: userId, email, name });
+        .insert({ user_id: userId, email, name })
+        .select('id')
+        .single();
 
       if (profileError) {
         console.error('[create-admin] Profile insert error:', profileError);
         throw profileError;
       }
-      console.log('[create-admin] Profile created');
+      
+      profileId = newProfile.id;
+      console.log('[create-admin] Profile created:', profileId);
+      
+      // Update profile with admin_id (admin manages their own data)
+      await supabaseAdmin
+        .from('profiles')
+        .update({ admin_id: profileId })
+        .eq('id', profileId);
+      
+      console.log('[create-admin] Admin ID set');
     } else {
-      console.log('[create-admin] Profile already exists');
+      profileId = existingProfile.id;
+      console.log('[create-admin] Profile already exists:', profileId);
+      
+      // Ensure admin_id is set
+      await supabaseAdmin
+        .from('profiles')
+        .update({ admin_id: profileId })
+        .eq('id', profileId);
     }
 
     // 3. Check existing roles and ensure admin role

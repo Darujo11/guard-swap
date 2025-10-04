@@ -36,7 +36,7 @@ const navigation = [
 ];
 
 export function AppLayout({ children, title, user }: AppLayoutProps) {
-  const { signOut } = useAuth();
+  const { signOut, role } = useAuth();
   const { notifications, markAsRead, markAllAsRead } = useSwapNotifications();
   const location = useLocation();
   
@@ -45,7 +45,7 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
     { name: 'Administradores', href: '/super-admin/administradores', icon: Crown },
   ];
   
-  const isSuperAdmin = user?.role === 'ADMIN' && location.pathname.includes('super-admin');
+  const isSuperAdmin = role === 'super_admin';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
@@ -76,7 +76,7 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
               ))}
               
               {/* Super Admin Menu */}
-              {user?.role === 'ADMIN' && (
+              {isSuperAdmin && (
                 <>
                   <div className="h-6 w-px bg-border mx-2" />
                   {superAdminNavigation.map((item) => (

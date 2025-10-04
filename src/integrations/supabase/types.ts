@@ -105,6 +105,7 @@ export type Database = {
       }
       extras: {
         Row: {
+          admin_id: string | null
           created_at: string
           created_by: string | null
           extra_date: string
@@ -116,6 +117,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_id?: string | null
           created_at?: string
           created_by?: string | null
           extra_date: string
@@ -127,6 +129,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_id?: string | null
           created_at?: string
           created_by?: string | null
           extra_date?: string
@@ -156,6 +159,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          admin_id: string | null
           created_at: string
           email: string
           id: string
@@ -167,6 +171,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          admin_id?: string | null
           created_at?: string
           email: string
           id?: string
@@ -178,6 +183,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          admin_id?: string | null
           created_at?: string
           email?: string
           id?: string
@@ -245,6 +251,7 @@ export type Database = {
           admin_approved: boolean | null
           admin_approved_at: string | null
           admin_approved_by: string | null
+          admin_id: string | null
           created_at: string
           id: string
           reason: string
@@ -260,6 +267,7 @@ export type Database = {
           admin_approved?: boolean | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
+          admin_id?: string | null
           created_at?: string
           id?: string
           reason: string
@@ -275,6 +283,7 @@ export type Database = {
           admin_approved?: boolean | null
           admin_approved_at?: string | null
           admin_approved_by?: string | null
+          admin_id?: string | null
           created_at?: string
           id?: string
           reason?: string
@@ -312,6 +321,7 @@ export type Database = {
       }
       team_schedules: {
         Row: {
+          admin_id: string | null
           created_at: string
           id: string
           shift_date: string
@@ -319,6 +329,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_id?: string | null
           created_at?: string
           id?: string
           shift_date: string
@@ -326,6 +337,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_id?: string | null
           created_at?: string
           id?: string
           shift_date?: string
@@ -344,6 +356,7 @@ export type Database = {
       }
       teams: {
         Row: {
+          admin_id: string | null
           color: string
           created_at: string
           description: string | null
@@ -352,6 +365,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_id?: string | null
           color?: string
           created_at?: string
           description?: string | null
@@ -360,6 +374,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_id?: string | null
           color?: string
           created_at?: string
           description?: string | null
