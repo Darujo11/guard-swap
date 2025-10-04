@@ -23,7 +23,7 @@ serve(async (req) => {
       }
     );
 
-    const { email, password, name } = await req.json();
+    const { email, password, name, phone } = await req.json();
 
     if (!email || !password || !name) {
       return new Response(
@@ -35,7 +35,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('[create-admin] Processing admin:', { email, name });
+    console.log('[create-admin] Processing admin:', { email, name, phone });
 
     // 1. Try to find existing user by email
     let userId: string | null = null;
@@ -76,7 +76,7 @@ serve(async (req) => {
     if (!existingProfile) {
       const { data: newProfile, error: profileError } = await supabaseAdmin
         .from('profiles')
-        .insert({ user_id: userId, email, name })
+        .insert({ user_id: userId, email, name, phone: phone || null })
         .select('id')
         .single();
 
@@ -99,10 +99,13 @@ serve(async (req) => {
       profileId = existingProfile.id;
       console.log('[create-admin] Profile already exists:', profileId);
       
-      // Ensure admin_id is set
+      // Ensure admin_id is set and update phone if provided
+      const updateData: any = { admin_id: profileId };
+      if (phone) updateData.phone = phone;
+      
       await supabaseAdmin
         .from('profiles')
-        .update({ admin_id: profileId })
+        .update(updateData)
         .eq('id', profileId);
     }
 

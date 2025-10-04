@@ -59,6 +59,7 @@ export default function SuperAdminManagement() {
   const [adminForm, setAdminForm] = useState({
     name: '',
     email: '',
+    phone: '',
     password: ''
   });
   const [editForm, setEditForm] = useState({
@@ -151,7 +152,8 @@ export default function SuperAdminManagement() {
         body: {
           email: adminForm.email,
           password: adminForm.password,
-          name: adminForm.name
+          name: adminForm.name,
+          phone: adminForm.phone
         }
       });
 
@@ -163,7 +165,7 @@ export default function SuperAdminManagement() {
       });
 
       setIsCreateAdminOpen(false);
-      setAdminForm({ name: '', email: '', password: '' });
+      setAdminForm({ name: '', email: '', phone: '', password: '' });
       fetchData();
     } catch (error: any) {
       console.error('Error creating admin:', error);
@@ -368,6 +370,19 @@ export default function SuperAdminManagement() {
                     onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
                     placeholder="email@exemplo.com"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="admin-phone">WhatsApp (opcional)</Label>
+                  <Input
+                    id="admin-phone"
+                    type="tel"
+                    value={adminForm.phone}
+                    onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })}
+                    placeholder="Ex: 11999999999"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Apenas números. Permite login com WhatsApp.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="admin-password">Senha *</Label>
