@@ -124,10 +124,15 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
 
   const getTeamColorStyle = (color: string): React.CSSProperties => {
     return {
-      backgroundColor: color + '20', // 20 = 12.5% opacity in hex
+      backgroundColor: color + '15', // 15 = ~8% opacity in hex for soft pastel background
       borderColor: color,
-      color: color,
+      borderWidth: '2px',
     };
+  };
+
+  const getTeamTextColor = (color: string): string => {
+    // Return the team color for text
+    return color;
   };
 
   const getTeamShortLabel = (name: string) => {
@@ -332,26 +337,33 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
 
   const renderDay = (date: Date) => {
     const team = getTeamForDate(date);
+    const teamColor = team?.color || '#3b82f6';
     
     return (
       <div
         onClick={() => !readOnly && handleDateClick(date)}
-        style={team ? getTeamColorStyle(team.color || '#3b82f6') : {}}
+        style={team ? getTeamColorStyle(teamColor) : {}}
         className={`
-          relative w-full h-full min-h-[50px] md:min-h-[60px] p-1 md:p-2 ${!readOnly ? 'cursor-pointer' : ''}
-          border rounded md:border-2 md:rounded-md
-          ${!readOnly ? 'hover:ring-1 md:hover:ring-2 hover:ring-primary' : ''}
-          transition-all
-          ${!team ? 'bg-background border-border' : ''}
+          relative w-full h-full min-h-[70px] md:min-h-[80px] p-2 md:p-3 ${!readOnly ? 'cursor-pointer' : ''}
+          border-2 rounded-lg
+          ${!readOnly ? 'hover:shadow-md' : ''}
+          transition-all duration-200
+          ${!team ? 'bg-background border-border hover:border-primary/30' : ''}
+          flex flex-col items-start justify-start gap-1
         `}
       >
-        <div className="text-xs md:text-sm font-medium">
+        <div 
+          className="text-base md:text-lg font-bold"
+          style={{ color: team ? teamColor : 'inherit' }}
+        >
           {format(date, "d")}
         </div>
         {team && (
-          <div className="text-[0.65rem] md:text-xs mt-0.5 md:mt-1 font-medium truncate leading-tight">
-            <span className="md:hidden">{getTeamShortLabel(team.name)}</span>
-            <span className="hidden md:inline">{team.name}</span>
+          <div 
+            className="text-xs md:text-sm font-medium leading-tight"
+            style={{ color: teamColor }}
+          >
+            {team.name}
           </div>
         )}
       </div>
@@ -368,18 +380,17 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
     const paddingDays = Array(firstDayOfWeek).fill(null);
 
     return (
-      <div className="grid grid-cols-7 gap-1 md:gap-2">
+      <div className="grid grid-cols-7 gap-2 md:gap-3">
         {/* Week days header */}
-        {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day, idx) => (
-          <div key={day} className="text-center text-xs md:text-sm font-medium text-muted-foreground p-1 md:p-2">
-            <span className="hidden sm:inline">{day}</span>
-            <span className="sm:hidden">{["D", "S", "T", "Q", "Q", "S", "S"][idx]}</span>
+        {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => (
+          <div key={day} className="text-center text-sm md:text-base font-semibold text-muted-foreground p-2">
+            {day}
           </div>
         ))}
         
         {/* Padding days */}
         {paddingDays.map((_, idx) => (
-          <div key={`padding-${idx}`} className="min-h-[50px] md:min-h-[60px]" />
+          <div key={`padding-${idx}`} className="min-h-[70px] md:min-h-[80px]" />
         ))}
         
         {/* Calendar days */}
@@ -454,21 +465,21 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
           {renderCalendar()}
 
           {/* Legend with team members */}
-          <div className="space-y-3">
-            <h3 className="text-xs md:text-sm font-medium">Equipes e Integrantes</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-4 mt-8">
+            <h3 className="text-base md:text-lg font-semibold">Equipes e Integrantes</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {teams.map((team) => {
                 const members = getTeamMembers(team.id);
                 return (
-                  <Card key={team.id} className="overflow-hidden">
-                    <CardContent className="p-3 md:p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
+                  <Card key={team.id} className="overflow-hidden border-2">
+                    <CardContent className="p-4 md:p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
                           <div
-                            className="w-3 h-3 md:w-4 md:h-4 rounded-full flex-shrink-0"
+                            className="w-5 h-5 md:w-6 md:h-6 rounded-full flex-shrink-0"
                             style={{ backgroundColor: team.color || '#3b82f6' }}
                           />
-                          <span className="font-medium text-sm md:text-base">{team.name}</span>
+                          <span className="font-semibold text-base md:text-lg">{team.name}</span>
                         </div>
                         {!readOnly && (
                           <Popover>
@@ -476,9 +487,9 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-6 w-6 p-0"
+                                className="h-8 w-8 p-0"
                               >
-                                <Palette className="h-3 w-3" />
+                                <Palette className="h-4 w-4" />
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-64">
@@ -509,18 +520,19 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
                       </div>
                       
                       {members.length > 0 ? (
-                        <div className="space-y-1">
+                        <div className="space-y-1.5 ml-1">
                           {members.map((member) => (
                             <div
                               key={member.id}
-                              className="text-xs md:text-sm text-muted-foreground pl-5 md:pl-6"
+                              className="text-sm text-muted-foreground flex items-start gap-2"
                             >
-                              • {member.name}
+                              <span className="text-muted-foreground/50 mt-0.5">•</span>
+                              <span>{member.name}</span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-muted-foreground pl-5 md:pl-6">
+                        <p className="text-sm text-muted-foreground ml-1">
                           Nenhum integrante nesta equipe
                         </p>
                       )}
