@@ -170,18 +170,6 @@ export default function AdminExtras() {
     setFilteredExtras(filtered);
   };
 
-  const groupedExtras = useMemo(() => {
-    const map: Record<string, { guardName: string; total: number; days: string[] }> = {};
-    filteredExtras.forEach((extra) => {
-      const id = extra.guard_id;
-      const name = extra.guard?.name || "Desconhecido";
-      const qty = Number(extra.quantity) || 1;
-      if (!map[id]) map[id] = { guardName: name, total: 0, days: [] };
-      map[id].total += qty;
-      map[id].days.push(format(new Date(extra.extra_date), "dd/MM", { locale: ptBR }));
-    });
-    return Object.entries(map).map(([guardId, v]) => ({ guardId, ...v }));
-  }, [filteredExtras]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -394,7 +382,7 @@ export default function AdminExtras() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="quantity">Quantidade de Extras *</Label>
+                <Label htmlFor="quantity">Horas de Extras Concedido *</Label>
                 <Input
                   id="quantity"
                   type="number"
@@ -489,16 +477,29 @@ export default function AdminExtras() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Segurança</TableHead>
-                    <TableHead className="text-center">Quantidade</TableHead>
-                    <TableHead>Dias</TableHead>
+                    <TableHead className="text-center">Horas</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Fundamentação/Justificativa</TableHead>
+                    <TableHead className="text-center">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {groupedExtras.map((group) => (
-                    <TableRow key={group.guardId}>
-                      <TableCell className="font-medium">{group.guardName}</TableCell>
-                      <TableCell className="text-center font-semibold">{group.total}</TableCell>
-                      <TableCell className="max-w-md">{group.days.join(", ")}</TableCell>
+                  {filteredExtras.map((extra) => (
+                    <TableRow key={extra.id}>
+                      <TableCell className="font-medium">{extra.guard?.name || "Desconhecido"}</TableCell>
+                      <TableCell className="text-center font-semibold">{extra.quantity}</TableCell>
+                      <TableCell>{format(new Date(extra.extra_date), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
+                      <TableCell className="max-w-md">{extra.justification}</TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(extra.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
