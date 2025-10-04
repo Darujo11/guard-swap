@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.create-super-admin-phone]
 verify_jwt = false
+
+[functions.delete-admin]
+verify_jwt = false
+
+[functions.update-admin]
+verify_jwt = false

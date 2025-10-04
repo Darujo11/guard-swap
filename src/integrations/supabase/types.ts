@@ -163,6 +163,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_active: boolean | null
           is_shift_chief: boolean
           name: string
           phone: string | null
@@ -175,6 +176,7 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
+          is_active?: boolean | null
           is_shift_chief?: boolean
           name: string
           phone?: string | null
@@ -187,6 +189,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          is_active?: boolean | null
           is_shift_chief?: boolean
           name?: string
           phone?: string | null
@@ -410,6 +413,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_admin_subscription_status: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       get_profile_id: {
         Args: { _user_id: string }
         Returns: string
@@ -428,6 +435,10 @@ export type Database = {
       is_super_admin: {
         Args: { _user_id: string }
         Returns: boolean
+      }
+      suspend_expired_admins: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, UserPlus, Calendar, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, UserPlus, Calendar, CheckCircle, XCircle, Pencil, Trash2, Ban, CheckCircle2 } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -27,6 +27,7 @@ interface Admin {
   name: string;
   email: string;
   created_at: string;
+  is_active: boolean;
   subscription?: {
     id: string;
     plan: {
@@ -53,11 +54,16 @@ export default function SuperAdminManagement() {
   const [loading, setLoading] = useState(true);
   const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
   const [isAssignPlanOpen, setIsAssignPlanOpen] = useState(false);
+  const [isEditAdminOpen, setIsEditAdminOpen] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [adminForm, setAdminForm] = useState({
     name: '',
     email: '',
     password: ''
+  });
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: ''
   });
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const { toast } = useToast();
@@ -68,6 +74,9 @@ export default function SuperAdminManagement() {
 
   const fetchData = async () => {
     try {
+      // First, run the function to update admin statuses
+      await supabase.rpc('suspend_expired_admins');
+
       // Fetch admin role user IDs
       const { data: adminRoles, error: rolesError } = await supabase
         .from('user_roles')
@@ -210,6 +219,101 @@ export default function SuperAdminManagement() {
     setIsAssignPlanOpen(true);
   };
 
+  const openEditDialog = (admin: Admin) => {
+    setSelectedAdmin(admin);
+    setEditForm({ name: admin.name, email: admin.email });
+    setIsEditAdminOpen(true);
+  };
+
+  const handleEditAdmin = async () => {
+    if (!selectedAdmin) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('update-admin', {
+        body: {
+          admin_id: selectedAdmin.id,
+          name: editForm.name,
+          email: editForm.email
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Administrador atualizado',
+        description: 'As informações foram atualizadas com sucesso.',
+      });
+
+      setIsEditAdminOpen(false);
+      setSelectedAdmin(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error updating admin:', error);
+      toast({
+        title: 'Erro ao atualizar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleToggleActive = async (admin: Admin) => {
+    try {
+      const { error } = await supabase.functions.invoke('update-admin', {
+        body: {
+          admin_id: admin.id,
+          is_active: !admin.is_active
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: admin.is_active ? 'Administrador suspenso' : 'Administrador ativado',
+        description: `O acesso foi ${admin.is_active ? 'suspenso' : 'ativado'} com sucesso.`,
+      });
+
+      fetchData();
+    } catch (error: any) {
+      console.error('Error toggling admin status:', error);
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteAdmin = async (admin: Admin) => {
+    if (!confirm(`Tem certeza que deseja deletar o administrador ${admin.name}? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke('delete-admin', {
+        body: {
+          admin_id: admin.id
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Administrador deletado',
+        description: 'O administrador foi removido com sucesso.',
+      });
+
+      fetchData();
+    } catch (error: any) {
+      console.error('Error deleting admin:', error);
+      toast({
+        title: 'Erro ao deletar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <AppLayout title="Gerenciar Administradores" user={{ name: profile?.name || 'Super Admin', role: 'ADMIN' }}>
@@ -296,7 +400,8 @@ export default function SuperAdminManagement() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Plano</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Status Plano</TableHead>
+                  <TableHead>Status Acesso</TableHead>
                   <TableHead>Validade</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -340,6 +445,23 @@ export default function SuperAdminManagement() {
                       )}
                     </TableCell>
                     <TableCell>
+                      <Badge 
+                        variant={admin.is_active ? 'default' : 'destructive'}
+                      >
+                        {admin.is_active ? (
+                          <>
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Ativo
+                          </>
+                        ) : (
+                          <>
+                            <Ban className="h-3 w-3 mr-1" />
+                            Suspenso
+                          </>
+                        )}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       {admin.subscription ? (
                         <span className="text-sm">
                           {format(new Date(admin.subscription.end_date), "dd/MM/yyyy", { locale: ptBR })}
@@ -349,14 +471,37 @@ export default function SuperAdminManagement() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openAssignPlanDialog(admin)}
-                      >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        {admin.subscription ? 'Renovar' : 'Atribuir'} Plano
-                      </Button>
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openAssignPlanDialog(admin)}
+                        >
+                          <UserPlus className="h-4 w-4 mr-2" />
+                          {admin.subscription ? 'Renovar' : 'Atribuir'} Plano
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(admin)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleActive(admin)}
+                        >
+                          {admin.is_active ? <Ban className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteAdmin(admin)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -403,6 +548,46 @@ export default function SuperAdminManagement() {
               </Button>
               <Button onClick={handleAssignPlan}>
                 Atribuir Plano
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Admin Dialog */}
+        <Dialog open={isEditAdminOpen} onOpenChange={setIsEditAdminOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Administrador</DialogTitle>
+            </DialogHeader>
+            {selectedAdmin && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Nome *</Label>
+                  <Input
+                    id="edit-name"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    placeholder="Nome completo"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">Email *</Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditAdminOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleEditAdmin}>
+                Salvar Alterações
               </Button>
             </DialogFooter>
           </DialogContent>
