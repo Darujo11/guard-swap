@@ -35,6 +35,8 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
   const [schedules, setSchedules] = useState<TeamSchedule[]>([]);
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
+  const [requesterCalendarOpen, setRequesterCalendarOpen] = useState(false);
+  const [targetCalendarOpen, setTargetCalendarOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -89,6 +91,34 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
   const getTeamForDate = (date: Date): TeamSchedule | undefined => {
     const dateStr = format(date, 'yyyy-MM-dd');
     return schedules.find(s => s.shift_date === dateStr);
+  };
+
+  const isDateInteractable = (date: Date): boolean => {
+    const schedule = getTeamForDate(date);
+    if (!schedule) return false;
+    
+    // Data é interactível se for da equipe do usuário atual
+    if (schedule.team_id === currentUser.team_id) return true;
+    
+    // Ou se for da equipe do alvo selecionado
+    if (selectedTarget) {
+      const targetGuard = availableGuards.find(g => g.id === selectedTarget);
+      if (targetGuard && schedule.team_id === targetGuard.team_id) return true;
+    }
+    
+    return false;
+  };
+
+  const getTeamColor = (teamId: string): string => {
+    const team = schedules.find(s => s.team_id === teamId)?.team;
+    if (!team) return '';
+    
+    // Extrair apenas a parte de cor de fundo
+    const colorConfig = team.name === 'Equipe A' ? 'bg-blue-500' :
+                       team.name === 'Equipe B' ? 'bg-green-500' :
+                       team.name === 'Equipe C' ? 'bg-yellow-500' :
+                       team.name === 'Equipe D' ? 'bg-purple-500' : '';
+    return colorConfig;
   };
 
   const validateSwapDates = (requesterDate: Date, targetDate: Date): boolean => {
@@ -293,7 +323,7 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
           {/* Requester Shift Date */}
           <div className="space-y-2">
             <Label>Data do Seu Plantão (que você quer trocar) *</Label>
-            <Popover>
+            <Popover open={requesterCalendarOpen} onOpenChange={setRequesterCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -310,11 +340,15 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
                 <Calendar
                   mode="single"
                   selected={requesterShiftDate}
-                  onSelect={setRequesterShiftDate}
+                  onSelect={(date) => {
+                    setRequesterShiftDate(date);
+                    setRequesterCalendarOpen(false);
+                  }}
                   disabled={(date) => {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    return date <= today || date > maxDateObj;
+                    if (date <= today || date > maxDateObj) return true;
+                    return !isDateInteractable(date);
                   }}
                   modifiers={{
                     userTeam: (date) => {
@@ -322,8 +356,13 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
                       return schedule?.team_id === currentUser.team_id;
                     }
                   }}
-                  modifiersClassNames={{
-                    userTeam: 'font-bold ring-2 ring-primary ring-offset-2'
+                  modifiersStyles={{
+                    userTeam: {
+                      fontWeight: 'bold',
+                      backgroundColor: 'hsl(var(--primary))',
+                      color: 'hsl(var(--primary-foreground))',
+                      borderRadius: '0.375rem'
+                    }
                   }}
                   initialFocus
                   className="pointer-events-auto"
@@ -337,14 +376,14 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              Data do plantão que você atualmente tem e deseja trocar. Datas da sua equipe aparecem destacadas.
+              Data do plantão que você atualmente tem e deseja trocar. Apenas datas da sua equipe estão disponíveis.
             </p>
           </div>
 
           {/* Target Shift Date */}
           <div className="space-y-2">
             <Label>Data do Plantão que Você Quer Assumir *</Label>
-            <Popover>
+            <Popover open={targetCalendarOpen} onOpenChange={setTargetCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -361,25 +400,41 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
                 <Calendar
                   mode="single"
                   selected={targetShiftDate}
-                  onSelect={setTargetShiftDate}
+                  onSelect={(date) => {
+                    setTargetShiftDate(date);
+                    setTargetCalendarOpen(false);
+                  }}
                   disabled={(date) => {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    return date <= today || date > maxDateObj;
+                    if (date <= today || date > maxDateObj) return true;
+                    return !isDateInteractable(date);
                   }}
                   modifiers={{
                     userTeam: (date) => {
                       const schedule = getTeamForDate(date);
                       return schedule?.team_id === currentUser.team_id;
                     },
-                    otherTeam: (date) => {
+                    targetTeam: (date) => {
+                      if (!selectedTarget) return false;
                       const schedule = getTeamForDate(date);
-                      return schedule !== undefined && schedule.team_id !== currentUser.team_id;
+                      const targetGuard = availableGuards.find(g => g.id === selectedTarget);
+                      return schedule !== undefined && targetGuard && schedule.team_id === targetGuard.team_id;
                     }
                   }}
-                  modifiersClassNames={{
-                    userTeam: 'font-bold ring-2 ring-primary ring-offset-2',
-                    otherTeam: 'font-semibold bg-secondary/50'
+                  modifiersStyles={{
+                    userTeam: {
+                      fontWeight: 'bold',
+                      backgroundColor: 'hsl(var(--primary))',
+                      color: 'hsl(var(--primary-foreground))',
+                      borderRadius: '0.375rem'
+                    },
+                    targetTeam: {
+                      fontWeight: '600',
+                      backgroundColor: 'hsl(var(--secondary))',
+                      color: 'hsl(var(--secondary-foreground))',
+                      borderRadius: '0.375rem'
+                    }
                   }}
                   initialFocus
                   className="pointer-events-auto"
@@ -393,7 +448,7 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              Data do plantão que você deseja assumir. Datas de outras equipes aparecem destacadas.
+              Data do plantão que você deseja assumir. Selecione primeiro o membro para ver as datas disponíveis da equipe dele.
             </p>
           </div>
 
