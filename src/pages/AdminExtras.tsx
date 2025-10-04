@@ -13,7 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, addMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Plus, FileText, Trash2, Download, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -52,7 +52,6 @@ export default function AdminExtras() {
   const [filterMonth, setFilterMonth] = useState<Date>(new Date());
   
   // Ranking filter state
-  const [rankingPeriod, setRankingPeriod] = useState<"monthly" | "bimonthly" | "quarterly" | "semiannual" | "annual">("monthly");
   const [rankingDate, setRankingDate] = useState<Date>(new Date());
 
   useEffect(() => {
@@ -83,37 +82,8 @@ export default function AdminExtras() {
   }, [guards, filteredExtras]);
 
   const rankingSummary = useMemo(() => {
-    let startDate: Date;
-    let endDate: Date;
-
-    const year = rankingDate.getFullYear();
-    const month = rankingDate.getMonth();
-
-    switch (rankingPeriod) {
-      case "monthly":
-        startDate = startOfMonth(rankingDate);
-        endDate = endOfMonth(rankingDate);
-        break;
-      case "bimonthly":
-        const bimonth = Math.floor(month / 2);
-        startDate = new Date(year, bimonth * 2, 1);
-        endDate = endOfMonth(addMonths(startDate, 1));
-        break;
-      case "quarterly":
-        const quarter = Math.floor(month / 3);
-        startDate = new Date(year, quarter * 3, 1);
-        endDate = endOfMonth(addMonths(startDate, 2));
-        break;
-      case "semiannual":
-        const semester = Math.floor(month / 6);
-        startDate = new Date(year, semester * 6, 1);
-        endDate = endOfMonth(addMonths(startDate, 5));
-        break;
-      case "annual":
-        startDate = startOfYear(rankingDate);
-        endDate = endOfYear(rankingDate);
-        break;
-    }
+    const startDate = startOfMonth(rankingDate);
+    const endDate = endOfMonth(rankingDate);
 
     const periodExtras = extras.filter((extra) => {
       const extraDate = new Date(extra.extra_date);
@@ -135,7 +105,7 @@ export default function AdminExtras() {
       startDate,
       endDate
     };
-  }, [guards, extras, rankingPeriod, rankingDate]);
+  }, [guards, extras, rankingDate]);
 
   const fetchGuards = async () => {
     // 1) Buscar todos os user_ids com papel de guard
@@ -407,19 +377,10 @@ export default function AdminExtras() {
       // Header
       doc.setFontSize(18);
       doc.text("Ranking de Plantões Extras", 14, 20);
-      
-      const periodLabels = {
-        monthly: "Mensal",
-        bimonthly: "Bimestral",
-        quarterly: "Trimestral",
-        semiannual: "Semestral",
-        annual: "Anual"
-      };
 
       doc.setFontSize(11);
-      doc.text(`Período: ${periodLabels[rankingPeriod]}`, 14, 30);
-      doc.text(`De: ${format(rankingSummary.startDate, "dd/MM/yyyy", { locale: ptBR })} até ${format(rankingSummary.endDate, "dd/MM/yyyy", { locale: ptBR })}`, 14, 36);
-      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 42);
+      doc.text(`Período: ${format(rankingDate, "MMMM 'de' yyyy", { locale: ptBR })}`, 14, 30);
+      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 36);
 
       // Table data
       const tableData = rankingSummary.data.map((item, index) => [
@@ -454,7 +415,7 @@ export default function AdminExtras() {
         );
       }
 
-      doc.save(`ranking-extras-${rankingPeriod}-${format(rankingDate, "MM-yyyy")}.pdf`);
+      doc.save(`ranking-extras-${format(rankingDate, "MM-yyyy")}.pdf`);
       
       toast({
         title: "PDF gerado",
@@ -481,17 +442,9 @@ export default function AdminExtras() {
         return;
       }
 
-      const periodLabels = {
-        monthly: "Mensal",
-        bimonthly: "Bimestral",
-        quarterly: "Trimestral",
-        semiannual: "Semestral",
-        annual: "Anual"
-      };
-
       let csvContent = "data:text/csv;charset=utf-8,";
-      csvContent += `Ranking de Plantões Extras - ${periodLabels[rankingPeriod]}\n`;
-      csvContent += `Período: ${format(rankingSummary.startDate, "dd/MM/yyyy")} até ${format(rankingSummary.endDate, "dd/MM/yyyy")}\n`;
+      csvContent += `Ranking de Plantões Extras\n`;
+      csvContent += `Período: ${format(rankingDate, "MMMM 'de' yyyy", { locale: ptBR })}\n`;
       csvContent += `Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm")}\n\n`;
       csvContent += "Posição,Segurança,Total de Horas\n";
 
@@ -502,7 +455,7 @@ export default function AdminExtras() {
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `ranking-extras-${rankingPeriod}-${format(rankingDate, "MM-yyyy")}.csv`);
+      link.setAttribute("download", `ranking-extras-${format(rankingDate, "MM-yyyy")}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -521,26 +474,6 @@ export default function AdminExtras() {
     }
   };
 
-  const getPeriodLabel = () => {
-    const year = rankingDate.getFullYear();
-    const month = rankingDate.getMonth();
-
-    switch (rankingPeriod) {
-      case "monthly":
-        return format(rankingDate, "MMMM 'de' yyyy", { locale: ptBR });
-      case "bimonthly":
-        const bimonth = Math.floor(month / 2) + 1;
-        return `${bimonth}º Bimestre de ${year}`;
-      case "quarterly":
-        const quarter = Math.floor(month / 3) + 1;
-        return `${quarter}º Trimestre de ${year}`;
-      case "semiannual":
-        const semester = Math.floor(month / 6) + 1;
-        return `${semester}º Semestre de ${year}`;
-      case "annual":
-        return `Ano de ${year}`;
-    }
-  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -787,28 +720,12 @@ export default function AdminExtras() {
           <Card>
             <CardHeader>
               <CardTitle>Filtros do Ranking</CardTitle>
-              <CardDescription>Selecione o período para visualizar o ranking de extras</CardDescription>
+              <CardDescription>Selecione o mês para visualizar o ranking de extras</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Período</Label>
-                  <Select value={rankingPeriod} onValueChange={(value: any) => setRankingPeriod(value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">📅 Mensal</SelectItem>
-                      <SelectItem value="bimonthly">🗓️ Bimestral</SelectItem>
-                      <SelectItem value="quarterly">📊 Trimestral</SelectItem>
-                      <SelectItem value="semiannual">📆 Semestral</SelectItem>
-                      <SelectItem value="annual">📈 Anual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Data de Referência</Label>
+                  <Label>Selecione o Mês</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full justify-start text-left font-normal">
@@ -820,7 +737,7 @@ export default function AdminExtras() {
                       <Calendar
                         mode="single"
                         selected={rankingDate}
-                        onSelect={(date) => date && setRankingDate(date)}
+                        onSelect={(date) => date && setRankingDate(startOfMonth(date))}
                         locale={ptBR}
                         captionLayout="dropdown-buttons"
                         fromYear={2020}
@@ -830,25 +747,25 @@ export default function AdminExtras() {
                     </PopoverContent>
                   </Popover>
                 </div>
-              </div>
 
-              <div className="mt-4 p-4 bg-muted rounded-lg">
-                <p className="text-sm font-medium">Período Selecionado:</p>
-                <p className="text-lg font-bold text-primary">{getPeriodLabel()}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {format(rankingSummary.startDate, "dd/MM/yyyy")} até {format(rankingSummary.endDate, "dd/MM/yyyy")}
-                </p>
-              </div>
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="text-sm font-medium">Período Selecionado:</p>
+                  <p className="text-lg font-bold text-primary">{format(rankingDate, "MMMM 'de' yyyy", { locale: ptBR })}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {format(rankingSummary.startDate, "dd/MM/yyyy")} até {format(rankingSummary.endDate, "dd/MM/yyyy")}
+                  </p>
+                </div>
 
-              <div className="flex gap-2 mt-4">
-                <Button onClick={generateRankingPDF} variant="outline" className="flex-1">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Exportar PDF
-                </Button>
-                <Button onClick={exportToCSV} variant="outline" className="flex-1">
-                  <Download className="mr-2 h-4 w-4" />
-                  Exportar CSV
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={generateRankingPDF} variant="outline" className="flex-1">
+                    <FileText className="mr-2 h-4 w-4" />
+                    Exportar PDF
+                  </Button>
+                  <Button onClick={exportToCSV} variant="outline" className="flex-1">
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar CSV
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
