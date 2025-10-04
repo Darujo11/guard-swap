@@ -1,15 +1,26 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { TeamBadge } from '@/components/ui/team-badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Profile } from '@/lib/types';
-import { CalendarDays, Users, ArrowRightLeft } from 'lucide-react';
+import { Profile, Team } from '@/lib/types';
+import { CalendarDays, ArrowRightLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+
+interface TeamSchedule {
+  id: string;
+  team_id: string;
+  shift_date: string;
+  team?: Team;
+}
 
 interface GuardSwapFormProps {
   currentUser: Profile;
@@ -19,19 +30,20 @@ interface GuardSwapFormProps {
 export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
   const [availableGuards, setAvailableGuards] = useState<Profile[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<string>('');
-  const [requesterShiftDate, setRequesterShiftDate] = useState(''); // Data do plantão do solicitante
-  const [targetShiftDate, setTargetShiftDate] = useState(''); // Data do plantão que quer assumir
+  const [requesterShiftDate, setRequesterShiftDate] = useState<Date | undefined>();
+  const [targetShiftDate, setTargetShiftDate] = useState<Date | undefined>();
+  const [schedules, setSchedules] = useState<TeamSchedule[]>([]);
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchAvailableGuards();
+    fetchSchedules();
   }, [currentUser]);
 
   const fetchAvailableGuards = async () => {
     try {
-      // Fetch all guards except the current user
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -41,7 +53,6 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
         .neq('id', currentUser.id);
 
       if (error) throw error;
-
       setAvailableGuards((data || []) as Profile[]);
     } catch (error) {
       console.error('[GuardSwapForm][FetchGuards]', error);
@@ -53,15 +64,40 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
     }
   };
 
-  const validateSwapDates = (requesterDate: string, targetDate: string): boolean => {
-    const requesterShift = new Date(requesterDate);
-    const targetShift = new Date(targetDate);
+  const fetchSchedules = async () => {
+    try {
+      const today = new Date();
+      const maxDate = new Date(today);
+      maxDate.setMonth(maxDate.getMonth() + 2);
+
+      const { data, error } = await supabase
+        .from('team_schedules')
+        .select(`
+          *,
+          team:teams(*)
+        `)
+        .gte('shift_date', today.toISOString().split('T')[0])
+        .lte('shift_date', maxDate.toISOString().split('T')[0]);
+
+      if (error) throw error;
+      setSchedules((data || []) as TeamSchedule[]);
+    } catch (error) {
+      console.error('[GuardSwapForm][FetchSchedules]', error);
+    }
+  };
+
+  const getTeamForDate = (date: Date): TeamSchedule | undefined => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return schedules.find(s => s.shift_date === dateStr);
+  };
+
+  const validateSwapDates = (requesterDate: Date, targetDate: Date): boolean => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const maxDate = new Date(today.getFullYear(), today.getMonth() + 2, today.getDate());
+    const maxDate = new Date(today);
+    maxDate.setMonth(maxDate.getMonth() + 2);
     
-    // Both dates must be in the future
-    if (requesterShift <= today) {
+    if (requesterDate <= today) {
       toast({
         title: 'Data inválida',
         description: 'A data do seu plantão deve ser posterior ao dia atual.',
@@ -70,7 +106,7 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
       return false;
     }
 
-    if (targetShift <= today) {
+    if (targetDate <= today) {
       toast({
         title: 'Data inválida',
         description: 'A data do plantão que você quer assumir deve ser posterior ao dia atual.',
@@ -79,8 +115,7 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
       return false;
     }
 
-    // Both dates must be within 2 months
-    if (requesterShift > maxDate || targetShift > maxDate) {
+    if (requesterDate > maxDate || targetDate > maxDate) {
       toast({
         title: 'Data inválida',
         description: 'Ambas as datas devem estar dentro de 2 meses.',
@@ -89,8 +124,7 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
       return false;
     }
 
-    // Dates cannot be the same
-    if (requesterDate === targetDate) {
+    if (format(requesterDate, 'yyyy-MM-dd') === format(targetDate, 'yyyy-MM-dd')) {
       toast({
         title: 'Data inválida',
         description: 'As datas dos plantões devem ser diferentes.',
@@ -121,14 +155,17 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
     setLoading(true);
 
     try {
+      const requesterDateStr = format(requesterShiftDate, 'yyyy-MM-dd');
+      const targetDateStr = format(targetShiftDate, 'yyyy-MM-dd');
+
       const { error } = await supabase
         .from('swap_requests')
         .insert([
           {
             requester_id: currentUser.id,
             target_id: selectedTarget,
-            requester_shift_date: requesterShiftDate,
-            target_shift_date: targetShiftDate,
+            requester_shift_date: requesterDateStr,
+            target_shift_date: targetDateStr,
             reason: reason.trim(),
             status: 'PENDING'
           }
@@ -146,15 +183,14 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
         throw error;
       }
 
-      // Create audit log
       await supabase.from('audit_logs').insert({
         user_id: currentUser.id,
         action: 'SWAP_REQUEST_CREATED',
         entity_type: 'swap_request',
         details: {
           target_id: selectedTarget,
-          requester_shift_date: requesterShiftDate,
-          target_shift_date: targetShiftDate
+          requester_shift_date: requesterDateStr,
+          target_shift_date: targetDateStr
         }
       });
 
@@ -163,10 +199,9 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
         description: 'Sua solicitação de troca foi enviada com sucesso. O membro convidado receberá uma notificação.',
       });
 
-      // Reset form
       setSelectedTarget('');
-      setRequesterShiftDate('');
-      setTargetShiftDate('');
+      setRequesterShiftDate(undefined);
+      setTargetShiftDate(undefined);
       setReason('');
       
       if (onClose) {
@@ -185,15 +220,15 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
   };
 
   const selectedGuard = availableGuards.find(guard => guard.id === selectedTarget);
+  
+  const requesterTeamSchedule = requesterShiftDate ? getTeamForDate(requesterShiftDate) : undefined;
+  const targetTeamSchedule = targetShiftDate ? getTeamForDate(targetShiftDate) : undefined;
 
-  // Get minimum date (tomorrow) and maximum date (2 months from now)
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const minDate = tomorrow.toISOString().split('T')[0];
 
   const maxDateObj = new Date();
   maxDateObj.setMonth(maxDateObj.getMonth() + 2);
-  const maxDate = maxDateObj.toISOString().split('T')[0];
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
@@ -257,35 +292,108 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
 
           {/* Requester Shift Date */}
           <div className="space-y-2">
-            <Label htmlFor="requesterShiftDate">Data do Seu Plantão (que você quer trocar) *</Label>
-            <Input
-              id="requesterShiftDate"
-              type="date"
-              value={requesterShiftDate}
-              onChange={(e) => setRequesterShiftDate(e.target.value)}
-              min={minDate}
-              max={maxDate}
-              required
-            />
+            <Label>Data do Seu Plantão (que você quer trocar) *</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !requesterShiftDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {requesterShiftDate ? format(requesterShiftDate, "PPP", { locale: ptBR }) : "Selecione a data"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={requesterShiftDate}
+                  onSelect={setRequesterShiftDate}
+                  disabled={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date <= today || date > maxDateObj;
+                  }}
+                  modifiers={{
+                    userTeam: (date) => {
+                      const schedule = getTeamForDate(date);
+                      return schedule?.team_id === currentUser.team_id;
+                    }
+                  }}
+                  modifiersClassNames={{
+                    userTeam: 'font-bold ring-2 ring-primary ring-offset-2'
+                  }}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            {requesterTeamSchedule && (
+              <div className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded">
+                <span className="text-xs">Plantão da equipe:</span>
+                {requesterTeamSchedule.team && <TeamBadge team={requesterTeamSchedule.team} />}
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
-              Data do plantão que você atualmente tem e deseja trocar.
+              Data do plantão que você atualmente tem e deseja trocar. Datas da sua equipe aparecem destacadas.
             </p>
           </div>
 
           {/* Target Shift Date */}
           <div className="space-y-2">
-            <Label htmlFor="targetShiftDate">Data do Plantão que Você Quer Assumir *</Label>
-            <Input
-              id="targetShiftDate"
-              type="date"
-              value={targetShiftDate}
-              onChange={(e) => setTargetShiftDate(e.target.value)}
-              min={minDate}
-              max={maxDate}
-              required
-            />
+            <Label>Data do Plantão que Você Quer Assumir *</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !targetShiftDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {targetShiftDate ? format(targetShiftDate, "PPP", { locale: ptBR }) : "Selecione a data"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={targetShiftDate}
+                  onSelect={setTargetShiftDate}
+                  disabled={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date <= today || date > maxDateObj;
+                  }}
+                  modifiers={{
+                    userTeam: (date) => {
+                      const schedule = getTeamForDate(date);
+                      return schedule?.team_id === currentUser.team_id;
+                    },
+                    otherTeam: (date) => {
+                      const schedule = getTeamForDate(date);
+                      return schedule !== undefined && schedule.team_id !== currentUser.team_id;
+                    }
+                  }}
+                  modifiersClassNames={{
+                    userTeam: 'font-bold ring-2 ring-primary ring-offset-2',
+                    otherTeam: 'font-semibold bg-secondary/50'
+                  }}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            {targetTeamSchedule && (
+              <div className="flex items-center gap-2 mt-2 p-2 bg-muted/50 rounded">
+                <span className="text-xs">Plantão da equipe:</span>
+                {targetTeamSchedule.team && <TeamBadge team={targetTeamSchedule.team} />}
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
-              Data do plantão da outra pessoa que você deseja assumir.
+              Data do plantão que você deseja assumir. Datas de outras equipes aparecem destacadas.
             </p>
           </div>
 
