@@ -56,24 +56,13 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
         return;
       }
 
-      if (!currentUser.admin_id) {
-        toast({
-          title: 'Erro',
-          description: 'Você precisa estar vinculado a uma organização.',
-          variant: 'destructive',
-        });
-        setAvailableGuards([]);
-        return;
-      }
-
-      // Buscar guardas da mesma organização, mas de outras equipes
+      // Buscar guardas de outras equipes (não da mesma equipe do usuário)
       const { data, error } = await supabase
         .from('profiles')
         .select(`
           *,
           team:teams(*)
         `)
-        .eq('admin_id', currentUser.admin_id)
         .neq('id', currentUser.id)
         .not('team_id', 'is', null)
         .neq('team_id', currentUser.team_id);
@@ -96,15 +85,12 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
       const maxDate = new Date(today);
       maxDate.setMonth(maxDate.getMonth() + 2);
 
-      if (!currentUser.admin_id) return;
-
       const { data, error } = await supabase
         .from('team_schedules')
         .select(`
           *,
           team:teams(*)
         `)
-        .eq('admin_id', currentUser.admin_id)
         .gte('shift_date', today.toISOString().split('T')[0])
         .lte('shift_date', maxDate.toISOString().split('T')[0]);
 

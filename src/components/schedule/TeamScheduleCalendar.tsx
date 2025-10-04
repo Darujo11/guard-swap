@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { Team } from "@/lib/types";
 import { format, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,22 +39,12 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
   const [selectedTeam, setSelectedTeam] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { profile, role } = useAuth();
-  
-  // Determinar o ID do admin baseado na role
-  const getAdminId = () => {
-    if (!profile) return null;
-    // Se for admin, use o próprio ID; se for guard, use o admin_id
-    return role === 'admin' ? profile.id : profile.admin_id;
-  };
 
   useEffect(() => {
     fetchTeams();
+    fetchSchedules();
     fetchProfiles();
-    if (profile?.id) {
-      fetchSchedules();
-    }
-  }, [currentMonth, profile?.id]);
+  }, [currentMonth]);
 
   const fetchTeams = async () => {
     const { data, error } = await supabase
@@ -79,9 +68,6 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
 
-    const adminId = getAdminId();
-    if (!adminId) return;
-
     const { data, error } = await supabase
       .from("team_schedules")
       .select(`
@@ -89,8 +75,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
         team:teams(*)
       `)
       .gte("shift_date", format(start, "yyyy-MM-dd"))
-      .lte("shift_date", format(end, "yyyy-MM-dd"))
-      .eq("admin_id", adminId);
+      .lte("shift_date", format(end, "yyyy-MM-dd"));
 
     if (error) {
       toast({
@@ -105,13 +90,9 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
   };
 
   const fetchProfiles = async () => {
-    const adminId = getAdminId();
-    if (!adminId) return;
-
     const { data, error } = await supabase
       .from("profiles")
       .select("id, name, team_id")
-      .eq("admin_id", adminId)
       .order("name");
 
     if (error) {
@@ -138,15 +119,10 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
 
   const getTeamColorStyle = (color: string): React.CSSProperties => {
     return {
-      backgroundColor: color + '15', // 15 = ~8% opacity in hex for soft pastel background
+      backgroundColor: color + '20', // 20 = 12.5% opacity in hex
       borderColor: color,
-      borderWidth: '2px',
+      color: color,
     };
-  };
-
-  const getTeamTextColor = (color: string): string => {
-    // Return the team color for text
-    return color;
   };
 
   const getTeamShortLabel = (name: string) => {
@@ -173,66 +149,32 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
     const existingSchedule = schedules.find(s => s.shift_date === dateStr);
 
     if (existingSchedule) {
-      // Se a escala existente é da mesma equipe selecionada, remove
-      if (existingSchedule.team_id === selectedTeam) {
-        const { error } = await supabase
-          .from("team_schedules")
-          .delete()
-          .eq("id", existingSchedule.id);
+      // Remove schedule
+      const { error } = await supabase
+        .from("team_schedules")
+        .delete()
+        .eq("id", existingSchedule.id);
 
-        if (error) {
-          toast({
-            variant: "destructive",
-            title: "Erro ao remover escala",
-            description: error.message,
-          });
-          return;
-        }
-
-        toast({
-          title: "Escala removida",
-          description: `A escala foi removida de ${format(date, "dd/MM/yyyy")}`,
-        });
-      } else {
-        // Se é de outra equipe, substitui
-        const { error } = await supabase
-          .from("team_schedules")
-          .update({ team_id: selectedTeam })
-          .eq("id", existingSchedule.id);
-
-        if (error) {
-          toast({
-            variant: "destructive",
-            title: "Erro ao atualizar escala",
-            description: error.message,
-          });
-          return;
-        }
-
-        const newTeam = teams.find(t => t.id === selectedTeam);
-        toast({
-          title: "Escala atualizada",
-          description: `${format(date, "dd/MM/yyyy")} agora está com ${newTeam?.name}`,
-        });
-      }
-    } else {
-      // Adiciona nova escala
-      const adminId = getAdminId();
-      if (!adminId) {
+      if (error) {
         toast({
           variant: "destructive",
-          title: "Erro",
-          description: "Não foi possível identificar a organização.",
+          title: "Erro ao remover escala",
+          description: error.message,
         });
         return;
       }
 
+      toast({
+        title: "Escala removida",
+        description: `A escala foi removida de ${format(date, "dd/MM/yyyy")}`,
+      });
+    } else {
+      // Add schedule
       const { error } = await supabase
         .from("team_schedules")
         .insert({
           team_id: selectedTeam,
           shift_date: dateStr,
-          admin_id: adminId,
         });
 
       if (error) {
@@ -244,10 +186,9 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
         return;
       }
 
-      const newTeam = teams.find(t => t.id === selectedTeam);
       toast({
         title: "Escala adicionada",
-        description: `${newTeam?.name} foi atribuída para ${format(date, "dd/MM/yyyy")}`,
+        description: `A escala foi adicionada para ${format(date, "dd/MM/yyyy")}`,
       });
     }
 
@@ -264,16 +205,6 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
       return;
     }
 
-    const adminId = getAdminId();
-    if (!adminId) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível identificar a organização.",
-      });
-      return;
-    }
-
     setLoading(true);
 
     const start = startOfMonth(currentMonth);
@@ -284,8 +215,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
       .from("team_schedules")
       .delete()
       .gte("shift_date", format(start, "yyyy-MM-dd"))
-      .lte("shift_date", format(end, "yyyy-MM-dd"))
-      .eq("admin_id", adminId);
+      .lte("shift_date", format(end, "yyyy-MM-dd"));
 
     // Generate pattern for all teams with offset
     const schedulesToInsert = [];
@@ -300,7 +230,6 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
           schedulesToInsert.push({
             team_id: team.id,
             shift_date: format(currentDate, "yyyy-MM-dd"),
-            admin_id: adminId,
           });
           consecutiveDays++;
           if (consecutiveDays >= 1) {
@@ -371,36 +300,26 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
 
   const renderDay = (date: Date) => {
     const team = getTeamForDate(date);
-    const dayNumber = format(date, "d");
     
     return (
       <div
         onClick={() => !readOnly && handleDateClick(date)}
+        style={team ? getTeamColorStyle(team.color || '#3b82f6') : {}}
         className={`
-          relative w-full min-h-[90px] md:min-h-[100px] p-3 md:p-4
-          border-2 rounded-xl
-          ${!readOnly ? 'cursor-pointer hover:shadow-md' : ''}
-          transition-all duration-200
-          flex flex-col items-start justify-start
-          ${team ? '' : 'bg-background border-border/50 hover:border-primary/30'}
+          relative w-full h-full min-h-[50px] md:min-h-[60px] p-1 md:p-2 ${!readOnly ? 'cursor-pointer' : ''}
+          border rounded md:border-2 md:rounded-md
+          ${!readOnly ? 'hover:ring-1 md:hover:ring-2 hover:ring-primary' : ''}
+          transition-all
+          ${!team ? 'bg-background border-border' : ''}
         `}
-        style={team ? {
-          backgroundColor: `${team.color}15`,
-          borderColor: team.color,
-        } : {}}
       >
-        <div 
-          className="text-2xl md:text-3xl font-bold mb-2"
-          style={{ color: team ? team.color : 'hsl(var(--foreground))' }}
-        >
-          {dayNumber}
+        <div className="text-xs md:text-sm font-medium">
+          {format(date, "d")}
         </div>
         {team && (
-          <div 
-            className="text-sm md:text-base font-medium"
-            style={{ color: team.color }}
-          >
-            {team.name}
+          <div className="text-[0.65rem] md:text-xs mt-0.5 md:mt-1 font-medium truncate leading-tight">
+            <span className="md:hidden">{getTeamShortLabel(team.name)}</span>
+            <span className="hidden md:inline">{team.name}</span>
           </div>
         )}
       </div>
@@ -417,30 +336,26 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
     const paddingDays = Array(firstDayOfWeek).fill(null);
 
     return (
-      <div className="space-y-3">
+      <div className="grid grid-cols-7 gap-1 md:gap-2">
         {/* Week days header */}
-        <div className="grid grid-cols-7 gap-2 md:gap-3">
-          {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day) => (
-            <div key={day} className="text-center text-sm md:text-base font-semibold text-muted-foreground py-2">
-              {day}
-            </div>
-          ))}
-        </div>
+        {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((day, idx) => (
+          <div key={day} className="text-center text-xs md:text-sm font-medium text-muted-foreground p-1 md:p-2">
+            <span className="hidden sm:inline">{day}</span>
+            <span className="sm:hidden">{["D", "S", "T", "Q", "Q", "S", "S"][idx]}</span>
+          </div>
+        ))}
         
-        {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-2 md:gap-3">
-          {/* Padding days */}
-          {paddingDays.map((_, idx) => (
-            <div key={`padding-${idx}`} className="min-h-[90px] md:min-h-[100px]" />
-          ))}
-          
-          {/* Calendar days */}
-          {days.map((day) => (
-            <div key={day.toISOString()}>
-              {renderDay(day)}
-            </div>
-          ))}
-        </div>
+        {/* Padding days */}
+        {paddingDays.map((_, idx) => (
+          <div key={`padding-${idx}`} className="min-h-[50px] md:min-h-[60px]" />
+        ))}
+        
+        {/* Calendar days */}
+        {days.map((day) => (
+          <div key={day.toISOString()}>
+            {renderDay(day)}
+          </div>
+        ))}
       </div>
     );
   };
@@ -507,21 +422,21 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
           {renderCalendar()}
 
           {/* Legend with team members */}
-          <div className="space-y-4 mt-8">
-            <h3 className="text-base md:text-lg font-semibold">Equipes e Integrantes</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <h3 className="text-xs md:text-sm font-medium">Equipes e Integrantes</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {teams.map((team) => {
                 const members = getTeamMembers(team.id);
                 return (
-                  <Card key={team.id} className="overflow-hidden border-2">
-                    <CardContent className="p-4 md:p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
+                  <Card key={team.id} className="overflow-hidden">
+                    <CardContent className="p-3 md:p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
                           <div
-                            className="w-5 h-5 md:w-6 md:h-6 rounded-full flex-shrink-0"
+                            className="w-3 h-3 md:w-4 md:h-4 rounded-full flex-shrink-0"
                             style={{ backgroundColor: team.color || '#3b82f6' }}
                           />
-                          <span className="font-semibold text-base md:text-lg">{team.name}</span>
+                          <span className="font-medium text-sm md:text-base">{team.name}</span>
                         </div>
                         {!readOnly && (
                           <Popover>
@@ -529,9 +444,9 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0"
+                                className="h-6 w-6 p-0"
                               >
-                                <Palette className="h-4 w-4" />
+                                <Palette className="h-3 w-3" />
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-64">
@@ -562,19 +477,18 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
                       </div>
                       
                       {members.length > 0 ? (
-                        <div className="space-y-1.5 ml-1">
+                        <div className="space-y-1">
                           {members.map((member) => (
                             <div
                               key={member.id}
-                              className="text-sm text-muted-foreground flex items-start gap-2"
+                              className="text-xs md:text-sm text-muted-foreground pl-5 md:pl-6"
                             >
-                              <span className="text-muted-foreground/50 mt-0.5">•</span>
-                              <span>{member.name}</span>
+                              • {member.name}
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground ml-1">
+                        <p className="text-xs text-muted-foreground pl-5 md:pl-6">
                           Nenhum integrante nesta equipe
                         </p>
                       )}

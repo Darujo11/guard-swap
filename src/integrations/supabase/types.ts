@@ -509,10 +509,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      user_belongs_to_admin_org: {
-        Args: { _admin_user_id: string; _target_user_id: string }
-        Returns: boolean
-      }
     }
     Enums: {
       app_role: "admin" | "guard" | "super_admin"
