@@ -17,7 +17,7 @@ const Index = () => {
     {
       icon: Calendar,
       title: 'Escala Inteligente',
-      description: 'Crie e visualize escalas de plantão automaticamente com calendário visual',
+      description: 'Crie e visualize escalas automaticamente com calendário visual intuitivo',
     },
     {
       icon: ArrowRight,
@@ -60,12 +60,39 @@ const Index = () => {
     {
       icon: TrendingUp,
       title: 'Otimização de Recursos',
-      description: 'Maximize a utilização de sua equipe com inteligência artificial',
+      description: 'Maximize a utilização de sua equipe com planejamento inteligente',
     },
     {
       icon: CheckCircle,
-      title: 'Zero Erros',
-      description: 'Elimine conflitos e erros na programação de plantões',
+      title: 'Zero Conflitos',
+      description: 'Elimine conflitos e erros na programação de escalas e plantões',
+    },
+  ];
+
+  const useCases = [
+    {
+      icon: Shield,
+      title: 'Segurança',
+      description: 'Gerencie equipes de vigilância, portaria e segurança patrimonial',
+      color: 'from-blue-500 to-blue-600',
+    },
+    {
+      icon: Users,
+      title: 'Saúde',
+      description: 'Organize escalas de médicos, enfermeiros e equipes hospitalares',
+      color: 'from-green-500 to-green-600',
+    },
+    {
+      icon: Clock,
+      title: 'Indústria',
+      description: 'Controle turnos de produção e operação em fábricas e plantas',
+      color: 'from-orange-500 to-orange-600',
+    },
+    {
+      icon: BarChart3,
+      title: 'Varejo',
+      description: 'Escale atendentes, caixas e equipes de vendas com eficiência',
+      color: 'from-purple-500 to-purple-600',
     },
   ];
 
@@ -120,24 +147,24 @@ const Index = () => {
 
   const testimonials = [
     {
-      name: 'Carlos Silva',
-      role: 'Gerente de Segurança',
-      company: 'SecuriMax',
-      content: 'O Escala Smart transformou completamente nossa operação. Antes gastávamos horas organizando escalas, agora leva minutos.',
+      name: 'Dr. Carlos Silva',
+      role: 'Diretor Médico',
+      company: 'Hospital São Lucas',
+      content: 'Revolucionou nossa gestão de plantões médicos. Organizamos 50+ profissionais com facilidade e zero conflitos.',
       rating: 5,
     },
     {
       name: 'Marina Santos',
-      role: 'Coordenadora',
+      role: 'Coordenadora de Segurança',
       company: 'GuardPro',
-      content: 'Sistema intuitivo e completo. A equipe adotou rapidamente e já vimos redução significativa em conflitos de horários.',
+      content: 'Sistema intuitivo e completo. A equipe adotou rapidamente e já vimos redução significativa em custos operacionais.',
       rating: 5,
     },
     {
       name: 'Roberto Oliveira',
-      role: 'Diretor Operacional',
-      company: 'SafeGuard',
-      content: 'Excelente custo-benefício. Os relatórios nos ajudam a tomar decisões estratégicas baseadas em dados reais.',
+      role: 'Gerente de Operações',
+      company: 'Indústria TechMax',
+      content: 'Perfeito para gestão de turnos de produção. Os relatórios nos ajudam a otimizar recursos e aumentar produtividade.',
       rating: 5,
     },
   ];
@@ -176,15 +203,15 @@ const Index = () => {
             </Badge>
             
             <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-              Gerencie Escalas de Plantão com{' '}
+              Gestão de Escalas e Plantões{' '}
               <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                Inteligência
+                Simplificada
               </span>
             </h1>
             
             <p className="text-xl sm:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto">
-              Automatize a gestão de equipes, elimine conflitos de horários e otimize 
-              sua operação de segurança com nossa plataforma moderna e intuitiva
+              Para hospitais, empresas de segurança, indústrias e qualquer operação que precisa 
+              gerenciar equipes em turnos de forma inteligente e eficiente
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
@@ -229,6 +256,37 @@ const Index = () => {
         </div>
       </div>
 
+      {/* Use Cases Section */}
+      <div className="py-20 bg-gradient-to-br from-muted/50 via-background to-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <Badge className="mb-4" variant="outline">Setores Atendidos</Badge>
+            <h2 className="text-3xl sm:text-5xl font-bold mb-4">
+              Solução Versátil para Diversos Setores
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Do setor de saúde à segurança, da indústria ao varejo - uma plataforma, infinitas possibilidades
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            {useCases.map((useCase, index) => (
+              <Card key={index} className="border-0 bg-background shadow-lg hover:shadow-xl transition-all group">
+                <CardHeader>
+                  <div className={`h-14 w-14 rounded-xl bg-gradient-to-br ${useCase.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                    <useCase.icon className="h-7 w-7 text-white" />
+                  </div>
+                  <CardTitle className="text-xl">{useCase.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">{useCase.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Benefits Section */}
       <div className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
@@ -238,7 +296,7 @@ const Index = () => {
               Benefícios que Transformam sua Operação
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Reduza custos, aumente eficiência e melhore a satisfação da sua equipe
+              Economize tempo, reduza custos e aumente a satisfação da sua equipe
             </p>
           </div>
 
@@ -385,38 +443,65 @@ const Index = () => {
       </div>
 
       {/* CTA Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-primary/80">
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary-hover" />
         <div className="absolute inset-0 bg-grid-pattern opacity-10" />
-        <div className="container mx-auto px-4 py-20 text-center relative">
-          <h2 className="text-3xl sm:text-5xl font-bold text-primary-foreground mb-6">
-            Pronto para Transformar sua Gestão?
-          </h2>
-          <p className="text-xl text-primary-foreground/90 mb-10 max-w-2xl mx-auto">
-            Junte-se a centenas de empresas que já otimizaram suas operações com o Escala Smart
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
-              variant="secondary"
-              className="gap-2 text-lg px-8 py-6"
-              onClick={() => setSelectedRole('ADMIN')}
-            >
-              Começar Gratuitamente
-              <ArrowRight className="h-5 w-5" />
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="gap-2 text-lg px-8 py-6 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground hover:text-primary"
-              onClick={() => setSelectedRole('GUARD')}
-            >
-              Acessar como Segurança
-              <Shield className="h-5 w-5" />
-            </Button>
+        <div className="absolute inset-0 bg-gradient-to-t from-primary/20 via-transparent to-transparent" />
+        
+        <div className="container mx-auto px-4 py-24 text-center relative">
+          <div className="max-w-4xl mx-auto">
+            <Badge className="mb-6 bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20">
+              <Zap className="h-4 w-4 mr-2" />
+              Comece Hoje Mesmo
+            </Badge>
+            
+            <h2 className="text-4xl sm:text-6xl font-bold text-primary-foreground mb-6 leading-tight">
+              Pronto para Transformar
+              <br />
+              sua Gestão?
+            </h2>
+            
+            <p className="text-xl sm:text-2xl text-primary-foreground/90 mb-12 max-w-2xl mx-auto leading-relaxed">
+              Junte-se a centenas de empresas que já otimizaram suas operações 
+              com o Escala Smart
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+              <Button 
+                size="lg" 
+                variant="secondary"
+                className="gap-2 text-lg px-8 py-7 shadow-2xl hover:shadow-xl hover:scale-105 transition-all"
+                onClick={() => setSelectedRole('ADMIN')}
+              >
+                Começar Gratuitamente
+                <ArrowRight className="h-5 w-5" />
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="gap-2 text-lg px-8 py-7 border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground hover:text-primary hover:scale-105 transition-all backdrop-blur-sm bg-primary-foreground/5"
+                onClick={() => setSelectedRole('GUARD')}
+              >
+                Ver Demonstração
+                <Shield className="h-5 w-5" />
+              </Button>
+            </div>
+            
+            <div className="flex flex-wrap items-center justify-center gap-6 text-primary-foreground/80 text-sm">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                <span>Sem cartão de crédito</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                <span>Cancele quando quiser</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                <span>Suporte em português</span>
+              </div>
+            </div>
           </div>
-          <p className="text-primary-foreground/70 mt-6 text-sm">
-            Sem cartão de crédito • Cancele quando quiser • Suporte em português
-          </p>
         </div>
       </div>
 
@@ -430,7 +515,7 @@ const Index = () => {
                 <span className="text-xl font-bold">Escala Smart</span>
               </div>
               <p className="text-muted-foreground mb-4 max-w-sm">
-                A solução completa para gestão inteligente de escalas e plantões de segurança.
+                A solução completa para gestão inteligente de escalas e plantões em qualquer setor.
               </p>
             </div>
             
