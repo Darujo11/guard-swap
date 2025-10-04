@@ -33,11 +33,11 @@ interface Extra {
 
 export default function AdminExtras() {
   const navigate = useNavigate();
-  const { user, role, profile } = useAuth();
+  const { user, role, profile, loading: authLoading } = useAuth();
   const [guards, setGuards] = useState<Profile[]>([]);
   const [extras, setExtras] = useState<Extra[]>([]);
   const [filteredExtras, setFilteredExtras] = useState<Extra[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [extrasLoading, setExtrasLoading] = useState(true);
   
   // Form state
   const [selectedGuard, setSelectedGuard] = useState<string>("");
@@ -50,14 +50,14 @@ export default function AdminExtras() {
   const [filterMonth, setFilterMonth] = useState<Date>(new Date());
 
   useEffect(() => {
+    if (authLoading) return;
     if (role !== "admin") {
-      navigate("/");
+      navigate("/", { replace: true });
       return;
     }
-    
     fetchGuards();
     fetchExtras();
-  }, [role, navigate]);
+  }, [role, authLoading, navigate]);
 
   useEffect(() => {
     applyFilters();
@@ -83,7 +83,7 @@ export default function AdminExtras() {
   };
 
   const fetchExtras = async () => {
-    setLoading(true);
+    setExtrasLoading(true);
     const { data, error } = await supabase
       .from("extras")
       .select(`
@@ -98,12 +98,12 @@ export default function AdminExtras() {
         title: "Erro ao carregar extras",
         description: error.message,
       });
-      setLoading(false);
+      setExtrasLoading(false);
       return;
     }
 
     setExtras(data || []);
-    setLoading(false);
+    setExtrasLoading(false);
   };
 
   const applyFilters = () => {
@@ -512,7 +512,7 @@ export default function AdminExtras() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {extrasLoading ? (
             <div className="text-center py-8">Carregando...</div>
           ) : filteredExtras.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
