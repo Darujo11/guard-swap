@@ -100,7 +100,6 @@ const GuardDashboard = () => {
         role: 'GUARD', 
         teamName: currentUser.team?.name || 'Sem equipe'
       }}
-      notificationCount={1}
     >
       {/* Quick Actions */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8">

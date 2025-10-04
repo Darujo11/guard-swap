@@ -183,7 +183,6 @@ const AdminDashboard = () => {
     <AppLayout
       title="Dashboard Administrativo"
       user={{ name: 'Admin Sistema', role: 'ADMIN' }}
-      notificationCount={3}
     >
       {/* Stats Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">

@@ -1,10 +1,12 @@
 import { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle } from 'lucide-react';
+import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useSwapNotifications } from '@/hooks/useSwapNotifications';
+import { NotificationsBell } from '@/components/notifications/NotificationsBell';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +24,6 @@ interface AppLayoutProps {
     role: 'ADMIN' | 'GUARD';
     teamName?: string;
   };
-  notificationCount?: number;
 }
 
 const navigation = [
@@ -33,8 +34,9 @@ const navigation = [
   { name: 'Escalas', href: '/admin/escalas', icon: ClipboardList },
 ];
 
-export function AppLayout({ children, title, user, notificationCount = 0 }: AppLayoutProps) {
+export function AppLayout({ children, title, user }: AppLayoutProps) {
   const { signOut } = useAuth();
+  const { notifications, markAsRead, markAllAsRead } = useSwapNotifications();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
@@ -68,17 +70,11 @@ export function AppLayout({ children, title, user, notificationCount = 0 }: AppL
 
           <div className="flex items-center gap-4">
             {/* Notifications */}
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="h-4 w-4" />
-              {notificationCount > 0 && (
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
-                >
-                  {notificationCount > 9 ? '9+' : notificationCount}
-                </Badge>
-              )}
-            </Button>
+            <NotificationsBell
+              notifications={notifications}
+              onMarkAsRead={markAsRead}
+              onMarkAllAsRead={markAllAsRead}
+            />
 
             {/* User Info */}
             {user && (
