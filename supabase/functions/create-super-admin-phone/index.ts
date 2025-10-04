@@ -44,41 +44,65 @@ serve(async (req) => {
       ? email
       : `${(phone || '').replace(/\D/g, '')}@guardshift.com`
 
-    console.log('[create-super-admin-phone] Creating super admin with phone:', { e164, name })
+    console.log('[create-super-admin-phone] Processing super admin:', { e164, profileEmail, name })
 
-    // 1. Create auth user with phone (idempotency best-effort)
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      phone: e164,
-      email: profileEmail,
-      password,
-      phone_confirm: true,
-      email_confirm: true,
-      user_metadata: { name }
+    // 1. Try to find existing user by email
+    let userId: string | null = null
+    const { data: existingUserId } = await supabaseAdmin.rpc('get_user_id_by_email', { 
+      email_address: profileEmail 
     })
 
-    if (authError) {
-      console.error('[create-super-admin-phone] Auth error:', authError)
-      throw authError
-    }
-
-    const userId = authData.user.id
-    console.log('[create-super-admin-phone] User created:', userId)
-
-    // 2. Create profile (email is required by schema)
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        user_id: userId,
+    if (existingUserId) {
+      userId = existingUserId as string
+      console.log('[create-super-admin-phone] User already exists:', userId)
+    } else {
+      // Create new auth user
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        phone: e164,
         email: profileEmail,
-        name
+        password,
+        phone_confirm: true,
+        email_confirm: true,
+        user_metadata: { name }
       })
 
-    if (profileError) {
-      console.error('[create-super-admin-phone] Profile error:', profileError)
-      throw profileError
+      if (authError) {
+        console.error('[create-super-admin-phone] Auth error:', authError)
+        throw authError
+      }
+
+      userId = authData.user.id
+      console.log('[create-super-admin-phone] User created:', userId)
     }
 
-    // 3. Assign super_admin role
+    // 2. Ensure profile exists (upsert)
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (!existingProfile) {
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .insert({ user_id: userId, email: profileEmail, name })
+
+      if (profileError) {
+        console.error('[create-super-admin-phone] Profile insert error:', profileError)
+        throw profileError
+      }
+      console.log('[create-super-admin-phone] Profile created')
+    } else {
+      console.log('[create-super-admin-phone] Profile already exists')
+    }
+
+    // 3. Delete any existing roles for this user to ensure clean state
+    await supabaseAdmin
+      .from('user_roles')
+      .delete()
+      .eq('user_id', userId)
+
+    // 4. Assign super_admin role
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
       .insert({ user_id: userId, role: 'super_admin' })
