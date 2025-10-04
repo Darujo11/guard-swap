@@ -275,7 +275,8 @@ export function TeamScheduleCalendar() {
         </div>
         {team && (
           <div className="text-[0.65rem] md:text-xs mt-0.5 md:mt-1 font-medium truncate leading-tight">
-            {team.name}
+            <span className="md:hidden">{team.name.charAt(0)}</span>
+            <span className="hidden md:inline">{team.name}</span>
           </div>
         )}
       </div>
