@@ -40,14 +40,23 @@ serve(async (req) => {
     
     // Create login email using phone
     const loginEmail = `${phoneClean}@guardshift.com`;
-    const defaultPassword = '123456';
+    
+    // Generate secure random password (12 characters: alphanumeric + special chars)
+    const generateSecurePassword = () => {
+      const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+      const array = new Uint8Array(12);
+      crypto.getRandomValues(array);
+      return Array.from(array, (byte) => charset[byte % charset.length]).join('');
+    };
+    
+    const securePassword = generateSecurePassword();
 
     console.log('[create-guard] Creating auth user with email:', loginEmail);
 
     // Create user in auth.users using service role (bypasses email confirmation)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: loginEmail,
-      password: defaultPassword,
+      password: securePassword,
       email_confirm: true, // Auto-confirm email
       user_metadata: {
         name: name,
@@ -121,8 +130,8 @@ serve(async (req) => {
         success: true,
         user_id: authData.user.id,
         login: phone,
-        password: defaultPassword,
-        message: `Segurança ${name} criado com sucesso!`
+        password: securePassword,
+        message: `Segurança ${name} criado com sucesso! Senha segura gerada automaticamente.`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
