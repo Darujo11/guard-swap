@@ -27,59 +27,94 @@ serve(async (req) => {
 
     console.log('[create-super-admin] Creating super admin:', { email, name })
 
-    // 1. Create auth user
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { name }
-    })
+    // 1. Try to find existing user by email first (idempotent)
+    let userId: string | null = null
+    const { data: existingUserId, error: getUserIdErr } = await supabaseAdmin
+      .rpc('get_user_id_by_email', { email_address: email })
 
-    if (authError) {
-      console.error('[create-super-admin] Auth error:', authError)
-      throw authError
+    if (getUserIdErr) {
+      console.warn('[create-super-admin] get_user_id_by_email error (non-blocking):', getUserIdErr)
     }
 
-    const userId = authData.user.id
-    console.log('[create-super-admin] User created:', userId)
-
-    // 2. Create profile
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        user_id: userId,
+    if (existingUserId) {
+      userId = existingUserId as string
+      console.log('[create-super-admin] User already exists, continuing:', userId)
+    } else {
+      // 2. Create auth user if not found
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
-        name,
+        password,
+        email_confirm: true,
+        user_metadata: { name }
       })
 
-    if (profileError) {
-      console.error('[create-super-admin] Profile error:', profileError)
-      throw profileError
+      if (authError) {
+        console.error('[create-super-admin] Auth error on createUser, will check if user exists:', authError)
+        // Retry by checking if the user now exists (handles race conditions / partial previous attempts)
+        const { data: maybeUserId, error: retryGetErr } = await supabaseAdmin
+          .rpc('get_user_id_by_email', { email_address: email })
+        if (retryGetErr) {
+          console.error('[create-super-admin] Retry get_user_id_by_email error:', retryGetErr)
+        }
+        if (maybeUserId) {
+          userId = maybeUserId as string
+          console.log('[create-super-admin] User found after retry, continuing:', userId)
+        } else {
+          throw authError
+        }
+      } else {
+        userId = authData!.user.id
+        console.log('[create-super-admin] User created:', userId)
+      }
     }
 
-    // 3. Get profile id
-    const { data: profile, error: getProfileError } = await supabaseAdmin
+    // 3. Ensure profile exists
+    const { data: existingProfile, error: profileCheckErr } = await supabaseAdmin
       .from('profiles')
       .select('id')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
-    if (getProfileError || !profile) {
-      console.error('[create-super-admin] Get profile error:', getProfileError)
-      throw getProfileError || new Error('Profile not found')
+    if (profileCheckErr) {
+      console.warn('[create-super-admin] Profile check warning (non-blocking):', profileCheckErr)
     }
 
-    // 4. Assign super_admin role
-    const { error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .insert({
-        user_id: userId,
-        role: 'super_admin'
-      })
+    if (!existingProfile) {
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .insert({ user_id: userId, email, name })
+      if (profileError) {
+        console.error('[create-super-admin] Profile insert error:', profileError)
+        throw profileError
+      }
+      console.log('[create-super-admin] Profile created')
+    } else {
+      console.log('[create-super-admin] Profile already exists, skipping insert')
+    }
 
-    if (roleError) {
-      console.error('[create-super-admin] Role error:', roleError)
-      throw roleError
+    // 4. Ensure super_admin role exists
+    const { data: existingRole, error: roleCheckErr } = await supabaseAdmin
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('role', 'super_admin')
+      .maybeSingle()
+
+    if (roleCheckErr) {
+      console.warn('[create-super-admin] Role check warning (non-blocking):', roleCheckErr)
+    }
+
+    if (!existingRole) {
+      const { error: roleError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({ user_id: userId, role: 'super_admin' })
+      if (roleError) {
+        console.error('[create-super-admin] Role insert error:', roleError)
+        throw roleError
+      }
+      console.log('[create-super-admin] Role assigned: super_admin')
+    } else {
+      console.log('[create-super-admin] Role already assigned, skipping insert')
     }
 
     console.log('[create-super-admin] Super admin created successfully')

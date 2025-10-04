@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.create-guard]
 verify_jwt = true
+
+[functions.create-super-admin]
+verify_jwt = false
