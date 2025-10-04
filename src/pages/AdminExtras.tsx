@@ -15,7 +15,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Plus, FileText, Trash2, Download, BarChart3, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarIcon, Plus, FileText, Trash2, Download, BarChart3, ChevronLeft, ChevronRight, Edit } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
@@ -53,6 +55,16 @@ export default function AdminExtras() {
   
   // Ranking filter state
   const [rankingDate, setRankingDate] = useState<Date>(new Date());
+  
+  // Edit dialog state
+  const [editingExtra, setEditingExtra] = useState<Extra | null>(null);
+  const [editGuardId, setEditGuardId] = useState<string>("");
+  const [editDate, setEditDate] = useState<Date>();
+  const [editJustification, setEditJustification] = useState("");
+  const [editQuantity, setEditQuantity] = useState<number>(1);
+  
+  // Delete confirmation state
+  const [deletingExtraId, setDeletingExtraId] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -259,12 +271,65 @@ export default function AdminExtras() {
     fetchExtras();
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este registro de extra?")) {
+  const openEditDialog = (extra: Extra) => {
+    setEditingExtra(extra);
+    setEditGuardId(extra.guard_id);
+    setEditDate(new Date(extra.extra_date));
+    setEditJustification(extra.justification);
+    setEditQuantity(extra.quantity);
+  };
+
+  const closeEditDialog = () => {
+    setEditingExtra(null);
+    setEditGuardId("");
+    setEditDate(undefined);
+    setEditJustification("");
+    setEditQuantity(1);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingExtra || !editGuardId || !editDate || !editJustification || editQuantity < 1) {
+      toast({
+        variant: "destructive",
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos corretamente.",
+      });
       return;
     }
 
-    const { error } = await supabase.from("extras").delete().eq("id", id);
+    const { error } = await supabase
+      .from("extras")
+      .update({
+        guard_id: editGuardId,
+        extra_date: format(editDate, "yyyy-MM-dd"),
+        month_reference: format(startOfMonth(editDate), "yyyy-MM-dd"),
+        justification: editJustification,
+        quantity: editQuantity,
+      })
+      .eq("id", editingExtra.id);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar extra",
+        description: error.message,
+      });
+      return;
+    }
+
+    toast({
+      title: "Extra atualizado",
+      description: "Registro atualizado com sucesso.",
+    });
+
+    closeEditDialog();
+    fetchExtras();
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingExtraId) return;
+
+    const { error } = await supabase.from("extras").delete().eq("id", deletingExtraId);
 
     if (error) {
       toast({
@@ -280,6 +345,7 @@ export default function AdminExtras() {
       description: "Registro removido com sucesso.",
     });
 
+    setDeletingExtraId(null);
     fetchExtras();
   };
 
@@ -647,16 +713,44 @@ export default function AdminExtras() {
                     <TableHead>Posição</TableHead>
                     <TableHead>Segurança</TableHead>
                     <TableHead className="text-center">Total de Horas</TableHead>
+                    <TableHead className="text-center">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {monthlySummary.map((item, index) => (
-                    <TableRow key={item.guardId}>
-                      <TableCell className="font-medium">{index + 1}º</TableCell>
-                      <TableCell>{item.guardName}</TableCell>
-                      <TableCell className="text-center font-semibold">{item.totalHours}</TableCell>
-                    </TableRow>
-                  ))}
+                  {monthlySummary.map((item, index) => {
+                    const guardExtras = filteredExtras.filter(e => e.guard_id === item.guardId);
+                    return (
+                      <TableRow key={item.guardId}>
+                        <TableCell className="font-medium">{index + 1}º</TableCell>
+                        <TableCell>{item.guardName}</TableCell>
+                        <TableCell className="text-center font-semibold">{item.totalHours}</TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            {guardExtras.length > 0 && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditDialog(guardExtras[0])}
+                                  className="text-primary hover:text-primary"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setDeletingExtraId(guardExtras[0].id)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -699,14 +793,24 @@ export default function AdminExtras() {
                       <TableCell>{format(new Date(extra.extra_date), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
                       <TableCell className="max-w-md">{extra.justification}</TableCell>
                       <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(extra.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(extra)}
+                            className="text-primary hover:text-primary"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeletingExtraId(extra.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -858,6 +962,111 @@ export default function AdminExtras() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingExtra} onOpenChange={(open) => !open && closeEditDialog()}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Plantão Extra</DialogTitle>
+            <DialogDescription>Atualize as informações do plantão extra</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-guard">Segurança *</Label>
+              <Select value={editGuardId} onValueChange={setEditGuardId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o segurança" />
+                </SelectTrigger>
+                <SelectContent>
+                  {guards.map(guard => (
+                    <SelectItem key={guard.id} value={guard.id}>
+                      {guard.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Data do Extra *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !editDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {editDate ? format(editDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione a data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={editDate}
+                      onSelect={setEditDate}
+                      locale={ptBR}
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-quantity">Horas de Extras Concedido *</Label>
+                <Input
+                  id="edit-quantity"
+                  type="number"
+                  min="1"
+                  value={editQuantity}
+                  onChange={(e) => setEditQuantity(parseInt(e.target.value) || 1)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-justification">Fundamentação/Justificativa *</Label>
+              <Textarea
+                id="edit-justification"
+                value={editJustification}
+                onChange={(e) => setEditJustification(e.target.value)}
+                placeholder="Descreva o motivo pelo qual o plantão extra foi concedido..."
+                rows={4}
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={closeEditDialog}>
+                Cancelar
+              </Button>
+              <Button onClick={handleUpdate}>
+                Salvar Alterações
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingExtraId} onOpenChange={(open) => !open && setDeletingExtraId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este registro de extra? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
