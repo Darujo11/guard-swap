@@ -69,7 +69,7 @@ const TrialSignup = () => {
               <Shield className="h-6 w-6 text-primary-foreground" />
             </div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-transparent">
-              ShiftGuard
+              Escala Smart
             </h1>
           </div>
           <CardTitle>Teste Grátis de 7 Dias</CardTitle>
