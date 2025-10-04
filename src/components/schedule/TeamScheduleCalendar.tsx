@@ -40,7 +40,14 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
   const [selectedTeam, setSelectedTeam] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { profile, role } = useAuth();
+  
+  // Determinar o ID do admin baseado na role
+  const getAdminId = () => {
+    if (!profile) return null;
+    // Se for admin, use o próprio ID; se for guard, use o admin_id
+    return role === 'admin' ? profile.id : profile.admin_id;
+  };
 
   useEffect(() => {
     fetchTeams();
@@ -72,7 +79,8 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
 
-    if (!profile?.admin_id) return;
+    const adminId = getAdminId();
+    if (!adminId) return;
 
     const { data, error } = await supabase
       .from("team_schedules")
@@ -82,7 +90,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
       `)
       .gte("shift_date", format(start, "yyyy-MM-dd"))
       .lte("shift_date", format(end, "yyyy-MM-dd"))
-      .eq("admin_id", profile.admin_id);
+      .eq("admin_id", adminId);
 
     if (error) {
       toast({
@@ -97,12 +105,13 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
   };
 
   const fetchProfiles = async () => {
-    if (!profile?.admin_id) return;
+    const adminId = getAdminId();
+    if (!adminId) return;
 
     const { data, error } = await supabase
       .from("profiles")
       .select("id, name, team_id")
-      .eq("admin_id", profile.admin_id)
+      .eq("admin_id", adminId)
       .order("name");
 
     if (error) {
@@ -208,12 +217,22 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
       }
     } else {
       // Adiciona nova escala
+      const adminId = getAdminId();
+      if (!adminId) {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Não foi possível identificar a organização.",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from("team_schedules")
         .insert({
           team_id: selectedTeam,
           shift_date: dateStr,
-          admin_id: profile?.id as string,
+          admin_id: adminId,
         });
 
       if (error) {
@@ -245,6 +264,16 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
       return;
     }
 
+    const adminId = getAdminId();
+    if (!adminId) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível identificar a organização.",
+      });
+      return;
+    }
+
     setLoading(true);
 
     const start = startOfMonth(currentMonth);
@@ -256,7 +285,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
       .delete()
       .gte("shift_date", format(start, "yyyy-MM-dd"))
       .lte("shift_date", format(end, "yyyy-MM-dd"))
-      .eq("admin_id", profile?.id as string);
+      .eq("admin_id", adminId);
 
     // Generate pattern for all teams with offset
     const schedulesToInsert = [];
@@ -271,7 +300,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
           schedulesToInsert.push({
             team_id: team.id,
             shift_date: format(currentDate, "yyyy-MM-dd"),
-            admin_id: profile?.id as string,
+            admin_id: adminId,
           });
           consecutiveDays++;
           if (consecutiveDays >= 1) {
