@@ -13,6 +13,7 @@ import AdminSwaps from "./pages/AdminSwaps";
 import AdminGuards from "./pages/AdminGuards";
 import AdminSchedule from "./pages/AdminSchedule";
 import GuardDashboard from "./pages/GuardDashboard";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,14 @@ const App = () => (
             element={
               <ProtectedRoute allowedRoles={['guard']}>
                 <GuardDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/perfil" 
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'guard']}>
+                <Profile />
               </ProtectedRoute>
             } 
           />

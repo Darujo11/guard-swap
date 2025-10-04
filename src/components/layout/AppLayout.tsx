@@ -1,10 +1,18 @@
 import { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Users, Calendar, Shield, BarChart3, LogOut, ClipboardList } from 'lucide-react';
+import { Bell, Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -75,25 +83,43 @@ export function AppLayout({ children, title, user, notificationCount = 0 }: AppL
             {/* User Info */}
             {user && (
               <div className="flex items-center gap-3 pl-3 border-l">
-                <div className="text-right text-sm">
-                  <div className="font-medium">{user.name}</div>
-                  <div className="text-muted-foreground flex items-center gap-1">
-                    {user.role === 'ADMIN' ? 'Administrador' : 'Segurança'}
-                    {user.teamName && (
-                      <Badge variant="secondary" className="ml-1">
-                        Equipe {user.teamName}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary">
-                    {user.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
-                  <LogOut className="h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="flex items-center gap-3">
+                      <div className="text-right text-sm hidden md:block">
+                        <div className="font-medium">{user.name}</div>
+                        <div className="text-muted-foreground flex items-center gap-1">
+                          {user.role === 'ADMIN' ? 'Administrador' : 'Segurança'}
+                          {user.teamName && (
+                            <Badge variant="secondary" className="ml-1">
+                              Equipe {user.teamName}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-sm font-medium text-primary">
+                          {user.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/perfil" className="cursor-pointer">
+                        <UserCircle className="mr-2 h-4 w-4" />
+                        <span>Perfil</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={signOut} className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sair</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
           </div>
