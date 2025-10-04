@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign } from 'lucide-react';
+import logoImage from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -54,10 +55,8 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center">
-                <Shield className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <span className="font-semibold text-xl">ShiftGuard</span>
+              <img src={logoImage} alt="Escala Smart" className="h-8 w-8" />
+              <span className="font-semibold text-xl">Escala Smart</span>
             </div>
             <div className="hidden md:flex items-center gap-1 ml-6">
               {navigation.map((item) => (
