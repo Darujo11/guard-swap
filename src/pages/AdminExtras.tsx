@@ -254,6 +254,7 @@ export default function AdminExtras() {
       justification,
       quantity,
       created_by: profile?.id,
+      admin_id: profile?.id,
     });
 
     if (error) {
