@@ -4,9 +4,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Shield, Users, Calendar, BarChart3, ArrowRight, Clock, CheckCircle, Zap, Star, TrendingUp, Bell, FileText, Lock } from 'lucide-react';
+import { useScrollAnimation } from '@/hooks/useScrollAnimation';
 
 const Index = () => {
   const [selectedRole, setSelectedRole] = useState<'ADMIN' | 'GUARD' | null>(null);
+  
+  // Scroll animations
+  const heroAnimation = useScrollAnimation();
+  const useCasesAnimation = useScrollAnimation();
+  const benefitsAnimation = useScrollAnimation();
+  const featuresAnimation = useScrollAnimation();
+  const pricingAnimation = useScrollAnimation();
+  const testimonialsAnimation = useScrollAnimation();
 
   const features = [
     {
@@ -196,7 +205,12 @@ const Index = () => {
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5" />
         <div className="container mx-auto px-4 py-20 sm:py-32">
-          <div className="text-center max-w-5xl mx-auto">
+          <div 
+            ref={heroAnimation.ref}
+            className={`text-center max-w-5xl mx-auto transition-all duration-700 ${
+              heroAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            }`}
+          >
             <Badge className="mb-6 text-sm py-2 px-4" variant="secondary">
               <Zap className="h-4 w-4 mr-2" />
               A Solução Completa para Gestão de Escalas
@@ -259,7 +273,12 @@ const Index = () => {
       {/* Use Cases Section */}
       <div className="py-20 bg-gradient-to-br from-muted/50 via-background to-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div 
+            ref={useCasesAnimation.ref}
+            className={`text-center mb-16 transition-all duration-700 ${
+              useCasesAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            }`}
+          >
             <Badge className="mb-4" variant="outline">Setores Atendidos</Badge>
             <h2 className="text-3xl sm:text-5xl font-bold mb-4">
               Solução Versátil para Diversos Setores
@@ -271,7 +290,13 @@ const Index = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {useCases.map((useCase, index) => (
-              <Card key={index} className="border-0 bg-background shadow-lg hover:shadow-xl transition-all group">
+              <Card 
+                key={index} 
+                className={`border-0 bg-background shadow-lg hover:shadow-xl transition-all duration-500 group ${
+                  useCasesAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                }`}
+                style={{ transitionDelay: `${index * 100}ms` }}
+              >
                 <CardHeader>
                   <div className={`h-14 w-14 rounded-xl bg-gradient-to-br ${useCase.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                     <useCase.icon className="h-7 w-7 text-white" />
@@ -290,7 +315,12 @@ const Index = () => {
       {/* Benefits Section */}
       <div className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div 
+            ref={benefitsAnimation.ref}
+            className={`text-center mb-16 transition-all duration-700 ${
+              benefitsAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            }`}
+          >
             <Badge className="mb-4" variant="outline">Por que escolher</Badge>
             <h2 className="text-3xl sm:text-5xl font-bold mb-4">
               Benefícios que Transformam sua Operação
@@ -302,7 +332,13 @@ const Index = () => {
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {benefits.map((benefit, index) => (
-              <Card key={index} className="border-0 bg-background shadow-lg hover:shadow-xl transition-all">
+              <Card 
+                key={index} 
+                className={`border-0 bg-background shadow-lg hover:shadow-xl transition-all duration-500 ${
+                  benefitsAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                }`}
+                style={{ transitionDelay: `${index * 100}ms` }}
+              >
                 <CardHeader>
                   <div className="h-14 w-14 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                     <benefit.icon className="h-7 w-7 text-primary" />
@@ -320,7 +356,12 @@ const Index = () => {
 
       {/* Features Section */}
       <div id="features" className="container mx-auto px-4 py-20">
-        <div className="text-center mb-16">
+        <div 
+          ref={featuresAnimation.ref}
+          className={`text-center mb-16 transition-all duration-700 ${
+            featuresAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+          }`}
+        >
           <Badge className="mb-4" variant="outline">Recursos</Badge>
           <h2 className="text-3xl sm:text-5xl font-bold mb-4">
             Tudo que Você Precisa em Um Só Lugar
@@ -332,7 +373,13 @@ const Index = () => {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
-            <Card key={index} className="group hover:shadow-lg hover:scale-105 transition-all duration-300 border-0 bg-background">
+            <Card 
+              key={index} 
+              className={`group hover:shadow-lg hover:scale-105 transition-all duration-500 border-0 bg-background ${
+                featuresAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+              }`}
+              style={{ transitionDelay: `${index * 50}ms` }}
+            >
               <CardHeader>
                 <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-primary-foreground transition-all">
                   <feature.icon className="h-6 w-6" />
@@ -352,7 +399,12 @@ const Index = () => {
       {/* Pricing Section */}
       <div className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div 
+            ref={pricingAnimation.ref}
+            className={`text-center mb-16 transition-all duration-700 ${
+              pricingAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            }`}
+          >
             <Badge className="mb-4" variant="outline">Planos</Badge>
             <h2 className="text-3xl sm:text-5xl font-bold mb-4">
               Escolha o Plano Ideal para Você
@@ -366,7 +418,14 @@ const Index = () => {
             {plans.map((plan, index) => (
               <Card 
                 key={index} 
-                className={`relative ${plan.highlighted ? 'border-primary border-2 shadow-2xl scale-105' : 'border-0'}`}
+                className={`relative group hover:-translate-y-2 transition-all duration-500 cursor-pointer ${
+                  plan.highlighted 
+                    ? 'border-primary border-2 shadow-2xl scale-105 hover:scale-110 hover:shadow-primary/20' 
+                    : 'border-0 hover:shadow-2xl hover:border-primary/50 hover:border'
+                } ${
+                  pricingAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                }`}
+                style={{ transitionDelay: `${index * 150}ms` }}
               >
                 {plan.highlighted && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">
@@ -410,7 +469,12 @@ const Index = () => {
       {/* Testimonials Section */}
       <div className="py-20">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div 
+            ref={testimonialsAnimation.ref}
+            className={`text-center mb-16 transition-all duration-700 ${
+              testimonialsAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+            }`}
+          >
             <Badge className="mb-4" variant="outline">Depoimentos</Badge>
             <h2 className="text-3xl sm:text-5xl font-bold mb-4">
               O Que Nossos Clientes Dizem
@@ -419,7 +483,13 @@ const Index = () => {
 
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {testimonials.map((testimonial, index) => (
-              <Card key={index} className="border-0 bg-background shadow-lg">
+              <Card 
+                key={index} 
+                className={`border-0 bg-background shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-500 ${
+                  testimonialsAnimation.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                }`}
+                style={{ transitionDelay: `${index * 100}ms` }}
+              >
                 <CardHeader>
                   <div className="flex gap-1 mb-4">
                     {[...Array(testimonial.rating)].map((_, i) => (
