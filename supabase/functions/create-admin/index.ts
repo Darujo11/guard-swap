@@ -23,48 +23,103 @@ serve(async (req) => {
       }
     );
 
-    // Create admin user
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: "coordenador@guardshift.com",
-      password: "123456",
-      email_confirm: true,
-      user_metadata: {
-        name: "Coordenador",
-      },
+    const { email, password, name } = await req.json();
+
+    if (!email || !password || !name) {
+      return new Response(
+        JSON.stringify({ error: 'email, password e name são obrigatórios' }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
+    }
+
+    console.log('[create-admin] Processing admin:', { email, name });
+
+    // 1. Try to find existing user by email
+    let userId: string | null = null;
+    const { data: existingUserId } = await supabaseAdmin.rpc('get_user_id_by_email', { 
+      email_address: email 
     });
 
-    if (authError) throw authError;
-    if (!authData.user) throw new Error("Failed to create user");
-
-    // Create profile
-    const { error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .insert({
-        user_id: authData.user.id,
-        name: "Coordenador",
-        email: "coordenador@guardshift.com",
+    if (existingUserId) {
+      userId = existingUserId as string;
+      console.log('[create-admin] User already exists:', userId);
+    } else {
+      // Create new auth user
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { name },
       });
 
-    if (profileError) throw profileError;
+      if (authError) {
+        console.error('[create-admin] Auth error:', authError);
+        throw authError;
+      }
 
-    // Assign admin role
-    const { error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .insert({
-        user_id: authData.user.id,
-        role: "admin",
-      });
+      userId = authData.user.id;
+      console.log('[create-admin] User created:', userId);
+    }
 
-    if (roleError) throw roleError;
+    // 2. Ensure profile exists (upsert)
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!existingProfile) {
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .insert({ user_id: userId, email, name });
+
+      if (profileError) {
+        console.error('[create-admin] Profile insert error:', profileError);
+        throw profileError;
+      }
+      console.log('[create-admin] Profile created');
+    } else {
+      console.log('[create-admin] Profile already exists');
+    }
+
+    // 3. Check existing roles and ensure admin role
+    const { data: existingRoles } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+
+    const hasAdminRole = existingRoles?.some(r => r.role === 'admin');
+
+    if (!hasAdminRole) {
+      // Remove other roles first
+      await supabaseAdmin
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+
+      // Assign admin role
+      const { error: roleError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({ user_id: userId, role: 'admin' });
+
+      if (roleError) {
+        console.error('[create-admin] Role error:', roleError);
+        throw roleError;
+      }
+      console.log('[create-admin] Admin role assigned');
+    } else {
+      console.log('[create-admin] Admin role already exists');
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Admin criado com sucesso!",
-        credentials: {
-          login: "coordenador@guardshift.com",
-          password: "123456",
-        },
+        message: 'Admin criado com sucesso!',
+        userId,
+        email
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -72,9 +127,9 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error("Error creating admin:", error);
+    console.error('[create-admin] Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Erro desconhecido' }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
