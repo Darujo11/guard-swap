@@ -56,30 +56,26 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
         return;
       }
 
-      if (!currentUser.admin_id) {
-        toast({
-          title: 'Erro de configuração',
-          description: 'Não foi possível identificar sua organização.',
-          variant: 'destructive',
-        });
-        setAvailableGuards([]);
-        return;
-      }
-
-      // Buscar todos os guardas da mesma organização (exceto o próprio usuário)
+      // Usar função RPC que bypassa RLS de forma segura
       const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          *,
-          team:teams(*)
-        `)
-        .eq('admin_id', currentUser.admin_id)
-        .neq('id', currentUser.id)
-        .not('team_id', 'is', null)
-        .eq('is_active', true);
+        .rpc('get_available_guards_for_swap');
 
       if (error) throw error;
-      setAvailableGuards((data || []) as Profile[]);
+
+      // Converter para formato esperado pelo componente
+      const guards = (data || []).map((guard: any) => ({
+        id: guard.id,
+        name: guard.name,
+        email: guard.email,
+        team_id: guard.team_id,
+        team: guard.team_name ? {
+          id: guard.team_id,
+          name: guard.team_name,
+          color: guard.team_color
+        } : null
+      }));
+
+      setAvailableGuards(guards as Profile[]);
     } catch (error) {
       console.error('[GuardSwapForm][FetchGuards]', error);
       toast({

@@ -482,6 +482,17 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      get_available_guards_for_swap: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          email: string
+          id: string
+          name: string
+          team_color: string
+          team_id: string
+          team_name: string
+        }[]
+      }
       get_profile_id: {
         Args: { _user_id: string }
         Returns: string
@@ -508,6 +519,10 @@ export type Database = {
       suspend_expired_admins: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      user_belongs_to_admin_org: {
+        Args: { _admin_user_id: string; _target_user_id: string }
+        Returns: boolean
       }
     }
     Enums: {
