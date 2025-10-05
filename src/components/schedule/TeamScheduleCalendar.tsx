@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Team } from "@/lib/types";
 import { format, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -39,6 +40,14 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
   const [selectedTeam, setSelectedTeam] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { profile } = useAuth();
+
+  const getAdminId = () => {
+    if (!profile) return null;
+    // For admins, their admin_id is null, so use their own id
+    // For guards, use their admin_id field
+    return profile.admin_id || profile.id;
+  };
 
   useEffect(() => {
     fetchTeams();
@@ -146,10 +155,15 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
 
     setSelectedDate(date);
     const dateStr = format(date, "yyyy-MM-dd");
-    const existingSchedule = schedules.find(s => s.shift_date === dateStr);
+    
+    // Check if the SELECTED team already has a schedule on this date
+    const existingSchedule = schedules.find(s => s.shift_date === dateStr && s.team_id === selectedTeam);
+    
+    // Check if ANY other team has a schedule on this date
+    const otherTeamSchedule = schedules.find(s => s.shift_date === dateStr && s.team_id !== selectedTeam);
 
     if (existingSchedule) {
-      // Remove schedule
+      // Remove schedule for the selected team
       const { error } = await supabase
         .from("team_schedules")
         .delete()
@@ -169,12 +183,22 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
         description: `A escala foi removida de ${format(date, "dd/MM/yyyy")}`,
       });
     } else {
-      // Add schedule
+      // If another team has this date, remove it first
+      if (otherTeamSchedule) {
+        await supabase
+          .from("team_schedules")
+          .delete()
+          .eq("id", otherTeamSchedule.id);
+      }
+      
+      // Add schedule for the selected team
+      const adminId = getAdminId();
       const { error } = await supabase
         .from("team_schedules")
         .insert({
           team_id: selectedTeam,
           shift_date: dateStr,
+          admin_id: adminId,
         });
 
       if (error) {
