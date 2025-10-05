@@ -56,16 +56,27 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
         return;
       }
 
-      // Buscar guardas de outras equipes (não da mesma equipe do usuário)
+      if (!currentUser.admin_id) {
+        toast({
+          title: 'Erro de configuração',
+          description: 'Não foi possível identificar sua organização.',
+          variant: 'destructive',
+        });
+        setAvailableGuards([]);
+        return;
+      }
+
+      // Buscar todos os guardas da mesma organização (exceto o próprio usuário)
       const { data, error } = await supabase
         .from('profiles')
         .select(`
           *,
           team:teams(*)
         `)
+        .eq('admin_id', currentUser.admin_id)
         .neq('id', currentUser.id)
         .not('team_id', 'is', null)
-        .neq('team_id', currentUser.team_id);
+        .eq('is_active', true);
 
       if (error) throw error;
       setAvailableGuards((data || []) as Profile[]);
