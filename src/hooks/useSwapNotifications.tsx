@@ -87,8 +87,8 @@ export function useSwapNotifications() {
           const { data: profile } = await supabase
             .from('profiles')
             .select('name')
-            .eq('user_id', payload.new.requester_id)
-            .single();
+            .eq('id', payload.new.requester_id)
+            .maybeSingle();
 
           const notification: Notification = {
             id: payload.new.id,

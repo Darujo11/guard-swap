@@ -340,6 +340,13 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                                   )}
                                 </div>
 
+                                <div className="text-sm">
+                                  <span className="text-muted-foreground">Troca entre</span>{' '}
+                                  <span className="font-medium">{request.requester?.name}</span>
+                                  {' ↔ '}
+                                  <span className="font-medium">{request.target?.name}</span>
+                                </div>
+
                                 <div className="grid gap-2 sm:grid-cols-2">
                                   <div>
                                     <div className="text-sm text-muted-foreground">
