@@ -18,10 +18,12 @@ import {
   ArrowRightLeft,
   MessageSquare,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  FileDown
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { SWAP_STATUS_CONFIG } from '@/lib/constants';
 
 interface GuardSwapListProps {
   currentUser: Profile;
@@ -216,6 +218,183 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
     }));
   };
 
+  const generatePDF = async (request: SwapRequest) => {
+    try {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+
+      const statusEmoji = {
+        'PENDING': '⏳',
+        'ACCEPTED': '✅',
+        'APPROVED': '✅',
+        'REJECTED': '❌',
+        'CANCELLED': '🚫'
+      }[request.status] || '📋';
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Solicitação de Troca - ${request.id}</title>
+            <meta charset="UTF-8">
+            <style>
+              body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; 
+                margin: 40px;
+                color: #1f2937;
+                line-height: 1.8;
+                font-size: 14px;
+              }
+              .header { 
+                margin-bottom: 30px;
+              }
+              .header h1 {
+                margin: 0 0 5px 0;
+                color: #111827;
+                font-size: 20px;
+                font-weight: 600;
+              }
+              .protocol {
+                color: #6b7280;
+                font-size: 13px;
+                margin-top: 5px;
+              }
+              .section { 
+                margin-bottom: 25px;
+              }
+              .section h3 {
+                margin: 0 0 10px 0;
+                color: #111827;
+                font-size: 15px;
+                font-weight: 600;
+              }
+              .info-row {
+                margin: 5px 0;
+                font-size: 14px;
+                line-height: 1.6;
+              }
+              .label { 
+                font-weight: 500;
+                color: #374151;
+              }
+              .value {
+                color: #1f2937;
+              }
+              .dates {
+                font-size: 15px;
+                font-weight: 500;
+                color: #1f2937;
+                margin: 8px 0;
+              }
+              .reason-text {
+                color: #4b5563;
+                margin: 8px 0;
+                line-height: 1.6;
+              }
+              .reason-footer {
+                margin-top: 8px;
+                font-size: 12px;
+                color: #9ca3af;
+              }
+              .footer { 
+                margin-top: 40px;
+                padding-top: 15px;
+                border-top: 1px solid #e5e7eb;
+                color: #6b7280;
+                font-size: 12px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>📄 Solicitação de Troca de Plantão</h1>
+              <p class="protocol">Protocolo: ${request.id}</p>
+            </div>
+            
+            <div class="section">
+              <h3>📅 Informações da Solicitação</h3>
+              <div class="info-row dates">
+                Período da Troca: ${format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })} → ${format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+              </div>
+              <div class="info-row">
+                <span class="label">Status:</span> ${statusEmoji} ${SWAP_STATUS_CONFIG[request.status as keyof typeof SWAP_STATUS_CONFIG]?.label}
+              </div>
+              <div class="info-row">
+                <span class="label">Data da Solicitação:</span> ${format(new Date(request.created_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.created_at), 'HH:mm', { locale: ptBR })}
+              </div>
+            </div>
+
+            <div class="section">
+              <h3>👤 Solicitante</h3>
+              <div class="info-row">
+                <span class="label">Nome:</span> ${request.requester?.name}
+              </div>
+              <div class="info-row">
+                <span class="label">E-mail:</span> ${request.requester?.email}
+              </div>
+              <div class="info-row">
+                <span class="label">Equipe:</span> ${request.requester?.team?.name}
+              </div>
+            </div>
+
+            <div class="section">
+              <h3>👥 Troca Solicitada com</h3>
+              <div class="info-row">
+                <span class="label">Nome:</span> ${request.target?.name}
+              </div>
+              <div class="info-row">
+                <span class="label">E-mail:</span> ${request.target?.email}
+              </div>
+              <div class="info-row">
+                <span class="label">Equipe:</span> ${request.target?.team?.name}
+              </div>
+              <div class="info-row">
+                <span class="label">Confirmação de Ciência:</span> ${request.target_confirmation ? '✅ Confirmada' : '⏳ Pendente'}
+              </div>
+            </div>
+
+            <div class="section">
+              <h3>📝 Motivo da Troca</h3>
+              <div class="reason-text">
+                ${request.reason}
+              </div>
+              <div class="reason-footer">
+                (registrado em ${format(new Date(request.created_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.created_at), 'HH:mm', { locale: ptBR })})
+              </div>
+            </div>
+
+            ${request.admin_approved_at ? `
+              <div class="section">
+                <h3>⚖️ Decisão Administrativa</h3>
+                <div class="info-row">
+                  <span class="label">Decidido em:</span> ${format(new Date(request.admin_approved_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.admin_approved_at), 'HH:mm', { locale: ptBR })}
+                </div>
+                <div class="info-row">
+                  <span class="label">Aprovado por:</span> ${request.admin_approver?.name || 'Coordenador'}
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="footer">
+              📄 Documento gerado em: ${format(new Date(), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(), 'HH:mm', { locale: ptBR })}
+            </div>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.print();
+    } catch (error) {
+      console.error('[GuardSwapList][GeneratePDF]', error);
+      toast({
+        title: 'Erro ao gerar PDF',
+        description: 'Não foi possível gerar o PDF da solicitação.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Agrupar solicitações por mês da troca (target_shift_date)
   const groupedByMonth = swapRequests.reduce((acc, request) => {
     const monthKey = format(startOfMonth(new Date(request.target_shift_date)), 'yyyy-MM');
@@ -303,89 +482,82 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                     {isExpanded && (
                       <div className="space-y-3">
                       {monthRequests.map((request) => {
-                        const isRequester = request.requester_id === currentUser.id;
-                        const otherUser = isRequester ? request.target : request.requester;
-                        
                         return (
                           <div
                             key={request.id}
-                            className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                            className="p-5 border rounded-lg hover:bg-muted/30 transition-colors space-y-4"
                           >
-                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                              <div className="space-y-3 flex-1">
-                                <div className="flex items-center gap-3 flex-wrap">
-                                  <Badge variant="secondary" className="font-mono text-xs">
-                                    Protocolo: {request.id.slice(0, 8)}
-                                  </Badge>
-                                  <Badge className={getRequestTypeColor(request)}>
-                                    {getRequestTypeLabel(request)}
-                                  </Badge>
-                                  <StatusBadge status={request.status} />
-                                  {isRequester && request.status === 'PENDING' && (
-                                    <Badge variant="outline" className="gap-1.5 border-amber-500 text-amber-700 bg-amber-50">
-                                      <Clock className="h-3 w-3" />
-                                      Aguardando aprovação de {otherUser?.name}
-                                    </Badge>
-                                  )}
-                                  {request.status === 'PENDING' && (
-                                    <Badge variant="outline" className="gap-1.5 border-orange-500 text-orange-700 bg-orange-50">
-                                      <Clock className="h-3 w-3" />
-                                      Aguardando aprovação do administrador
-                                    </Badge>
-                                  )}
-                                  {request.status === 'ACCEPTED' && !request.target_confirmation && (
-                                    <Badge variant="outline" className="text-warning border-warning">
-                                      Aguardando Admin
-                                    </Badge>
-                                  )}
-                                </div>
+                            {/* Header com Protocolo e Status */}
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                              <div className="flex items-center gap-3">
+                                <Badge variant="secondary" className="font-mono text-xs">
+                                  Protocolo: {request.id.slice(0, 8)}
+                                </Badge>
+                                <StatusBadge status={request.status} />
+                              </div>
+                              
+                              {request.status === 'APPROVED' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => generatePDF(request)}
+                                  className="gap-2"
+                                >
+                                  <FileDown className="h-4 w-4" />
+                                  PDF
+                                </Button>
+                              )}
+                            </div>
 
-                                <div className="text-sm">
-                                  <span className="text-muted-foreground">Troca entre</span>{' '}
+                            {/* Solicitante e Membro Convidado */}
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <div>
+                                <div className="text-sm text-muted-foreground mb-1">Solicitante</div>
+                                <div className="flex items-center gap-2">
                                   <span className="font-medium">{request.requester?.name}</span>
-                                  {' ↔ '}
-                                  <span className="font-medium">{request.target?.name}</span>
-                                </div>
-
-                                <div className="grid gap-2 sm:grid-cols-2">
-                                  <div>
-                                    <div className="text-sm text-muted-foreground">
-                                      {isRequester ? 'Para' : 'De'}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium">{otherUser?.name}</span>
-                                      {otherUser?.team && (
-                                        <TeamBadge team={otherUser.team} />
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <div className="text-sm text-muted-foreground">Datas da Troca</div>
-                                    <div className="font-medium text-sm">
-                                      {format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
-                                      {' → '}
-                                      {format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      Seu plantão → Plantão desejado
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <div className="text-sm text-muted-foreground">Motivo</div>
-                                  <div className="text-sm">{request.reason}</div>
-                                </div>
-
-                                <div className="text-xs text-muted-foreground">
-                                  Criado em {format(new Date(request.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                                  {request.admin_approved_at && (
-                                    <> • Decidido em {format(new Date(request.admin_approved_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</>
+                                  {request.requester?.team && (
+                                    <TeamBadge team={request.requester.team} />
                                   )}
                                 </div>
                               </div>
+                              <div>
+                                <div className="text-sm text-muted-foreground mb-1">Membro Convidado</div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{request.target?.name}</span>
+                                  {request.target?.team && (
+                                    <TeamBadge team={request.target.team} />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
 
-                              <div className="flex flex-col gap-2 lg:w-auto w-full">
+                            {/* Datas da Troca */}
+                            <div>
+                              <div className="text-sm text-muted-foreground mb-1">Datas da Troca</div>
+                              <div className="font-medium">
+                                {format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                                {' → '}
+                                {format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                Plantão do solicitante → Plantão desejado
+                              </div>
+                            </div>
+
+                            {/* Motivo */}
+                            <div>
+                              <div className="text-sm text-muted-foreground mb-1">Motivo</div>
+                              <div className="text-sm">{request.reason}</div>
+                            </div>
+
+                            {/* Data de solicitação */}
+                            <div className="text-xs text-muted-foreground pt-2 border-t">
+                              Solicitado em {format(new Date(request.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </div>
+
+                            {/* Ações */}
+                            {(canRespond(request) || canCancel(request)) && (
+                              <div className="flex flex-wrap gap-2 pt-2">
                                 {canRespond(request) && (
                                   <>
                                     <Button
@@ -419,15 +591,8 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                                     Cancelar
                                   </Button>
                                 )}
-
-                                {request.status === 'ACCEPTED' && request.target_confirmation && (
-                                  <Badge variant="outline" className="text-center py-2 text-info border-info">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    Aguardando Admin
-                                  </Badge>
-                                )}
                               </div>
-                            </div>
+                            )}
                           </div>
                         );
                       })}
