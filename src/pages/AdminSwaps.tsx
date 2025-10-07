@@ -26,7 +26,7 @@ import {
   Users,
   AlertCircle
 } from 'lucide-react';
-import { format, startOfMonth } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const AdminSwaps = () => {
@@ -40,6 +40,12 @@ const AdminSwaps = () => {
   const [decisionAction, setDecisionAction] = useState<'approve' | 'reject' | null>(null);
   const [decisionReason, setDecisionReason] = useState('');
   const { toast } = useToast();
+
+  // Helper para converter string YYYY-MM-DD em data local (evita problemas de timezone)
+  const parseDateOnly = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
 
   useEffect(() => {
     fetchSwapRequests();
@@ -242,7 +248,7 @@ const AdminSwaps = () => {
             <div class="section">
               <h3>📅 Informações da Solicitação</h3>
               <div class="info-row dates">
-                Período da Troca: ${format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })} → ${format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                Período da Troca: ${format(parseDateOnly(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })} → ${format(parseDateOnly(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
               </div>
               <div class="info-row">
                 <span class="label">Status:</span> ${statusEmoji} ${SWAP_STATUS_CONFIG[request.status as keyof typeof SWAP_STATUS_CONFIG]?.label}
@@ -345,13 +351,26 @@ const AdminSwaps = () => {
 
   const stats = getStats();
 
-  // Agrupar solicitações por mês da troca (target_shift_date)
+  // Agrupar solicitações pelos meses envolvidos (requester_shift_date e target_shift_date)
   const groupedByMonth = filteredRequests.reduce((acc, request) => {
-    const monthKey = format(startOfMonth(new Date(request.target_shift_date)), 'yyyy-MM');
-    if (!acc[monthKey]) {
-      acc[monthKey] = [];
-    }
-    acc[monthKey].push(request);
+    const getMonthKey = (dateStr: string | null | undefined) => {
+      if (!dateStr) return null;
+      const [y, m] = dateStr.split('-');
+      if (!y || !m) return null;
+      return `${y}-${m}`;
+    };
+
+    const months = new Set<string>();
+    const m1 = getMonthKey(request.requester_shift_date);
+    const m2 = getMonthKey(request.target_shift_date);
+    if (m1) months.add(m1);
+    if (m2) months.add(m2);
+
+    months.forEach((key) => {
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(request);
+    });
+
     return acc;
   }, {} as Record<string, SwapRequest[]>);
 
@@ -461,7 +480,8 @@ const AdminSwaps = () => {
         ) : (
           sortedMonthKeys.map((monthKey) => {
             const monthRequests = groupedByMonth[monthKey];
-            const monthDate = new Date(monthKey + '-01');
+            const [year, month] = monthKey.split('-');
+            const monthDate = new Date(Number(year), Number(month) - 1, 1);
             const monthLabel = format(monthDate, 'MMMM yyyy', { locale: ptBR });
             
             return (
@@ -516,9 +536,9 @@ const AdminSwaps = () => {
                             <div>
                               <div className="text-sm text-muted-foreground">Datas da Troca</div>
                               <div className="font-medium text-sm">
-                                {format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                                {format(parseDateOnly(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
                                 {' → '}
-                                {format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                                {format(parseDateOnly(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 Plantão do solicitante → Plantão desejado
@@ -596,9 +616,9 @@ const AdminSwaps = () => {
               <div className="text-sm text-muted-foreground mt-1">
                 Datas: {selectedRequest && (
                   <>
-                    {format(new Date(selectedRequest.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    {format(parseDateOnly(selectedRequest.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
                     {' → '}
-                    {format(new Date(selectedRequest.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    {format(parseDateOnly(selectedRequest.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
                   </>
                 )}
               </div>
