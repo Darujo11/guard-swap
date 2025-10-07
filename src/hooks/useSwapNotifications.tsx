@@ -141,9 +141,19 @@ export function useSwapNotifications() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
+  const deleteNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const clearAllNotifications = () => {
+    setNotifications([]);
+  };
+
   return {
     notifications,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
+    clearAllNotifications,
   };
 }

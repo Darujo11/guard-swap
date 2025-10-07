@@ -30,7 +30,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, title, user }: AppLayoutProps) {
   const { signOut, role } = useAuth();
-  const { notifications, markAsRead, markAllAsRead } = useSwapNotifications();
+  const { notifications, markAsRead, markAllAsRead, deleteNotification, clearAllNotifications } = useSwapNotifications();
   const location = useLocation();
   const { settings } = useOrganizationSettings();
   
@@ -110,6 +110,8 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
               notifications={notifications}
               onMarkAsRead={markAsRead}
               onMarkAllAsRead={markAllAsRead}
+              onDelete={deleteNotification}
+              onClearAll={clearAllNotifications}
             />
 
             {/* User Info */}

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bell, Check, CheckCheck, Clock, AlertCircle } from 'lucide-react';
+import { Bell, Check, CheckCheck, Clock, AlertCircle, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Notification {
@@ -19,6 +19,8 @@ interface NotificationsBellProps {
   notifications: Notification[];
   onMarkAsRead?: (id: string) => void;
   onMarkAllAsRead?: () => void;
+  onDelete?: (id: string) => void;
+  onClearAll?: () => void;
   className?: string;
 }
 
@@ -39,7 +41,9 @@ const typeColors = {
 export function NotificationsBell({ 
   notifications = [], 
   onMarkAsRead, 
-  onMarkAllAsRead, 
+  onMarkAllAsRead,
+  onDelete,
+  onClearAll,
   className 
 }: NotificationsBellProps) {
   const [open, setOpen] = useState(false);
@@ -83,17 +87,30 @@ export function NotificationsBell({
         <div className="p-4 border-b">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">Notificações</h3>
-            {unreadCount > 0 && onMarkAllAsRead && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="gap-1 text-xs"
-                onClick={onMarkAllAsRead}
-              >
-                <CheckCheck className="h-3 w-3" />
-                Marcar todas
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && onMarkAllAsRead && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-1 text-xs"
+                  onClick={onMarkAllAsRead}
+                >
+                  <CheckCheck className="h-3 w-3" />
+                  Marcar todas
+                </Button>
+              )}
+              {notifications.length > 0 && onClearAll && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-1 text-xs text-destructive hover:text-destructive"
+                  onClick={onClearAll}
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Limpar todas
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -111,19 +128,24 @@ export function NotificationsBell({
                   <div
                     key={notification.id}
                     className={cn(
-                      "p-3 hover:bg-muted/50 transition-colors cursor-pointer",
+                      "p-3 hover:bg-muted/50 transition-colors group",
                       !notification.read && "bg-muted/20"
                     )}
-                    onClick={() => handleMarkAsRead(notification.id)}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0",
-                        typeColors[notification.type]
-                      )}>
+                      <div 
+                        className={cn(
+                          "h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer",
+                          typeColors[notification.type]
+                        )}
+                        onClick={() => handleMarkAsRead(notification.id)}
+                      >
                         <Icon className="h-4 w-4" />
                       </div>
-                      <div className="flex-1 space-y-1 min-w-0">
+                      <div 
+                        className="flex-1 space-y-1 min-w-0 cursor-pointer"
+                        onClick={() => handleMarkAsRead(notification.id)}
+                      >
                         <div className="flex items-start justify-between gap-2">
                           <h4 className={cn(
                             "text-sm font-medium leading-tight",
@@ -142,6 +164,19 @@ export function NotificationsBell({
                           {formatTime(notification.createdAt)}
                         </p>
                       </div>
+                      {onDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(notification.id);
+                          }}
+                        >
+                          <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
