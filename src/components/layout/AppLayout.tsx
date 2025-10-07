@@ -48,6 +48,7 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
   const superAdminNavigation = [
     { name: 'Planos', href: '/super-admin/planos', icon: DollarSign },
     { name: 'Administradores', href: '/super-admin/administradores', icon: Crown },
+    { name: 'Meu Perfil', href: '/perfil', icon: Settings },
   ];
   
   const isSuperAdmin = role === 'super_admin';
