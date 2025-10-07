@@ -248,7 +248,7 @@ const GuardDashboard = () => {
                     <p className="text-sm text-muted-foreground">{extra.justification}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-semibold">{extra.quantity}x</p>
+                    <p className="text-lg font-semibold">{extra.quantity} horas</p>
                   </div>
                 </div>
               ))}
