@@ -124,6 +124,20 @@ export function useSwapNotifications() {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'swap_requests',
+        },
+        (payload) => {
+          console.log('Swap request deleted:', payload);
+          
+          // Remove notification when swap is deleted
+          setNotifications((prev) => prev.filter((n) => n.id !== payload.old.id));
+        }
+      )
       .subscribe();
 
     return () => {

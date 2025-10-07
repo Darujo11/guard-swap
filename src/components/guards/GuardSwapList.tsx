@@ -61,9 +61,14 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
           table: 'swap_requests'
         },
         (payload) => {
+          console.log('[GuardSwapList] Realtime event:', payload.eventType, payload);
+          
           // Check if the change affects the current user
-          const record = payload.new as any;
+          // For DELETE events, check payload.old instead of payload.new
+          const record = (payload.eventType === 'DELETE' ? payload.old : payload.new) as any;
+          
           if (record && (record.requester_id === currentUser.id || record.target_id === currentUser.id)) {
+            console.log('[GuardSwapList] Change affects current user, refetching...');
             fetchSwapRequests();
           }
         }
