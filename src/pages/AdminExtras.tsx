@@ -50,6 +50,7 @@ export default function AdminExtras() {
   const [extraDate, setExtraDate] = useState<Date>();
   const [justification, setJustification] = useState("");
   const [quantity, setQuantity] = useState<number>(1);
+  const [guardShiftDates, setGuardShiftDates] = useState<Date[]>([]);
   
   // Filter state
   const [filterMonth, setFilterMonth] = useState<Date>(new Date());
@@ -217,6 +218,45 @@ export default function AdminExtras() {
     setExtrasLoading(false);
   };
 
+  const fetchGuardShiftDates = async (guardId: string) => {
+    if (!guardId) {
+      setGuardShiftDates([]);
+      return;
+    }
+
+    try {
+      // 1) Buscar o team_id do segurança
+      const { data: guardProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("team_id")
+        .eq("id", guardId)
+        .single();
+
+      if (profileError || !guardProfile?.team_id) {
+        setGuardShiftDates([]);
+        return;
+      }
+
+      // 2) Buscar todas as datas de plantões daquela equipe
+      const { data: schedules, error: schedulesError } = await supabase
+        .from("team_schedules")
+        .select("shift_date")
+        .eq("team_id", guardProfile.team_id);
+
+      if (schedulesError || !schedules) {
+        setGuardShiftDates([]);
+        return;
+      }
+
+      // Converter as datas de string para Date
+      const dates = schedules.map(s => new Date(s.shift_date));
+      setGuardShiftDates(dates);
+    } catch (error) {
+      console.error("Erro ao buscar dias de plantão:", error);
+      setGuardShiftDates([]);
+    }
+  };
+
   const applyFilters = () => {
     const targetKey = format(startOfMonth(filterMonth), "yyyy-MM");
     const filtered = extras.filter((extra) => {
@@ -322,6 +362,7 @@ export default function AdminExtras() {
       setExtraDate(undefined);
       setJustification("");
       setQuantity(1);
+      setGuardShiftDates([]);
       
       fetchExtras();
     } catch (err) {
@@ -633,7 +674,13 @@ export default function AdminExtras() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="guard">Segurança *</Label>
-                <Select value={selectedGuard} onValueChange={setSelectedGuard}>
+                <Select 
+                  value={selectedGuard} 
+                  onValueChange={(value) => {
+                    setSelectedGuard(value);
+                    fetchGuardShiftDates(value);
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o segurança" />
                   </SelectTrigger>
@@ -669,9 +716,21 @@ export default function AdminExtras() {
                       onSelect={setExtraDate}
                       locale={ptBR}
                       className="pointer-events-auto"
+                      modifiers={{
+                        shift: guardShiftDates
+                      }}
+                      modifiersClassNames={{
+                        shift: "bg-primary/20 text-primary font-semibold"
+                      }}
                     />
                   </PopoverContent>
                 </Popover>
+                {selectedGuard && guardShiftDates.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <span className="inline-block w-3 h-3 bg-primary/20 border border-primary/40 rounded mr-1"></span>
+                    = Dias de plantão do segurança na escala
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
