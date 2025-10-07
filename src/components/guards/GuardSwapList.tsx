@@ -19,7 +19,8 @@ import {
   MessageSquare,
   ChevronDown,
   ChevronUp,
-  FileDown
+  FileDown,
+  AlertCircle
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -489,7 +490,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                           >
                             {/* Header com Protocolo e Status */}
                             <div className="flex items-center justify-between gap-3 flex-wrap">
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3 flex-wrap">
                                 <Badge variant="secondary" className="font-mono text-xs">
                                   Protocolo: {request.id.slice(0, 8)}
                                 </Badge>
@@ -508,6 +509,49 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                                 </Button>
                               )}
                             </div>
+
+                            {/* Pendências de Aprovação */}
+                            {request.status === 'PENDING' && !request.target_confirmation && request.target_id === currentUser.id && (
+                              <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-lg">
+                                <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+                                    Aguardando sua confirmação
+                                  </p>
+                                  <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-0.5">
+                                    Você precisa aceitar ou rejeitar esta solicitação de troca
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {request.status === 'ACCEPTED' && (
+                              <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg">
+                                <Clock className="h-5 w-5 text-blue-600 dark:text-blue-500 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                                    ⏳ Aguardando Aprovação do Administrador
+                                  </p>
+                                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                                    O membro convidado aceitou a troca. Agora o administrador precisa aprovar para a troca ser finalizada.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {request.status === 'APPROVED' && (
+                              <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg">
+                                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                                    ✅ Troca Aprovada e Confirmada
+                                  </p>
+                                  <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">
+                                    Esta troca foi aprovada pelo administrador e está confirmada.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
 
                             {/* Solicitante e Membro Convidado */}
                             <div className="grid gap-4 sm:grid-cols-2">
