@@ -396,15 +396,28 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
     }
   };
 
-  // Agrupar solicitações por mês da troca (target_shift_date)
+  // Agrupar solicitações pelos meses envolvidos na troca (requester_shift_date e target_shift_date)
   const groupedByMonth = swapRequests.reduce((acc, request) => {
-    // Parse date as local date to avoid timezone issues
-    const [year, month] = request.target_shift_date.split('-');
-    const monthKey = `${year}-${month}`;
-    if (!acc[monthKey]) {
-      acc[monthKey] = [];
-    }
-    acc[monthKey].push(request);
+    const getMonthKey = (dateStr: string | null | undefined) => {
+      if (!dateStr) return null;
+      const [y, m] = dateStr.split('-');
+      if (!y || !m) return null;
+      return `${y}-${m}`;
+    };
+
+    const months = new Set<string>();
+    const m1 = getMonthKey(request.requester_shift_date);
+    const m2 = getMonthKey(request.target_shift_date);
+    if (m1) months.add(m1);
+    if (m2) months.add(m2);
+
+    months.forEach((monthKey) => {
+      if (!acc[monthKey]) {
+        acc[monthKey] = [];
+      }
+      acc[monthKey].push(request);
+    });
+
     return acc;
   }, {} as Record<string, SwapRequest[]>);
 
