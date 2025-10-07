@@ -14,6 +14,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2, ArrowLeft, X } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
+const nameSchema = z.object({
+  name: z.string().min(3, "O nome deve ter no mínimo 3 caracteres").max(100, "O nome deve ter no máximo 100 caracteres"),
+});
+
 const passwordSchema = z.object({
   newPassword: z.string().min(6, "A senha deve ter no mínimo 6 caracteres"),
   confirmPassword: z.string()
@@ -29,10 +33,19 @@ export default function Profile() {
   
   const [profileLoading, setProfileLoading] = useState(true);
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [nameLoading, setNameLoading] = useState(false);
   
   // Profile data
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
+  const [profileId, setProfileId] = useState("");
+
+  const nameForm = useForm<z.infer<typeof nameSchema>>({
+    resolver: zodResolver(nameSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
 
   const form = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
@@ -70,6 +83,8 @@ export default function Profile() {
 
       if (data) {
         setName(data.name || "");
+        setProfileId(data.id);
+        nameForm.setValue("name", data.name || "");
         
         // Determine role based on shift chief status and team
         let roleText = "Segurança";
@@ -89,6 +104,34 @@ export default function Profile() {
       });
     } finally {
       setProfileLoading(false);
+    }
+  };
+
+  const onNameSubmit = async (values: z.infer<typeof nameSchema>) => {
+    setNameLoading(true);
+    
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ name: values.name })
+        .eq("id", profileId);
+
+      if (error) throw error;
+
+      setName(values.name);
+      
+      toast({
+        title: "Nome atualizado",
+        description: "Seu nome foi alterado com sucesso.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar nome",
+        description: error.message,
+      });
+    } finally {
+      setNameLoading(false);
     }
   };
 
@@ -166,19 +209,34 @@ export default function Profile() {
               Suas informações como segurança
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
-              <Input
-                id="name"
-                value={name}
-                readOnly
-                disabled
-                className="bg-muted"
-              />
-            </div>
+          <CardContent>
+            <Form {...nameForm}>
+              <form onSubmit={nameForm.handleSubmit(onNameSubmit)} className="space-y-4">
+                <FormField
+                  control={nameForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Digite seu nome"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="space-y-2">
+                <Button type="submit" disabled={nameLoading}>
+                  {nameLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Atualizar Nome
+                </Button>
+              </form>
+            </Form>
+
+            <div className="space-y-2 mt-4 pt-4 border-t">
               <Label htmlFor="role">Cargo</Label>
               <Input
                 id="role"
