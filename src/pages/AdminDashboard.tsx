@@ -287,17 +287,17 @@ const AdminDashboard = () => {
       {/* Schedule Calendar */}
       <Card className="mb-6">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex-1">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                 <Calendar className="h-5 w-5" />
-                Escala de Plantões - Todas as Equipes
+                <span className="break-words">Escala de Plantões - Todas as Equipes</span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="mt-2">
                 Gerencie a escala completa de todas as equipes
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" className="gap-2" asChild>
+            <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" asChild>
               <Link to="/admin/escalas">
                 <Calendar className="h-4 w-4" />
                 Gerenciar Escala
@@ -313,28 +313,30 @@ const AdminDashboard = () => {
       {/* Swap Requests */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
                 Solicitações de Troca
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="mt-2">
                 Gerencie as solicitações de troca de plantão
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" className="gap-2" asChild>
-              <Link to="/admin/equipes">
-                <Users className="h-4 w-4" />
-                Gerenciar Equipes
-              </Link>
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2" asChild>
-              <Link to="/admin/trocas">
-                <Filter className="h-4 w-4" />
-                Gerenciar Trocas
-              </Link>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" asChild>
+                <Link to="/admin/equipes">
+                  <Users className="h-4 w-4" />
+                  Gerenciar Equipes
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" asChild>
+                <Link to="/admin/trocas">
+                  <Filter className="h-4 w-4" />
+                  Gerenciar Trocas
+                </Link>
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

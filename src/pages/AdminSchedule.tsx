@@ -55,8 +55,8 @@ export default function AdminSchedule() {
       user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}
     >
       <div className="container mx-auto p-3 md:p-6 max-w-7xl">
-        <div className="mb-4 md:mb-6 flex justify-between items-start">
-          <div>
+        <div className="mb-4 md:mb-6 flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
+          <div className="flex-1">
             <h1 className="text-2xl md:text-3xl font-bold">Calendário de Escalas</h1>
             <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
               Gerencie as escalas das equipes. Clique em um dia para atribuir ou remover uma equipe.
@@ -68,10 +68,10 @@ export default function AdminSchedule() {
               variant="destructive"
               size="sm"
               onClick={() => setShowDeleteDialog(true)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto"
             >
               <Trash2 className="h-4 w-4" />
-              Limpar Todas as Escalas
+              <span className="sm:inline">Limpar Todas as Escalas</span>
             </Button>
           )}
         </div>
