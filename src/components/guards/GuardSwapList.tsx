@@ -511,16 +511,41 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                             </div>
 
                             {/* Pendências de Aprovação */}
-                            {request.status === 'PENDING' && !request.target_confirmation && request.target_id === currentUser.id && (
+                            {request.status === 'PENDING' && request.target_id === currentUser.id && (
                               <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-lg">
                                 <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
                                 <div className="flex-1">
                                   <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
-                                    Aguardando sua confirmação
+                                    ⚠️ Aguardando sua confirmação
                                   </p>
                                   <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-0.5">
                                     Você precisa aceitar ou rejeitar esta solicitação de troca
                                   </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {request.status === 'PENDING' && request.requester_id === currentUser.id && (
+                              <div className="flex items-start gap-2 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-lg">
+                                <Clock className="h-5 w-5 text-orange-600 dark:text-orange-500 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                                    ⏳ Pendências de Aprovação
+                                  </p>
+                                  <div className="space-y-2 mt-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                                      <p className="text-xs text-orange-700 dark:text-orange-300">
+                                        <strong>1. Membro Convidado:</strong> Aguardando {request.target?.name} aceitar a troca
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                                      <p className="text-xs text-orange-700 dark:text-orange-300">
+                                        <strong>2. Administrador:</strong> Aguardará aprovação após aceite do membro
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             )}
@@ -532,9 +557,20 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                                   <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
                                     ⏳ Aguardando Aprovação do Administrador
                                   </p>
-                                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
-                                    O membro convidado aceitou a troca. Agora o administrador precisa aprovar para a troca ser finalizada.
-                                  </p>
+                                  <div className="space-y-2 mt-2">
+                                    <div className="flex items-center gap-2">
+                                      <CheckCircle className="w-4 h-4 text-green-600" />
+                                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                                        <strong>1. Membro Convidado:</strong> {request.target?.name} aceitou a troca ✓
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                                        <strong>2. Administrador:</strong> Aguardando aprovação final
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             )}
@@ -546,9 +582,20 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                                   <p className="text-sm font-medium text-green-900 dark:text-green-100">
                                     ✅ Troca Aprovada e Confirmada
                                   </p>
-                                  <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">
-                                    Esta troca foi aprovada pelo administrador e está confirmada.
-                                  </p>
+                                  <div className="space-y-1 mt-2">
+                                    <div className="flex items-center gap-2">
+                                      <CheckCircle className="w-4 h-4 text-green-600" />
+                                      <p className="text-xs text-green-700 dark:text-green-300">
+                                        Membro convidado aceitou ✓
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <CheckCircle className="w-4 h-4 text-green-600" />
+                                      <p className="text-xs text-green-700 dark:text-green-300">
+                                        Administrador aprovou ✓
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             )}
