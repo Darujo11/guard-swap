@@ -24,7 +24,8 @@ import {
   FileDown,
   Clock,
   Users,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -39,6 +40,8 @@ const AdminSwaps = () => {
   const [isDecisionDialogOpen, setIsDecisionDialogOpen] = useState(false);
   const [decisionAction, setDecisionAction] = useState<'approve' | 'reject' | null>(null);
   const [decisionReason, setDecisionReason] = useState('');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [requestToDelete, setRequestToDelete] = useState<SwapRequest | null>(null);
   const { toast } = useToast();
 
   // Helper para converter string YYYY-MM-DD em data local (evita problemas de timezone)
@@ -150,6 +153,40 @@ const AdminSwaps = () => {
     setSelectedRequest(request);
     setDecisionAction(action);
     setIsDecisionDialogOpen(true);
+  };
+
+  const openDeleteDialog = (request: SwapRequest) => {
+    setRequestToDelete(request);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!requestToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('swap_requests')
+        .delete()
+        .eq('id', requestToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Solicitação excluída',
+        description: 'A solicitação de troca foi removida com sucesso.',
+      });
+
+      await fetchSwapRequests();
+      setIsDeleteDialogOpen(false);
+      setRequestToDelete(null);
+    } catch (error) {
+      console.error('[AdminSwaps][HandleDelete]', error);
+      toast({
+        title: 'Erro ao excluir',
+        description: 'Não foi possível excluir a solicitação.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const generatePDF = async (request: SwapRequest) => {
@@ -587,6 +624,16 @@ const AdminSwaps = () => {
                                 </Button>
                               </>
                             )}
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDeleteDialog(request)}
+                              className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Excluir
+                            </Button>
                           </div>
                         </div>
                       </CardContent>
@@ -648,6 +695,46 @@ const AdminSwaps = () => {
               className={decisionAction === 'approve' ? 'bg-success hover:bg-success/90' : 'bg-danger hover:bg-danger/90'}
             >
               {decisionAction === 'approve' ? 'Aprovar' : 'Rejeitar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Tem certeza que deseja excluir esta solicitação de troca? Esta ação não pode ser desfeita.
+            </p>
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="text-sm text-muted-foreground mb-1">Troca entre</div>
+              <div className="font-medium">
+                {requestToDelete?.requester?.name} ↔ {requestToDelete?.target?.name}
+              </div>
+              <div className="text-sm text-muted-foreground mt-1">
+                Datas: {requestToDelete && (
+                  <>
+                    {format(parseDateOnly(requestToDelete.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    {' → '}
+                    {format(parseDateOnly(requestToDelete.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDelete}
+              variant="destructive"
+            >
+              Excluir Solicitação
             </Button>
           </DialogFooter>
         </DialogContent>
