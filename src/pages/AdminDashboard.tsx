@@ -22,7 +22,8 @@ import {
   Calendar,
   BarChart3,
   ArrowUpRight,
-  Filter
+  Filter,
+  Trash2
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -41,6 +42,8 @@ const AdminDashboard = () => {
     action: 'APPROVED' | 'REJECTED' | null;
   }>({ open: false, request: null, action: null });
   const [decisionReason, setDecisionReason] = useState('');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [requestToDelete, setRequestToDelete] = useState<SwapRequest | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -167,6 +170,35 @@ const AdminDashboard = () => {
       toast({
         title: 'Erro ao processar decisão',
         description: 'Não foi possível processar sua decisão.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!requestToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('swap_requests')
+        .delete()
+        .eq('id', requestToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Solicitação excluída',
+        description: 'A solicitação de troca foi removida com sucesso.',
+      });
+
+      await fetchData();
+      setIsDeleteDialogOpen(false);
+      setRequestToDelete(null);
+    } catch (error) {
+      console.error('[AdminDashboard][HandleDelete]', error);
+      toast({
+        title: 'Erro ao excluir',
+        description: 'Não foi possível excluir a solicitação.',
         variant: 'destructive',
       });
     }
@@ -352,6 +384,18 @@ const AdminDashboard = () => {
                   
                   <div className="flex items-center gap-3 mt-3 sm:mt-0">
                     <StatusBadge status={request.status} />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setRequestToDelete(request);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                      className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Excluir
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -398,6 +442,44 @@ const AdminDashboard = () => {
               onClick={handleDecision}
             >
               {decisionDialog.action === 'APPROVED' ? 'Aprovar' : 'Rejeitar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Tem certeza que deseja excluir esta solicitação de troca? Esta ação não pode ser desfeita.
+            </p>
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="text-sm text-muted-foreground mb-1">Troca entre</div>
+              <div className="font-medium">
+                {requestToDelete?.requester?.name} ↔ {requestToDelete?.target?.name}
+              </div>
+              <div className="text-sm text-muted-foreground mt-1">
+                Datas: {requestToDelete && (
+                  <>
+                    {formatDate(requestToDelete.requester_shift_date)} → {formatDate(requestToDelete.target_shift_date)}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDelete}
+              variant="destructive"
+            >
+              Excluir Solicitação
             </Button>
           </DialogFooter>
         </DialogContent>
