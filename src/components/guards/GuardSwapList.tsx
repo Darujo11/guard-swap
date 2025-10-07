@@ -398,7 +398,9 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
 
   // Agrupar solicitações por mês da troca (target_shift_date)
   const groupedByMonth = swapRequests.reduce((acc, request) => {
-    const monthKey = format(startOfMonth(new Date(request.target_shift_date)), 'yyyy-MM');
+    // Parse date as local date to avoid timezone issues
+    const [year, month] = request.target_shift_date.split('-');
+    const monthKey = `${year}-${month}`;
     if (!acc[monthKey]) {
       acc[monthKey] = [];
     }
