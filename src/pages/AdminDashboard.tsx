@@ -266,7 +266,7 @@ const AdminDashboard = () => {
               </CardDescription>
             </div>
             <Button variant="outline" size="sm" className="gap-2" asChild>
-              <Link to="/admin/escala">
+              <Link to="/admin/escalas">
                 <Calendar className="h-4 w-4" />
                 Gerenciar Escala
               </Link>
