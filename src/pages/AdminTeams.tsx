@@ -166,6 +166,7 @@ const AdminTeams = () => {
     name: '',
     phone: ''
   });
+  const [memberTransfers, setMemberTransfers] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -417,6 +418,42 @@ const AdminTeams = () => {
     }
   };
 
+  const handleTransferMembers = async () => {
+    if (!selectedTeam || Object.keys(memberTransfers).length === 0) return;
+
+    try {
+      // Processar todas as transferências
+      const promises = Object.entries(memberTransfers).map(([memberId, newTeamId]) => {
+        return supabase
+          .from('profiles')
+          .update({ team_id: newTeamId === 'unassigned' ? null : newTeamId })
+          .eq('id', memberId);
+      });
+
+      const results = await Promise.all(promises);
+      const errors = results.filter(r => r.error);
+
+      if (errors.length > 0) {
+        throw new Error('Algumas transferências falharam');
+      }
+
+      toast({
+        title: 'Transferências concluídas',
+        description: `${Object.keys(memberTransfers).length} membro(s) transferido(s) com sucesso.`,
+      });
+
+      setMemberTransfers({});
+      await fetchData();
+    } catch (error) {
+      console.error('[AdminTeams][TransferMembers]', error);
+      toast({
+        title: 'Erro ao transferir',
+        description: 'Não foi possível transferir todos os membros.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const resetTeamForm = () => {
     setTeamForm({ name: '', description: '' });
     setEditingTeam(null);
@@ -551,14 +588,104 @@ const AdminTeams = () => {
       </DndContext>
 
       {/* Assign Member Dialog */}
-      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-        <DialogContent>
+      <Dialog open={isAssignDialogOpen} onOpenChange={(open) => {
+        setIsAssignDialogOpen(open);
+        if (!open) setMemberTransfers({});
+      }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               Gerenciar Membros - {selectedTeam?.name}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Membros Atuais da Equipe */}
+            {selectedTeam && getTeamMembers(selectedTeam.id).length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-sm">Membros Atuais</h4>
+                  <Badge variant="secondary">
+                    {getTeamMembers(selectedTeam.id).length} membro(s)
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  {getTeamMembers(selectedTeam.id).map((member) => (
+                    <div key={member.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{member.name}</span>
+                          {member.is_shift_chief && (
+                            <Crown className="h-4 w-4 text-amber-500" />
+                          )}
+                        </div>
+                        {member.phone && (
+                          <div className="text-xs text-muted-foreground">
+                            WhatsApp: {member.phone}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={memberTransfers[member.id] || selectedTeam.id}
+                          onValueChange={(value) => {
+                            if (value === selectedTeam.id) {
+                              const newTransfers = { ...memberTransfers };
+                              delete newTransfers[member.id];
+                              setMemberTransfers(newTransfers);
+                            } else {
+                              setMemberTransfers({
+                                ...memberTransfers,
+                                [member.id]: value
+                              });
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={selectedTeam.id}>
+                              {selectedTeam.name} (atual)
+                            </SelectItem>
+                            <SelectItem value="unassigned">
+                              Sem equipe
+                            </SelectItem>
+                            {teams
+                              .filter(t => t.id !== selectedTeam.id)
+                              .map(team => (
+                                <SelectItem key={team.id} value={team.id}>
+                                  {team.name}
+                                </SelectItem>
+                              ))
+                            }
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {Object.keys(memberTransfers).length > 0 && (
+                  <Button 
+                    onClick={handleTransferMembers}
+                    className="w-full"
+                  >
+                    Confirmar Transferências ({Object.keys(memberTransfers).length})
+                  </Button>
+                )}
+              </div>
+            )}
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Adicionar membros
+                </span>
+              </div>
+            </div>
+
             <Button 
               className="w-full" 
               onClick={() => {
@@ -569,37 +696,28 @@ const AdminTeams = () => {
               <Plus className="h-4 w-4 mr-2" />
               Cadastrar Novo Membro
             </Button>
-            
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Ou atribuir membro existente
-                </span>
-              </div>
-            </div>
 
-            {unassignedMembers.length > 0 ? (
-              unassignedMembers.map((member) => (
-                <div key={member.id} className="flex items-center justify-between p-3 border rounded">
-                  <div>
-                    <div className="font-medium">{member.name}</div>
-                    <div className="text-sm text-muted-foreground">{member.email}</div>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => handleAssignMember(member.id)}
-                  >
-                    Atribuir
-                  </Button>
+            {/* Membros Não Atribuídos */}
+            {unassignedMembers.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">Membros Sem Equipe</h4>
+                <div className="space-y-2">
+                  {unassignedMembers.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between p-3 border rounded">
+                      <div>
+                        <div className="font-medium">{member.name}</div>
+                        <div className="text-sm text-muted-foreground">{member.email}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleAssignMember(member.id)}
+                      >
+                        Atribuir
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ))
-            ) : (
-              <p className="text-center text-muted-foreground py-4">
-                Não há membros disponíveis para atribuição.
-              </p>
+              </div>
             )}
           </div>
         </DialogContent>
