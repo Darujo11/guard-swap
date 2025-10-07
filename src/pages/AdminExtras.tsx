@@ -51,6 +51,7 @@ export default function AdminExtras() {
   const [justification, setJustification] = useState("");
   const [quantity, setQuantity] = useState<number>(1);
   const [guardShiftDates, setGuardShiftDates] = useState<Date[]>([]);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
   
   // Filter state
   const [filterMonth, setFilterMonth] = useState<Date>(new Date());
@@ -218,7 +219,7 @@ export default function AdminExtras() {
     setExtrasLoading(false);
   };
 
-  const fetchGuardShiftDates = async (guardId: string) => {
+  const fetchGuardShiftDates = async (guardId: string, month: Date = calendarMonth) => {
     if (!guardId) {
       setGuardShiftDates([]);
       return;
@@ -246,11 +247,17 @@ export default function AdminExtras() {
         return;
       }
 
-      // 2) Buscar todas as datas de plantões daquela equipe
+      // Preparar intervalo do mês atual do calendário
+      const start = startOfMonth(month);
+      const end = endOfMonth(month);
+
+      // 2) Buscar todas as datas de plantões daquela equipe APENAS no mês visível
       const { data: schedules, error: schedulesError } = await supabase
         .from("team_schedules")
         .select("shift_date, team_id")
         .eq("team_id", guardProfile.team_id)
+        .gte("shift_date", format(start, "yyyy-MM-dd"))
+        .lte("shift_date", format(end, "yyyy-MM-dd"))
         .order("shift_date", { ascending: true });
 
       console.log("[fetchGuardShiftDates] Schedules found:", schedules);
@@ -262,14 +269,19 @@ export default function AdminExtras() {
       }
 
       if (!schedules || schedules.length === 0) {
-        console.log("[fetchGuardShiftDates] No schedules found for team");
+        console.log("[fetchGuardShiftDates] No schedules found for team in month");
         setGuardShiftDates([]);
         return;
       }
 
-      // Converter as datas de string para Date
-      const dates = schedules.map(s => new Date(s.shift_date + "T00:00:00"));
-      console.log("[fetchGuardShiftDates] Dates to highlight:", dates.map(d => d.toLocaleDateString()));
+      // Conversão segura YYYY-MM-DD -> Date (sem problemas de fuso)
+      const parseYmd = (ymd: string) => {
+        const [y, m, d] = ymd.split("-").map(Number);
+        return new Date(y, (m || 1) - 1, d || 1);
+      };
+
+      const dates = schedules.map((s) => parseYmd(s.shift_date));
+      console.log("[fetchGuardShiftDates] Dates to highlight:", dates.map((d) => d.toISOString()));
       setGuardShiftDates(dates);
     } catch (error) {
       console.error("[fetchGuardShiftDates] Unexpected error:", error);
@@ -698,7 +710,7 @@ export default function AdminExtras() {
                   value={selectedGuard} 
                   onValueChange={(value) => {
                     setSelectedGuard(value);
-                    fetchGuardShiftDates(value);
+                    fetchGuardShiftDates(value, calendarMonth);
                   }}
                 >
                   <SelectTrigger>
@@ -736,6 +748,13 @@ export default function AdminExtras() {
                       onSelect={setExtraDate}
                       locale={ptBR}
                       className="pointer-events-auto"
+                      month={calendarMonth}
+                      onMonthChange={(m) => {
+                        setCalendarMonth(startOfMonth(m));
+                        if (selectedGuard) {
+                          fetchGuardShiftDates(selectedGuard, m);
+                        }
+                      }}
                       modifiers={{
                         shift: guardShiftDates
                       }}
