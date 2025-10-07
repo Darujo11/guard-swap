@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign, Settings } from 'lucide-react';
+import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign, Settings, Menu } from 'lucide-react';
 import logoImage from '@/assets/logo.png';
 import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,13 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useSwapNotifications } from '@/hooks/useSwapNotifications';
 import { NotificationsBell } from '@/components/notifications/NotificationsBell';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +40,7 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
   const { notifications, markAsRead, markAllAsRead, deleteNotification, clearAllNotifications } = useSwapNotifications();
   const location = useLocation();
   const { settings } = useOrganizationSettings();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const navigation = [
     { name: 'Dashboard', href: '/dashboard/admin', icon: BarChart3, roles: ['admin', 'super_admin'] },
@@ -59,9 +67,80 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-4">
+            {/* Mobile Menu */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[280px] sm:w-[340px]">
+                <SheetHeader>
+                  <SheetTitle className="flex items-center gap-2">
+                    <img src={logoImage} alt="Escala Smart" className="h-6 w-6" />
+                    Escala Smart
+                  </SheetTitle>
+                </SheetHeader>
+                <nav className="mt-6 flex flex-col gap-2">
+                  {navigation
+                    .filter((item) => !role || item.roles.includes(role))
+                    .map((item) => (
+                      <Button
+                        key={item.name}
+                        variant={location.pathname === item.href ? "secondary" : "ghost"}
+                        className="justify-start gap-3"
+                        asChild
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Link to={item.href}>
+                          <item.icon className="h-5 w-5" />
+                          {item.name}
+                        </Link>
+                      </Button>
+                    ))}
+                  
+                  {isSuperAdmin && (
+                    <>
+                      <div className="my-2 border-t" />
+                      <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                        Super Admin
+                      </div>
+                      {superAdminNavigation.map((item) => (
+                        <Button
+                          key={item.name}
+                          variant={location.pathname === item.href ? "secondary" : "ghost"}
+                          className="justify-start gap-3 text-amber-600 dark:text-amber-400"
+                          asChild
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <Link to={item.href}>
+                            <item.icon className="h-5 w-5" />
+                            {item.name}
+                          </Link>
+                        </Button>
+                      ))}
+                    </>
+                  )}
+                  
+                  <div className="my-2 border-t" />
+                  <Button
+                    variant="ghost"
+                    className="justify-start gap-3 text-destructive hover:text-destructive"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      signOut();
+                    }}
+                  >
+                    <LogOut className="h-5 w-5" />
+                    Sair
+                  </Button>
+                </nav>
+              </SheetContent>
+            </Sheet>
+
             <div className="flex items-center gap-2">
               <img src={logoImage} alt="Escala Smart" className="h-8 w-8" />
-              <span className="font-semibold text-xl">Escala Smart</span>
+              <span className="font-semibold text-xl hidden sm:inline">Escala Smart</span>
             </div>
             <div className="hidden md:flex items-center gap-1 ml-6">
               {navigation
