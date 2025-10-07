@@ -225,14 +225,23 @@ export default function AdminExtras() {
     }
 
     try {
-      // 1) Buscar o team_id do segurança
+      // 1) Buscar o team_id e nome do segurança para debug
       const { data: guardProfile, error: profileError } = await supabase
         .from("profiles")
-        .select("team_id")
+        .select("team_id, name")
         .eq("id", guardId)
-        .single();
+        .maybeSingle();
 
-      if (profileError || !guardProfile?.team_id) {
+      console.log("[fetchGuardShiftDates] Guard profile:", guardProfile);
+
+      if (profileError) {
+        console.error("[fetchGuardShiftDates] Error fetching profile:", profileError);
+        setGuardShiftDates([]);
+        return;
+      }
+
+      if (!guardProfile?.team_id) {
+        console.log("[fetchGuardShiftDates] Guard has no team_id");
         setGuardShiftDates([]);
         return;
       }
@@ -240,19 +249,30 @@ export default function AdminExtras() {
       // 2) Buscar todas as datas de plantões daquela equipe
       const { data: schedules, error: schedulesError } = await supabase
         .from("team_schedules")
-        .select("shift_date")
-        .eq("team_id", guardProfile.team_id);
+        .select("shift_date, team_id")
+        .eq("team_id", guardProfile.team_id)
+        .order("shift_date", { ascending: true });
 
-      if (schedulesError || !schedules) {
+      console.log("[fetchGuardShiftDates] Schedules found:", schedules);
+
+      if (schedulesError) {
+        console.error("[fetchGuardShiftDates] Error fetching schedules:", schedulesError);
+        setGuardShiftDates([]);
+        return;
+      }
+
+      if (!schedules || schedules.length === 0) {
+        console.log("[fetchGuardShiftDates] No schedules found for team");
         setGuardShiftDates([]);
         return;
       }
 
       // Converter as datas de string para Date
-      const dates = schedules.map(s => new Date(s.shift_date));
+      const dates = schedules.map(s => new Date(s.shift_date + "T00:00:00"));
+      console.log("[fetchGuardShiftDates] Dates to highlight:", dates.map(d => d.toLocaleDateString()));
       setGuardShiftDates(dates);
     } catch (error) {
-      console.error("Erro ao buscar dias de plantão:", error);
+      console.error("[fetchGuardShiftDates] Unexpected error:", error);
       setGuardShiftDates([]);
     }
   };
