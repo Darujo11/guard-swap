@@ -433,7 +433,7 @@ const AdminSwaps = () => {
     <AppLayout title="Gerenciar Trocas" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
       {/* Back to Dashboard Button */}
       <div className="mb-6">
-        <Link to="/admin">
+        <Link to="/dashboard/admin">
           <Button variant="outline" className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             Voltar ao Dashboard
