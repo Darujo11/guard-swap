@@ -25,10 +25,12 @@ import {
   Clock,
   Users,
   AlertCircle,
-  Trash2
+  Trash2,
+  ArrowLeft
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Link } from 'react-router-dom';
 
 const AdminSwaps = () => {
   const { profile } = useAuth();
@@ -429,6 +431,16 @@ const AdminSwaps = () => {
 
   return (
     <AppLayout title="Gerenciar Trocas" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
+      {/* Back to Dashboard Button */}
+      <div className="mb-6">
+        <Link to="/admin">
+          <Button variant="outline" className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar ao Dashboard
+          </Button>
+        </Link>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
