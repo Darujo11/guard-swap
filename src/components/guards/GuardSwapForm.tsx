@@ -25,9 +25,10 @@ interface TeamSchedule {
 interface GuardSwapFormProps {
   currentUser: Profile;
   onClose?: () => void;
+  onSwapCreated?: () => void;
 }
 
-export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
+export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwapFormProps) {
   const [availableGuards, setAvailableGuards] = useState<Profile[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<string>('');
   const [requesterShiftDate, setRequesterShiftDate] = useState<Date | undefined>();
@@ -255,12 +256,14 @@ export function GuardSwapForm({ currentUser, onClose }: GuardSwapFormProps) {
       setTargetShiftDate(undefined);
       setReason('');
       
-      // Force a small delay to ensure the real-time subscription catches the change
-      setTimeout(() => {
-        if (onClose) {
-          onClose();
-        }
-      }, 100);
+      // Notify parent to refresh the list
+      if (onSwapCreated) {
+        onSwapCreated();
+      }
+      
+      if (onClose) {
+        onClose();
+      }
     } catch (error) {
       console.error('[GuardSwapForm][Submit]', error);
       toast({

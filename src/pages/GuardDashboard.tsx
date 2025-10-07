@@ -35,6 +35,7 @@ const GuardDashboard = () => {
   const [extrasMonth, setExtrasMonth] = useState(startOfMonth(new Date()));
   const [extras, setExtras] = useState<any[]>([]);
   const [loadingExtras, setLoadingExtras] = useState(false);
+  const [refreshSwapList, setRefreshSwapList] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -164,6 +165,7 @@ const GuardDashboard = () => {
             <GuardSwapForm 
               currentUser={currentUser} 
               onClose={() => setIsSwapFormOpen(false)}
+              onSwapCreated={() => setRefreshSwapList(prev => prev + 1)}
             />
           </DialogContent>
         </Dialog>
@@ -258,7 +260,7 @@ const GuardDashboard = () => {
 
       <div className="grid gap-6 lg:grid-cols-1">
         {/* Swap Requests */}
-        <GuardSwapList currentUser={currentUser} />
+        <GuardSwapList key={refreshSwapList} currentUser={currentUser} />
       </div>
     </AppLayout>
   );
