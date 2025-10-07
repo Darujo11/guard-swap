@@ -40,6 +40,12 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
   const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
+  // Helper para converter string YYYY-MM-DD em data local (evita problemas de timezone)
+  const parseDateOnly = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
   useEffect(() => {
     fetchSwapRequests();
     
@@ -315,7 +321,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
             <div class="section">
               <h3>📅 Informações da Solicitação</h3>
               <div class="info-row dates">
-                Período da Troca: ${format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })} → ${format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                Período da Troca: ${format(parseDateOnly(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })} → ${format(parseDateOnly(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
               </div>
               <div class="info-row">
                 <span class="label">Status:</span> ${statusEmoji} ${SWAP_STATUS_CONFIG[request.status as keyof typeof SWAP_STATUS_CONFIG]?.label}
@@ -473,7 +479,8 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
             <div className="space-y-6">
               {sortedMonthKeys.map((monthKey) => {
                 const monthRequests = groupedByMonth[monthKey];
-                const monthDate = new Date(monthKey + '-01');
+                const [year, month] = monthKey.split('-');
+                const monthDate = new Date(Number(year), Number(month) - 1, 1);
                 const monthLabel = format(monthDate, 'MMMM yyyy', { locale: ptBR });
                 const isExpanded = expandedMonths[monthKey] ?? true;
                 
@@ -641,9 +648,9 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                             <div>
                               <div className="text-sm text-muted-foreground mb-1">Datas da Troca</div>
                               <div className="font-medium">
-                                {format(new Date(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                                {format(parseDateOnly(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
                                 {' → '}
-                                {format(new Date(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                                {format(parseDateOnly(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
                               </div>
                               <div className="text-xs text-muted-foreground mt-0.5">
                                 Plantão do solicitante → Plantão desejado
@@ -727,9 +734,9 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
               <div className="text-sm text-muted-foreground mt-1">
                 Datas: {selectedRequest && (
                   <>
-                    {format(new Date(selectedRequest.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    {format(parseDateOnly(selectedRequest.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
                     {' → '}
-                    {format(new Date(selectedRequest.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    {format(parseDateOnly(selectedRequest.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
                   </>
                 )}
               </div>
