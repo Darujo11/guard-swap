@@ -21,6 +21,7 @@ export default function AdminSchedule() {
   const { profile, role } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleClearAllSchedules = async () => {
     if (role !== 'super_admin') {
@@ -39,8 +40,7 @@ export default function AdminSchedule() {
 
       toast.success('Todas as escalas foram limpas com sucesso');
       setShowDeleteDialog(false);
-      // Refresh the page to show empty calendar
-      window.location.reload();
+      setRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error('Erro ao limpar escalas:', error);
       toast.error('Erro ao limpar as escalas');
@@ -76,7 +76,7 @@ export default function AdminSchedule() {
           )}
         </div>
 
-        <TeamScheduleCalendar />
+        <TeamScheduleCalendar key={refreshKey} />
       </div>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
