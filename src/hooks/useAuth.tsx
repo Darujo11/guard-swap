@@ -148,11 +148,11 @@ export const useAuth = () => {
         keysToRemove.forEach((k) => localStorage.removeItem(k));
       } catch {}
       
-      // Small delay to ensure Supabase processed the signOut
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Increased delay to ensure Supabase fully processed the signOut
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Navigate to login page
-      window.location.href = '/login';
+      // Use replace to avoid adding to browser history
+      window.location.replace('/login');
     } catch (error) {
       console.error('[Auth] Erro ao fazer logout:', error);
 
@@ -168,7 +168,7 @@ export const useAuth = () => {
         keysToRemove.forEach((k) => localStorage.removeItem(k));
       } catch {}
       
-      window.location.href = '/login';
+      window.location.replace('/login');
     }
   };
 
