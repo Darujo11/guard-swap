@@ -61,12 +61,14 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
           table: 'swap_requests'
         },
         (payload) => {
-          console.log('[GuardSwapList] Realtime event:', payload.eventType, payload);
+          // Always refetch on DELETE to avoid missing payload.old when replica identity is not FULL
+          if ((payload as any).eventType === 'DELETE') {
+            fetchSwapRequests();
+            return;
+          }
           
           // Check if the change affects the current user
-          // For DELETE events, check payload.old instead of payload.new
-          const record = (payload.eventType === 'DELETE' ? payload.old : payload.new) as any;
-          
+          const record = (payload as any).new as any;
           if (record && (record.requester_id === currentUser.id || record.target_id === currentUser.id)) {
             console.log('[GuardSwapList] Change affects current user, refetching...');
             fetchSwapRequests();
