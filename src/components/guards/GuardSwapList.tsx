@@ -20,7 +20,8 @@ import {
   ChevronDown,
   ChevronUp,
   FileDown,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -209,6 +210,35 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
     }
   };
 
+  const deleteRequest = async (request: SwapRequest) => {
+    if (!confirm('Tem certeza que deseja excluir permanentemente esta solicitação? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('swap_requests')
+        .delete()
+        .eq('id', request.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Solicitação excluída',
+        description: 'A solicitação de troca foi removida permanentemente.',
+      });
+
+      await fetchSwapRequests();
+    } catch (error) {
+      console.error('[GuardSwapList][DeleteRequest]', error);
+      toast({
+        title: 'Erro ao excluir',
+        description: 'Não foi possível excluir a solicitação.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getRequestTypeLabel = (request: SwapRequest) => {
     return request.requester_id === currentUser.id ? 'Enviada' : 'Recebida';
   };
@@ -223,6 +253,10 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
 
   const canCancel = (request: SwapRequest) => {
     return request.requester_id === currentUser.id && request.status === 'PENDING';
+  };
+
+  const canDelete = (request: SwapRequest) => {
+    return request.requester_id === currentUser.id;
   };
 
   const toggleMonth = (monthKey: string) => {
@@ -676,7 +710,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                             </div>
 
                             {/* Ações */}
-                            {(canRespond(request) || canCancel(request)) && (
+                            {(canRespond(request) || canCancel(request) || canDelete(request)) && (
                               <div className="flex flex-wrap gap-2 pt-2">
                                 {canRespond(request) && (
                                   <>
@@ -709,6 +743,18 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                                   >
                                     <XCircle className="h-4 w-4" />
                                     Cancelar
+                                  </Button>
+                                )}
+
+                                {canDelete(request) && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => deleteRequest(request)}
+                                    className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Excluir
                                   </Button>
                                 )}
                               </div>
