@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -158,12 +158,12 @@ const TrialSignup = () => {
                 </p>
 
                 <div className="text-center">
-                  <a
-                    href="/login"
+                  <Link
+                    to="/login"
                     className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     Já tem uma conta? Faça login
-                  </a>
+                  </Link>
                 </div>
               </form>
             </>

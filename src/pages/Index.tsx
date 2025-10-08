@@ -181,7 +181,7 @@ const Index = () => {
   ];
 
   if (selectedRole) {
-    window.location.href = '/login';
+    navigate('/login', { replace: true });
     return null;
   }
 
