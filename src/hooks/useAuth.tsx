@@ -25,30 +25,51 @@ export const useAuth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          const role = await getUserRole(session.user.id);
-          const profile = await getUserProfile(session.user.id);
-          setAuthState({
-            user: session.user,
-            session,
-            role,
-            profile,
-            loading: false,
-          });
-        } else {
-          setAuthState({
-            user: null,
-            session: null,
-            role: null,
-            profile: null,
-            loading: false,
-          });
-        }
+    // Set up auth state listener (avoid async work inside callback)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        // Set base state and fetch role/profile asynchronously to avoid deadlocks
+        setAuthState(prev => ({
+          ...prev,
+          user: session.user!,
+          session,
+          loading: true,
+        }));
+
+        setTimeout(async () => {
+          try {
+            const [role, profile] = await Promise.all([
+              getUserRole(session.user!.id),
+              getUserProfile(session.user!.id),
+            ]);
+            setAuthState({
+              user: session.user!,
+              session,
+              role,
+              profile,
+              loading: false,
+            });
+          } catch (e) {
+            console.error('[Auth] Failed to fetch role/profile after auth change', e);
+            setAuthState({
+              user: session.user!,
+              session,
+              role: null,
+              profile: null,
+              loading: false,
+            });
+          }
+        }, 0);
+      } else {
+        setAuthState({
+          user: null,
+          session: null,
+          role: null,
+          profile: null,
+          loading: false,
+        });
       }
-    );
+    });
 
     // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {

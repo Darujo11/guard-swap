@@ -148,16 +148,22 @@ export default function Profile() {
     setPasswordLoading(true);
     
     try {
-      // Atualiza a senha
+      // 1) Atualiza a senha do usuário atual
       const { error: updateError } = await supabase.auth.updateUser({
         password: values.newPassword
       });
-
       if (updateError) throw updateError;
+
+      // 2) Reautentica imediatamente para renovar os tokens e manter a sessão ativa
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: values.newPassword,
+      });
+      if (signInError) throw signInError;
 
       toast({
         title: "Senha atualizada",
-        description: "Sua senha foi alterada com sucesso.",
+        description: "Sua senha foi alterada e sua sessão foi mantida.",
       });
       
       form.reset();
