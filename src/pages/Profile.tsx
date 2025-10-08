@@ -136,14 +136,24 @@ export default function Profile() {
   };
 
   const onPasswordSubmit = async (values: z.infer<typeof passwordSchema>) => {
+    if (!user?.email) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Usuário não encontrado.",
+      });
+      return;
+    }
+
     setPasswordLoading(true);
     
     try {
-      const { error } = await supabase.auth.updateUser({
+      // Atualiza a senha
+      const { error: updateError } = await supabase.auth.updateUser({
         password: values.newPassword
       });
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
       toast({
         title: "Senha atualizada",
