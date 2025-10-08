@@ -124,10 +124,19 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
-      // Sign out from Supabase with global scope to clear all sessions
+      // Clear local state immediately
+      setAuthState({
+        user: null,
+        session: null,
+        role: null,
+        profile: null,
+        loading: false,
+      });
+
+      // Sign out from Supabase with global scope
       await supabase.auth.signOut({ scope: 'global' });
 
-      // Extra cleanup: remove any persisted Supabase auth tokens
+      // Clean up localStorage
       try {
         const keysToRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -139,21 +148,15 @@ export const useAuth = () => {
         keysToRemove.forEach((k) => localStorage.removeItem(k));
       } catch {}
       
-      // Clear local state
-      setAuthState({
-        user: null,
-        session: null,
-        role: null,
-        profile: null,
-        loading: false,
-      });
+      // Small delay to ensure Supabase processed the signOut
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Redirect to login
-      window.location.replace('/login');
+      // Navigate to login (this will reload the page)
+      window.location.href = '/login';
     } catch (error) {
       console.error('[Auth] Erro ao fazer logout:', error);
 
-      // Fallback cleanup even if API signOut fails
+      // Fallback cleanup
       try {
         const keysToRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -165,15 +168,7 @@ export const useAuth = () => {
         keysToRemove.forEach((k) => localStorage.removeItem(k));
       } catch {}
       
-      // Even if logout fails, clear local state and redirect
-      setAuthState({
-        user: null,
-        session: null,
-        role: null,
-        profile: null,
-        loading: false,
-      });
-      window.location.replace('/login');
+      window.location.href = '/login';
     }
   };
 
