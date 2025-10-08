@@ -151,8 +151,8 @@ export const useAuth = () => {
       // Small delay to ensure Supabase processed the signOut
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Navigate to login (this will reload the page)
-      window.location.href = '/login';
+      // Navigate to home page
+      window.location.href = '/';
     } catch (error) {
       console.error('[Auth] Erro ao fazer logout:', error);
 
@@ -168,7 +168,7 @@ export const useAuth = () => {
         keysToRemove.forEach((k) => localStorage.removeItem(k));
       } catch {}
       
-      window.location.href = '/login';
+      window.location.href = '/';
     }
   };
 
