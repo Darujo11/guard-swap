@@ -151,8 +151,8 @@ export const useAuth = () => {
       // Increased delay to ensure Supabase fully processed the signOut
       await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Use replace to avoid adding to browser history
-      window.location.replace('/login');
+      // Use navigate for client-side routing (avoid server 404)
+      navigate('/login', { replace: true });
     } catch (error) {
       console.error('[Auth] Erro ao fazer logout:', error);
 
@@ -168,7 +168,7 @@ export const useAuth = () => {
         keysToRemove.forEach((k) => localStorage.removeItem(k));
       } catch {}
       
-      window.location.replace('/login');
+      navigate('/login', { replace: true });
     }
   };
 
