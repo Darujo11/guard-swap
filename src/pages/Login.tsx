@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import logoImage from '@/assets/logo.png';
+import PWAInstallButton from '@/components/PWAInstallButton';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -118,6 +119,9 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center p-4">
+      <div className="absolute top-4 right-4">
+        <PWAInstallButton />
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
