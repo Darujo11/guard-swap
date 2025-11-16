@@ -255,6 +255,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
           const webhookResponse = await supabase.functions.invoke('send-swap-webhook', {
             body: {
               evento: 'troca_solicitada',
+              aprovacao_chefe_estado: 'pendente',
               requester_name: currentUser.name,
               requester_email: currentUser.email,
               requester_phone: currentUser.phone || '',

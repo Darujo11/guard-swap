@@ -138,6 +138,7 @@ const AdminSwaps = () => {
           await supabase.functions.invoke('send-swap-webhook', {
             body: {
               evento: 'troca_aprovada_admin',
+              aprovacao_chefe_estado: 'aprovado',
               requester_name: selectedRequest.requester.name,
               requester_email: selectedRequest.requester.email,
               requester_phone: selectedRequest.requester.phone,
@@ -150,13 +151,44 @@ const AdminSwaps = () => {
               status: 'APPROVED',
               created_at: selectedRequest.created_at,
               responded_at: new Date().toISOString(),
-              admin_approved: decisionAction === 'approve',
+              admin_approved: true,
               admin_approved_by: profile?.id || null,
               admin_approved_at: new Date().toISOString(),
             }
           });
         } catch (webhookError) {
-          console.error('[AdminSwaps][Webhook]', webhookError);
+          console.error('[AdminSwaps][Webhook] Erro ao enviar webhook de aprovação:', webhookError);
+          // Não bloquear o fluxo se o webhook falhar
+        }
+      }
+
+      // Enviar notificação ao webhook quando rejeitar
+      if (decisionAction === 'reject' && selectedRequest.requester && selectedRequest.target) {
+        try {
+          await supabase.functions.invoke('send-swap-webhook', {
+            body: {
+              evento: 'troca_rejeitada_admin',
+              aprovacao_chefe_estado: 'rejeitado',
+              requester_name: selectedRequest.requester.name,
+              requester_email: selectedRequest.requester.email,
+              requester_phone: selectedRequest.requester.phone,
+              target_name: selectedRequest.target.name,
+              target_email: selectedRequest.target.email,
+              target_phone: selectedRequest.target.phone,
+              requester_shift_date: selectedRequest.requester_shift_date,
+              target_shift_date: selectedRequest.target_shift_date,
+              reason: selectedRequest.reason,
+              rejection_reason: decisionReason,
+              status: 'REJECTED',
+              created_at: selectedRequest.created_at,
+              responded_at: new Date().toISOString(),
+              admin_approved: false,
+              admin_approved_by: profile?.id || null,
+              admin_approved_at: new Date().toISOString(),
+            }
+          });
+        } catch (webhookError) {
+          console.error('[AdminSwaps][Webhook] Erro ao enviar webhook de rejeição:', webhookError);
           // Não bloquear o fluxo se o webhook falhar
         }
       }
