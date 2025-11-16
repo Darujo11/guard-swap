@@ -68,6 +68,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
         id: guard.id,
         name: guard.name,
         email: guard.email,
+        phone: guard.phone,
         team_id: guard.team_id,
         team: guard.team_name ? {
           id: guard.team_id,
