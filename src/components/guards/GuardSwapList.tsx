@@ -151,6 +151,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
           await supabase.functions.invoke('send-swap-webhook', {
             body: {
               evento: 'troca_aceita',
+              aprovacao_chefe_estado: 'pendente',
               requester_name: selectedRequest.requester.name,
               requester_email: selectedRequest.requester.email,
               requester_phone: selectedRequest.requester.phone,
@@ -169,7 +170,36 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
             }
           });
         } catch (webhookError) {
-          console.error('[GuardSwapList][Webhook]', webhookError);
+          console.error('[GuardSwapList][Webhook] Erro ao enviar webhook de aceitação:', webhookError);
+          // Não bloquear o fluxo se o webhook falhar
+        }
+      }
+
+      // Enviar notificação ao webhook quando rejeitar
+      if (responseAction === 'reject' && selectedRequest.requester && selectedRequest.target) {
+        try {
+          await supabase.functions.invoke('send-swap-webhook', {
+            body: {
+              evento: 'troca_rejeitada_alvo',
+              aprovacao_chefe_estado: 'rejeitado',
+              requester_name: selectedRequest.requester.name,
+              requester_email: selectedRequest.requester.email,
+              requester_phone: selectedRequest.requester.phone,
+              target_name: selectedRequest.target.name,
+              target_email: selectedRequest.target.email,
+              target_phone: selectedRequest.target.phone,
+              requester_shift_date: selectedRequest.requester_shift_date,
+              target_shift_date: selectedRequest.target_shift_date,
+              reason: selectedRequest.reason,
+              rejection_reason: responseReason,
+              status: 'REJECTED',
+              created_at: selectedRequest.created_at,
+              responded_at: new Date().toISOString(),
+              admin_approved: false,
+            }
+          });
+        } catch (webhookError) {
+          console.error('[GuardSwapList][Webhook] Erro ao enviar webhook de rejeição:', webhookError);
           // Não bloquear o fluxo se o webhook falhar
         }
       }
