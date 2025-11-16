@@ -1,11 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const WEBHOOK_URL = "https://webhook.autozapx.com/webhook/55554956-a014-404b-879a-9ee22706bd8b";
+const WEBHOOK_URL = "https://webhook.autozapx.com/webhook/getdados";
 
 interface SwapWebhookData {
   evento: string;
@@ -27,16 +27,16 @@ interface SwapWebhookData {
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const payload = await req.json();
-    console.log('[SendSwapWebhook] Payload recebido:', JSON.stringify(payload));
+    console.log("[SendSwapWebhook] Payload recebido:", JSON.stringify(payload));
 
     const webhookData: SwapWebhookData = {
-      evento: payload.evento || 'troca_solicitada',
+      evento: payload.evento || "troca_solicitada",
       solicitante_nome: payload.requester_name,
       solicitante_email: payload.requester_email,
       solicitante_telefone: payload.requester_phone,
@@ -54,12 +54,12 @@ serve(async (req) => {
       admin_aprovado_em: payload.admin_approved_at,
     };
 
-    console.log('[SendSwapWebhook] Enviando para webhook:', JSON.stringify(webhookData));
+    console.log("[SendSwapWebhook] Enviando para webhook:", JSON.stringify(webhookData));
 
     const webhookResponse = await fetch(WEBHOOK_URL, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(webhookData),
     });
@@ -69,26 +69,23 @@ serve(async (req) => {
     }
 
     const responseText = await webhookResponse.text();
-    console.log('[SendSwapWebhook] Resposta do webhook:', responseText);
+    console.log("[SendSwapWebhook] Resposta do webhook:", responseText);
 
-    return new Response(
-      JSON.stringify({ success: true, message: 'Webhook enviado com sucesso' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
-    );
+    return new Response(JSON.stringify({ success: true, message: "Webhook enviado com sucesso" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
-    console.error('[SendSwapWebhook] Erro:', error);
+    console.error("[SendSwapWebhook] Erro:", error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
+      JSON.stringify({
+        success: false,
+        error: error.message,
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      },
     );
   }
 });
