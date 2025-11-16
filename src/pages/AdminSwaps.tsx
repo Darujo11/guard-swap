@@ -132,6 +132,32 @@ const AdminSwaps = () => {
         }
       });
 
+      // Enviar notificação ao webhook quando aprovar
+      if (decisionAction === 'approve' && selectedRequest.requester && selectedRequest.target) {
+        try {
+          await supabase.functions.invoke('send-swap-webhook', {
+            body: {
+              evento: 'troca_aprovada_admin',
+              requester_name: selectedRequest.requester.name,
+              requester_email: selectedRequest.requester.email,
+              requester_phone: selectedRequest.requester.phone,
+              target_name: selectedRequest.target.name,
+              target_email: selectedRequest.target.email,
+              target_phone: selectedRequest.target.phone,
+              requester_shift_date: selectedRequest.requester_shift_date,
+              target_shift_date: selectedRequest.target_shift_date,
+              reason: selectedRequest.reason,
+              status: 'APPROVED',
+              created_at: selectedRequest.created_at,
+              responded_at: new Date().toISOString(),
+            }
+          });
+        } catch (webhookError) {
+          console.error('[AdminSwaps][Webhook]', webhookError);
+          // Não bloquear o fluxo se o webhook falhar
+        }
+      }
+
       toast({
         title: `Solicitação ${decisionAction === 'approve' ? 'aprovada' : 'rejeitada'}`,
         description: `A solicitação de troca foi ${decisionAction === 'approve' ? 'aprovada' : 'rejeitada'} com sucesso.`,
