@@ -246,6 +246,32 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
         }
       });
 
+      // Enviar notificação ao webhook
+      const targetGuard = availableGuards.find(g => g.id === selectedTarget);
+      if (targetGuard) {
+        try {
+          await supabase.functions.invoke('send-swap-webhook', {
+            body: {
+              evento: 'troca_solicitada',
+              requester_name: currentUser.name,
+              requester_email: currentUser.email,
+              requester_phone: currentUser.phone,
+              target_name: targetGuard.name,
+              target_email: targetGuard.email,
+              target_phone: targetGuard.phone,
+              requester_shift_date: requesterDateStr,
+              target_shift_date: targetDateStr,
+              reason: reason.trim(),
+              status: 'PENDING',
+              created_at: new Date().toISOString(),
+            }
+          });
+        } catch (webhookError) {
+          console.error('[GuardSwapForm][Webhook]', webhookError);
+          // Não bloquear o fluxo se o webhook falhar
+        }
+      }
+
       toast({
         title: 'Solicitação enviada',
         description: 'Sua solicitação de troca foi enviada com sucesso e aparecerá como pendente em suas solicitações.',

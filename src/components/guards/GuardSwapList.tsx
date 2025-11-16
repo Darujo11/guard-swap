@@ -145,6 +145,32 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
         }
       });
 
+      // Enviar notificação ao webhook quando aceitar
+      if (responseAction === 'accept' && selectedRequest.requester && selectedRequest.target) {
+        try {
+          await supabase.functions.invoke('send-swap-webhook', {
+            body: {
+              evento: 'troca_aceita',
+              requester_name: selectedRequest.requester.name,
+              requester_email: selectedRequest.requester.email,
+              requester_phone: selectedRequest.requester.phone,
+              target_name: selectedRequest.target.name,
+              target_email: selectedRequest.target.email,
+              target_phone: selectedRequest.target.phone,
+              requester_shift_date: selectedRequest.requester_shift_date,
+              target_shift_date: selectedRequest.target_shift_date,
+              reason: selectedRequest.reason,
+              status: 'ACCEPTED',
+              created_at: selectedRequest.created_at,
+              responded_at: new Date().toISOString(),
+            }
+          });
+        } catch (webhookError) {
+          console.error('[GuardSwapList][Webhook]', webhookError);
+          // Não bloquear o fluxo se o webhook falhar
+        }
+      }
+
       toast({
         title: `Solicitação ${responseAction === 'accept' ? 'aceita' : 'rejeitada'}`,
         description: `Você ${responseAction === 'accept' ? 'aceitou' : 'rejeitou'} a solicitação de troca.`,

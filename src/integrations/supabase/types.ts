@@ -483,7 +483,7 @@ export type Database = {
         Returns: boolean
       }
       get_available_guards_for_swap: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           email: string
           id: string
@@ -493,18 +493,9 @@ export type Database = {
           team_name: string
         }[]
       }
-      get_profile_id: {
-        Args: { _user_id: string }
-        Returns: string
-      }
-      get_user_admin_id: {
-        Args: { _user_id: string }
-        Returns: string
-      }
-      get_user_id_by_email: {
-        Args: { email_address: string }
-        Returns: string
-      }
+      get_profile_id: { Args: { _user_id: string }; Returns: string }
+      get_user_admin_id: { Args: { _user_id: string }; Returns: string }
+      get_user_id_by_email: { Args: { email_address: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -512,18 +503,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin_active: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
-      is_super_admin: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
-      suspend_expired_admins: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      is_admin_active: { Args: { _user_id: string }; Returns: boolean }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      suspend_expired_admins: { Args: never; Returns: undefined }
       user_belongs_to_admin_org: {
         Args: { _admin_user_id: string; _target_user_id: string }
         Returns: boolean
