@@ -247,40 +247,6 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
         }
       });
 
-      // Enviar notificação ao webhook
-      const targetGuard = availableGuards.find(g => g.id === selectedTarget);
-      if (targetGuard) {
-        try {
-          console.log('[GuardSwapForm] Enviando webhook para troca solicitada');
-          const webhookResponse = await supabase.functions.invoke('send-swap-webhook', {
-            body: {
-              evento: 'troca_solicitada',
-              aprovacao_chefe_estado: 'pendente',
-              requester_name: currentUser.name,
-              requester_email: currentUser.email,
-              requester_phone: currentUser.phone || '',
-              target_name: targetGuard.name,
-              target_email: targetGuard.email,
-              target_phone: targetGuard.phone || '',
-              requester_shift_date: requesterDateStr,
-              target_shift_date: targetDateStr,
-              reason: reason.trim(),
-              status: 'PENDING',
-              created_at: new Date().toISOString(),
-              admin_approved: false,
-              admin_approved_by: null,
-              admin_approved_at: null,
-            }
-          });
-          console.log('[GuardSwapForm] Webhook enviado com sucesso:', webhookResponse);
-        } catch (webhookError) {
-          console.error('[GuardSwapForm][Webhook] Erro ao enviar webhook:', webhookError);
-          // Não bloquear o fluxo se o webhook falhar
-        }
-      } else {
-        console.error('[GuardSwapForm] Target guard não encontrado para envio de webhook');
-      }
-
       toast({
         title: 'Solicitação enviada',
         description: 'Sua solicitação de troca foi enviada com sucesso e aparecerá como pendente em suas solicitações.',
