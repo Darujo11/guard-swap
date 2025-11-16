@@ -488,6 +488,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          phone: string
           team_color: string
           team_id: string
           team_name: string
