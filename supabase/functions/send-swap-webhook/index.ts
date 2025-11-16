@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const WEBHOOK_URL = "https://webhook.autozapx.com/webhook/55554956-a014-404b-879a-9ee22706bd8b";
+const WEBHOOK_URL = "https://n8n.autozapx.com/webhook-test/55554956-a014-404b-879a-9ee22706bd8b";
 
 interface SwapWebhookData {
   evento: string;
