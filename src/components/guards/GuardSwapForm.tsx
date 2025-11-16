@@ -250,15 +250,16 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
       const targetGuard = availableGuards.find(g => g.id === selectedTarget);
       if (targetGuard) {
         try {
-          await supabase.functions.invoke('send-swap-webhook', {
+          console.log('[GuardSwapForm] Enviando webhook para troca solicitada');
+          const webhookResponse = await supabase.functions.invoke('send-swap-webhook', {
             body: {
               evento: 'troca_solicitada',
               requester_name: currentUser.name,
               requester_email: currentUser.email,
-              requester_phone: currentUser.phone,
+              requester_phone: currentUser.phone || '',
               target_name: targetGuard.name,
               target_email: targetGuard.email,
-              target_phone: targetGuard.phone,
+              target_phone: targetGuard.phone || '',
               requester_shift_date: requesterDateStr,
               target_shift_date: targetDateStr,
               reason: reason.trim(),
@@ -266,10 +267,13 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
               created_at: new Date().toISOString(),
             }
           });
+          console.log('[GuardSwapForm] Webhook enviado com sucesso:', webhookResponse);
         } catch (webhookError) {
-          console.error('[GuardSwapForm][Webhook]', webhookError);
+          console.error('[GuardSwapForm][Webhook] Erro ao enviar webhook:', webhookError);
           // Não bloquear o fluxo se o webhook falhar
         }
+      } else {
+        console.error('[GuardSwapForm] Target guard não encontrado para envio de webhook');
       }
 
       toast({
