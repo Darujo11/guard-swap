@@ -112,23 +112,43 @@ serve(async (req) => {
     console.log("[SendSwapWebhook] Enviando para webhook:", WEBHOOK_URL);
     console.log("[SendSwapWebhook] Dados formatados:", JSON.stringify(webhookData, null, 2));
 
-    const webhookResponse = await fetchWithRetry(WEBHOOK_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(webhookData),
-    });
+    try {
+      const webhookResponse = await fetchWithRetry(WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(webhookData),
+      });
 
-    const responseText = await webhookResponse.text();
-    console.log("[SendSwapWebhook] Resposta do webhook (status " + webhookResponse.status + "):", responseText);
+      const responseText = await webhookResponse.text();
+      console.log("[SendSwapWebhook] Resposta do webhook (status " + webhookResponse.status + "):", responseText);
 
-    return new Response(JSON.stringify({ success: true, message: "Webhook enviado com sucesso" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: "Webhook enviado com sucesso",
+        webhook_status: webhookResponse.status 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    } catch (webhookError) {
+      // Se o webhook externo falhar, não falhar a requisição inteira
+      // Apenas logar o erro e retornar sucesso parcial
+      console.warn("[SendSwapWebhook] Webhook externo falhou, mas operação continuará:", webhookError.message);
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: "Operação concluída, mas webhook externo não está disponível",
+        webhook_error: webhookError.message,
+        warning: "O webhook AutoZapX não está ativo ou a URL está incorreta. Verifique se o workflow está ativo no AutoZapX."
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200, // Retorna 200 mesmo se webhook falhar
+      });
+    }
   } catch (error) {
-    console.error("[SendSwapWebhook] Erro:", error);
+    console.error("[SendSwapWebhook] Erro crítico:", error);
     return new Response(
       JSON.stringify({
         success: false,
