@@ -21,6 +21,9 @@ interface SwapWebhookData {
   status: string;
   data_criacao: string;
   data_resposta?: string;
+  admin_aprovado: boolean;
+  admin_aprovado_por?: string;
+  admin_aprovado_em?: string;
 }
 
 serve(async (req) => {
@@ -46,6 +49,9 @@ serve(async (req) => {
       status: payload.status,
       data_criacao: payload.created_at,
       data_resposta: payload.responded_at,
+      admin_aprovado: payload.admin_approved,
+      admin_aprovado_por: payload.admin_approved_by,
+      admin_aprovado_em: payload.admin_approved_at,
     };
 
     console.log('[SendSwapWebhook] Enviando para webhook:', JSON.stringify(webhookData));
