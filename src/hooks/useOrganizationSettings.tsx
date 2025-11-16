@@ -45,7 +45,7 @@ export function useOrganizationSettings() {
         .from('profiles')
         .select('admin_id')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (!profile?.admin_id) return defaultSettings;
 
@@ -53,7 +53,7 @@ export function useOrganizationSettings() {
         .from('organization_settings')
         .select('*')
         .eq('admin_id', profile.admin_id)
-        .single();
+        .maybeSingle();
 
       if (error || !data) return defaultSettings;
       return data as OrganizationSettings;
@@ -77,7 +77,7 @@ export function useOrganizationSettings() {
         .from('organization_settings')
         .select('id')
         .eq('admin_id', adminId)
-        .single();
+        .maybeSingle();
 
       if (existing) {
         const { error } = await supabase

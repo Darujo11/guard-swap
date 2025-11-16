@@ -135,29 +135,60 @@ const AdminSwaps = () => {
       // Enviar notificação ao webhook quando aprovar
       if (decisionAction === 'approve' && selectedRequest.requester && selectedRequest.target) {
         try {
-          await supabase.functions.invoke('send-swap-webhook', {
-            body: {
-              evento: 'troca_aprovada_admin',
-              aprovacao_chefe_estado: 'aprovado',
-              requester_name: selectedRequest.requester.name,
-              requester_email: selectedRequest.requester.email,
-              requester_phone: selectedRequest.requester.phone,
-              target_name: selectedRequest.target.name,
-              target_email: selectedRequest.target.email,
-              target_phone: selectedRequest.target.phone,
-              requester_shift_date: selectedRequest.requester_shift_date,
-              target_shift_date: selectedRequest.target_shift_date,
-              reason: selectedRequest.reason,
-              status: 'APPROVED',
-              created_at: selectedRequest.created_at,
-              responded_at: new Date().toISOString(),
-              admin_approved: true,
-              admin_approved_by: profile?.id || null,
-              admin_approved_at: new Date().toISOString(),
-            }
+          // Verificar autenticação
+          const { data: { session } } = await supabase.auth.getSession();
+          console.log('🔐 [AdminSwaps][Webhook] Auth check:', session ? 'Autenticado' : 'Não autenticado');
+          
+          if (!session) {
+            toast({
+              title: '⚠️ Erro de autenticação',
+              description: 'Você precisa estar logado para enviar webhook',
+              variant: 'destructive'
+            });
+            return;
+          }
+
+          const webhookPayload = {
+            evento: 'troca_aprovada_admin',
+            aprovacao_chefe_estado: 'aprovado',
+            requester_name: selectedRequest.requester.name,
+            requester_email: selectedRequest.requester.email,
+            requester_phone: selectedRequest.requester.phone,
+            target_name: selectedRequest.target.name,
+            target_email: selectedRequest.target.email,
+            target_phone: selectedRequest.target.phone,
+            requester_shift_date: selectedRequest.requester_shift_date,
+            target_shift_date: selectedRequest.target_shift_date,
+            reason: selectedRequest.reason,
+            status: 'APPROVED',
+            created_at: selectedRequest.created_at,
+            responded_at: new Date().toISOString(),
+            admin_approved: true,
+            admin_approved_by: profile?.id || null,
+            admin_approved_at: new Date().toISOString(),
+          };
+          
+          console.log('📤 [AdminSwaps][Webhook] Enviando payload de aprovação:', webhookPayload);
+          
+          const { data: webhookData, error: webhookError } = await supabase.functions.invoke('send-swap-webhook', {
+            body: webhookPayload
+          });
+          
+          console.log('✅ [AdminSwaps][Webhook] Resposta do webhook:', webhookData);
+          
+          if (webhookError) throw webhookError;
+          
+          toast({
+            title: '✅ Webhook enviado',
+            description: 'Notificação de aprovação enviada com sucesso',
           });
         } catch (webhookError) {
-          console.error('[AdminSwaps][Webhook] Erro ao enviar webhook de aprovação:', webhookError);
+          console.error('❌ [AdminSwaps][Webhook] Erro ao enviar webhook de aprovação:', webhookError);
+          toast({
+            title: '❌ Erro ao enviar webhook',
+            description: webhookError instanceof Error ? webhookError.message : 'Erro desconhecido ao enviar webhook',
+            variant: 'destructive'
+          });
           // Não bloquear o fluxo se o webhook falhar
         }
       }
@@ -165,30 +196,61 @@ const AdminSwaps = () => {
       // Enviar notificação ao webhook quando rejeitar
       if (decisionAction === 'reject' && selectedRequest.requester && selectedRequest.target) {
         try {
-          await supabase.functions.invoke('send-swap-webhook', {
-            body: {
-              evento: 'troca_rejeitada_admin',
-              aprovacao_chefe_estado: 'rejeitado',
-              requester_name: selectedRequest.requester.name,
-              requester_email: selectedRequest.requester.email,
-              requester_phone: selectedRequest.requester.phone,
-              target_name: selectedRequest.target.name,
-              target_email: selectedRequest.target.email,
-              target_phone: selectedRequest.target.phone,
-              requester_shift_date: selectedRequest.requester_shift_date,
-              target_shift_date: selectedRequest.target_shift_date,
-              reason: selectedRequest.reason,
-              rejection_reason: decisionReason,
-              status: 'REJECTED',
-              created_at: selectedRequest.created_at,
-              responded_at: new Date().toISOString(),
-              admin_approved: false,
-              admin_approved_by: profile?.id || null,
-              admin_approved_at: new Date().toISOString(),
-            }
+          // Verificar autenticação
+          const { data: { session } } = await supabase.auth.getSession();
+          console.log('🔐 [AdminSwaps][Webhook] Auth check:', session ? 'Autenticado' : 'Não autenticado');
+          
+          if (!session) {
+            toast({
+              title: '⚠️ Erro de autenticação',
+              description: 'Você precisa estar logado para enviar webhook',
+              variant: 'destructive'
+            });
+            return;
+          }
+
+          const webhookPayload = {
+            evento: 'troca_rejeitada_admin',
+            aprovacao_chefe_estado: 'rejeitado',
+            requester_name: selectedRequest.requester.name,
+            requester_email: selectedRequest.requester.email,
+            requester_phone: selectedRequest.requester.phone,
+            target_name: selectedRequest.target.name,
+            target_email: selectedRequest.target.email,
+            target_phone: selectedRequest.target.phone,
+            requester_shift_date: selectedRequest.requester_shift_date,
+            target_shift_date: selectedRequest.target_shift_date,
+            reason: selectedRequest.reason,
+            rejection_reason: decisionReason,
+            status: 'REJECTED',
+            created_at: selectedRequest.created_at,
+            responded_at: new Date().toISOString(),
+            admin_approved: false,
+            admin_approved_by: profile?.id || null,
+            admin_approved_at: new Date().toISOString(),
+          };
+          
+          console.log('📤 [AdminSwaps][Webhook] Enviando payload de rejeição:', webhookPayload);
+          
+          const { data: webhookData, error: webhookError } = await supabase.functions.invoke('send-swap-webhook', {
+            body: webhookPayload
+          });
+          
+          console.log('✅ [AdminSwaps][Webhook] Resposta do webhook:', webhookData);
+          
+          if (webhookError) throw webhookError;
+          
+          toast({
+            title: '✅ Webhook enviado',
+            description: 'Notificação de rejeição enviada com sucesso',
           });
         } catch (webhookError) {
-          console.error('[AdminSwaps][Webhook] Erro ao enviar webhook de rejeição:', webhookError);
+          console.error('❌ [AdminSwaps][Webhook] Erro ao enviar webhook de rejeição:', webhookError);
+          toast({
+            title: '❌ Erro ao enviar webhook',
+            description: webhookError instanceof Error ? webhookError.message : 'Erro desconhecido ao enviar webhook',
+            variant: 'destructive'
+          });
           // Não bloquear o fluxo se o webhook falhar
         }
       }

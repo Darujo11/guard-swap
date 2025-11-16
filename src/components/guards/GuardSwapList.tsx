@@ -148,29 +148,60 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
       // Enviar notificação ao webhook quando aceitar
       if (responseAction === 'accept' && selectedRequest.requester && selectedRequest.target) {
         try {
-          await supabase.functions.invoke('send-swap-webhook', {
-            body: {
-              evento: 'troca_aceita',
-              aprovacao_chefe_estado: 'pendente',
-              requester_name: selectedRequest.requester.name,
-              requester_email: selectedRequest.requester.email,
-              requester_phone: selectedRequest.requester.phone,
-              target_name: selectedRequest.target.name,
-              target_email: selectedRequest.target.email,
-              target_phone: selectedRequest.target.phone,
-              requester_shift_date: selectedRequest.requester_shift_date,
-              target_shift_date: selectedRequest.target_shift_date,
-              reason: selectedRequest.reason,
-              status: 'ACCEPTED',
-              created_at: selectedRequest.created_at,
-              responded_at: new Date().toISOString(),
-              admin_approved: selectedRequest.admin_approved || false,
-              admin_approved_by: selectedRequest.admin_approved_by || null,
-              admin_approved_at: selectedRequest.admin_approved_at || null,
-            }
+          // Verificar autenticação
+          const { data: { session } } = await supabase.auth.getSession();
+          console.log('🔐 [GuardSwapList][Webhook] Auth check:', session ? 'Autenticado' : 'Não autenticado');
+          
+          if (!session) {
+            toast({
+              title: '⚠️ Erro de autenticação',
+              description: 'Você precisa estar logado para enviar webhook',
+              variant: 'destructive'
+            });
+            return;
+          }
+
+          const webhookPayload = {
+            evento: 'troca_aceita',
+            aprovacao_chefe_estado: 'pendente',
+            requester_name: selectedRequest.requester.name,
+            requester_email: selectedRequest.requester.email,
+            requester_phone: selectedRequest.requester.phone,
+            target_name: selectedRequest.target.name,
+            target_email: selectedRequest.target.email,
+            target_phone: selectedRequest.target.phone,
+            requester_shift_date: selectedRequest.requester_shift_date,
+            target_shift_date: selectedRequest.target_shift_date,
+            reason: selectedRequest.reason,
+            status: 'ACCEPTED',
+            created_at: selectedRequest.created_at,
+            responded_at: new Date().toISOString(),
+            admin_approved: selectedRequest.admin_approved || false,
+            admin_approved_by: selectedRequest.admin_approved_by || null,
+            admin_approved_at: selectedRequest.admin_approved_at || null,
+          };
+          
+          console.log('📤 [GuardSwapList][Webhook] Enviando payload de aceitação:', webhookPayload);
+          
+          const { data: webhookData, error: webhookError } = await supabase.functions.invoke('send-swap-webhook', {
+            body: webhookPayload
+          });
+          
+          console.log('✅ [GuardSwapList][Webhook] Resposta do webhook:', webhookData);
+          
+          if (webhookError) throw webhookError;
+          
+          toast({
+            title: '✅ Webhook enviado',
+            description: 'Notificação de aceitação enviada com sucesso',
           });
         } catch (webhookError) {
-          console.error('[GuardSwapList][Webhook] Erro ao enviar webhook de aceitação:', webhookError);
+          console.error('❌ [GuardSwapList][Webhook] Erro ao enviar webhook de aceitação:', webhookError);
+          toast({
+            title: '❌ Erro ao enviar webhook',
+            description: webhookError instanceof Error ? webhookError.message : 'Erro desconhecido ao enviar webhook',
+            variant: 'destructive'
+          });
           // Não bloquear o fluxo se o webhook falhar
         }
       }
@@ -178,28 +209,59 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
       // Enviar notificação ao webhook quando rejeitar
       if (responseAction === 'reject' && selectedRequest.requester && selectedRequest.target) {
         try {
-          await supabase.functions.invoke('send-swap-webhook', {
-            body: {
-              evento: 'troca_rejeitada_alvo',
-              aprovacao_chefe_estado: 'rejeitado',
-              requester_name: selectedRequest.requester.name,
-              requester_email: selectedRequest.requester.email,
-              requester_phone: selectedRequest.requester.phone,
-              target_name: selectedRequest.target.name,
-              target_email: selectedRequest.target.email,
-              target_phone: selectedRequest.target.phone,
-              requester_shift_date: selectedRequest.requester_shift_date,
-              target_shift_date: selectedRequest.target_shift_date,
-              reason: selectedRequest.reason,
-              rejection_reason: responseReason,
-              status: 'REJECTED',
-              created_at: selectedRequest.created_at,
-              responded_at: new Date().toISOString(),
-              admin_approved: false,
-            }
+          // Verificar autenticação
+          const { data: { session } } = await supabase.auth.getSession();
+          console.log('🔐 [GuardSwapList][Webhook] Auth check:', session ? 'Autenticado' : 'Não autenticado');
+          
+          if (!session) {
+            toast({
+              title: '⚠️ Erro de autenticação',
+              description: 'Você precisa estar logado para enviar webhook',
+              variant: 'destructive'
+            });
+            return;
+          }
+
+          const webhookPayload = {
+            evento: 'troca_rejeitada_alvo',
+            aprovacao_chefe_estado: 'rejeitado',
+            requester_name: selectedRequest.requester.name,
+            requester_email: selectedRequest.requester.email,
+            requester_phone: selectedRequest.requester.phone,
+            target_name: selectedRequest.target.name,
+            target_email: selectedRequest.target.email,
+            target_phone: selectedRequest.target.phone,
+            requester_shift_date: selectedRequest.requester_shift_date,
+            target_shift_date: selectedRequest.target_shift_date,
+            reason: selectedRequest.reason,
+            rejection_reason: responseReason,
+            status: 'REJECTED',
+            created_at: selectedRequest.created_at,
+            responded_at: new Date().toISOString(),
+            admin_approved: false,
+          };
+          
+          console.log('📤 [GuardSwapList][Webhook] Enviando payload de rejeição:', webhookPayload);
+          
+          const { data: webhookData, error: webhookError } = await supabase.functions.invoke('send-swap-webhook', {
+            body: webhookPayload
+          });
+          
+          console.log('✅ [GuardSwapList][Webhook] Resposta do webhook:', webhookData);
+          
+          if (webhookError) throw webhookError;
+          
+          toast({
+            title: '✅ Webhook enviado',
+            description: 'Notificação de rejeição enviada com sucesso',
           });
         } catch (webhookError) {
-          console.error('[GuardSwapList][Webhook] Erro ao enviar webhook de rejeição:', webhookError);
+          console.error('❌ [GuardSwapList][Webhook] Erro ao enviar webhook de rejeição:', webhookError);
+          toast({
+            title: '❌ Erro ao enviar webhook',
+            description: webhookError instanceof Error ? webhookError.message : 'Erro desconhecido ao enviar webhook',
+            variant: 'destructive'
+          });
           // Não bloquear o fluxo se o webhook falhar
         }
       }
