@@ -266,6 +266,9 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
               reason: reason.trim(),
               status: 'PENDING',
               created_at: new Date().toISOString(),
+              admin_approved: false,
+              admin_approved_by: null,
+              admin_approved_at: null,
             }
           });
           console.log('[GuardSwapForm] Webhook enviado com sucesso:', webhookResponse);
