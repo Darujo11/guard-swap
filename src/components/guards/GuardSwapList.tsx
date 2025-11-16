@@ -163,6 +163,9 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
               status: 'ACCEPTED',
               created_at: selectedRequest.created_at,
               responded_at: new Date().toISOString(),
+              admin_approved: selectedRequest.admin_approved || false,
+              admin_approved_by: selectedRequest.admin_approved_by || null,
+              admin_approved_at: selectedRequest.admin_approved_at || null,
             }
           });
         } catch (webhookError) {

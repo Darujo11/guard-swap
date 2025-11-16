@@ -150,6 +150,9 @@ const AdminSwaps = () => {
               status: 'APPROVED',
               created_at: selectedRequest.created_at,
               responded_at: new Date().toISOString(),
+              admin_approved: decisionAction === 'approve',
+              admin_approved_by: profile?.id || null,
+              admin_approved_at: new Date().toISOString(),
             }
           });
         } catch (webhookError) {
