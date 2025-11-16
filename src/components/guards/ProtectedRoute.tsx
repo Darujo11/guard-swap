@@ -23,7 +23,15 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/login" replace />;
   }
 
+  // Se o usuário não tem permissão, redireciona para o dashboard apropriado
   if (allowedRoles && role && !allowedRoles.includes(role)) {
+    if (role === 'super_admin') {
+      return <Navigate to="/super-admin/planos" replace />;
+    } else if (role === 'admin') {
+      return <Navigate to="/dashboard/admin" replace />;
+    } else if (role === 'guard') {
+      return <Navigate to="/dashboard/guard" replace />;
+    }
     return <Navigate to="/login" replace />;
   }
 
