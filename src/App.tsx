@@ -19,6 +19,7 @@ import AdminExtras from "./pages/AdminExtras";
 import AdminSettings from "./pages/AdminSettings";
 import SuperAdminPlans from "./pages/SuperAdminPlans";
 import SuperAdminManagement from "./pages/SuperAdminManagement";
+import SuperAdminResetPassword from "./pages/SuperAdminResetPassword";
 import GuardDashboard from "./pages/GuardDashboard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -111,6 +112,14 @@ const App = () => (
             } 
           />
           <Route 
+            path="/super-admin/resetar-senha" 
+            element={
+              <ProtectedRoute allowedRoles={['super_admin']}>
+                <SuperAdminResetPassword />
+              </ProtectedRoute>
+            } 
+          />
+          <Route
             path="/dashboard/guard" 
             element={
               <ProtectedRoute allowedRoles={['guard']}>
