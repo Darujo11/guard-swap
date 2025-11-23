@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import logoImage from '@/assets/logo.png';
 import camaraBackground from '@/assets/camara.jpg';
+import logoCamara from '@/assets/logo-camara.png';
 import PWAInstallButton from '@/components/PWAInstallButton';
 
 const Login = () => {
@@ -130,6 +131,13 @@ const Login = () => {
       
       {/* Content */}
       <div className="relative z-10 w-full max-w-md">
+        {/* Logo Câmara no topo */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-background/95 backdrop-blur-md rounded-lg px-6 py-4 shadow-lg border border-border/50">
+            <img src={logoCamara} alt="Câmara Municipal de Macaé" className="h-16 w-auto" />
+          </div>
+        </div>
+        
         <div className="absolute top-4 right-4">
           <PWAInstallButton />
         </div>
