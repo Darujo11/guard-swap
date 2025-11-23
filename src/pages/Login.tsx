@@ -124,13 +124,19 @@ const Login = () => {
       {/* Lado Esquerdo - Imagem da Câmara (Desktop) */}
       <div 
         className="hidden lg:block lg:sticky lg:top-0 lg:h-screen bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${camaraBackground})` }}
+        style={{ 
+          backgroundImage: `url(${camaraBackground})`,
+          filter: 'contrast(1.15) saturate(1.3) brightness(1.05)'
+        }}
       />
       
       {/* Imagem da Câmara (Mobile - Topo) */}
       <div 
         className="h-64 lg:hidden bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${camaraBackground})` }}
+        style={{ 
+          backgroundImage: `url(${camaraBackground})`,
+          filter: 'contrast(1.15) saturate(1.3) brightness(1.05)'
+        }}
       />
       
       {/* Lado Direito - Formulário */}
