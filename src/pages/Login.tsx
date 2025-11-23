@@ -129,23 +129,23 @@ const Login = () => {
         <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
       </div>
       
+      {/* PWA Install Button - Canto Superior Direito */}
+      <div className="absolute top-4 right-4 z-20">
+        <PWAInstallButton />
+      </div>
+      
       {/* Content */}
       <div className="relative z-10 w-full max-w-md space-y-6">
-        {/* Header com Logo Câmara e PWA Button */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 flex justify-center">
-            <div className="bg-background/95 backdrop-blur-md rounded-lg px-6 py-4 shadow-lg border border-border/50">
-              <img 
-                src={logoCamara} 
-                alt="Câmara Municipal de Macaé" 
-                className="h-16 w-auto"
-                loading="eager"
-                fetchPriority="high"
-              />
-            </div>
-          </div>
-          <div className="flex-shrink-0">
-            <PWAInstallButton />
+        {/* Logo Câmara no topo */}
+        <div className="flex justify-center">
+          <div className="bg-background/95 backdrop-blur-md rounded-lg px-6 py-4 shadow-lg border border-border/50">
+            <img 
+              src={logoCamara} 
+              alt="Câmara Municipal de Macaé" 
+              className="h-16 w-auto"
+              loading="eager"
+              fetchPriority="high"
+            />
           </div>
         </div>
         <Card className="w-full shadow-2xl border-border/50 bg-card/95 backdrop-blur-md">
