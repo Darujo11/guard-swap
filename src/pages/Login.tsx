@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import logoImage from '@/assets/logo.png';
-import camaraBackground from '@/assets/cam2.jpg';
+import camaraBackground from '@/assets/logo3.jpg';
 import logoCamara from '@/assets/logo-camara.png';
 import PWAInstallButton from '@/components/PWAInstallButton';
 
