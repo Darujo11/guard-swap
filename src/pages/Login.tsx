@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import logoImage from '@/assets/logo.png';
+import camaraBackground from '@/assets/camara.jpg';
 import PWAInstallButton from '@/components/PWAInstallButton';
 
 const Login = () => {
@@ -118,61 +119,72 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center p-4">
-      <div className="absolute top-4 right-4">
-        <PWAInstallButton />
+    <div className="min-h-screen relative flex items-center justify-center p-4">
+      {/* Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${camaraBackground})` }}
+      >
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
       </div>
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <img src={logoImage} alt="Escala Smart" className="h-12 w-12" />
-            <h1 className="text-2xl font-bold">Escala Smart</h1>
-          </div>
-          <CardTitle>Login</CardTitle>
-          <CardDescription>
-            Entre com suas credenciais para acessar o sistema
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">WhatsApp / Email</Label>
-              <Input
-                id="email"
-                type="text"
-                placeholder="Digite seu WhatsApp ou email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Seguranças: use apenas números do WhatsApp (ex: 11999999999)
-              </p>
+      
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-md">
+        <div className="absolute top-4 right-4">
+          <PWAInstallButton />
+        </div>
+        <Card className="w-full shadow-2xl border-border/50 bg-card/95 backdrop-blur-md">
+          <CardHeader className="text-center">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <img src={logoImage} alt="Escala Smart" className="h-12 w-12" />
+              <h1 className="text-2xl font-bold">Escala Smart</h1>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Digite sua senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Entrando...
-                </>
-              ) : (
-                'Entrar'
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            <CardTitle>Login</CardTitle>
+            <CardDescription>
+              Entre com suas credenciais para acessar o sistema
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">WhatsApp / Email</Label>
+                <Input
+                  id="email"
+                  type="text"
+                  placeholder="Digite seu WhatsApp ou email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Seguranças: use apenas números do WhatsApp (ex: 11999999999)
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Digite sua senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Entrando...
+                  </>
+                ) : (
+                  'Entrar'
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
