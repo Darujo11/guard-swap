@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { TeamBadge } from '@/components/ui/team-badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { GuardSwapForm } from '@/components/guards/GuardSwapForm';
 import { GuardSwapList } from '@/components/guards/GuardSwapList';
 import { TeamScheduleCalendar } from '@/components/schedule/TeamScheduleCalendar';
@@ -161,6 +161,9 @@ const GuardDashboard = () => {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Solicitar Troca de Plantão</DialogTitle>
+              <DialogDescription>
+                Preencha os dados para solicitar uma troca com outro membro da equipe
+              </DialogDescription>
             </DialogHeader>
             <GuardSwapForm 
               currentUser={currentUser} 
@@ -184,6 +187,9 @@ const GuardDashboard = () => {
         <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Escala Completa de Plantões</DialogTitle>
+            <DialogDescription>
+              Visualize a escala completa de todos os plantões programados
+            </DialogDescription>
           </DialogHeader>
           <TeamScheduleCalendar readOnly />
         </DialogContent>
