@@ -123,19 +123,15 @@ const Login = () => {
     <div className="min-h-screen grid lg:grid-cols-2">
       {/* Lado Esquerdo - Imagem da Câmara (Desktop) */}
       <div 
-        className="hidden lg:block lg:sticky lg:top-0 lg:h-screen bg-cover bg-center bg-no-repeat relative"
+        className="hidden lg:block lg:sticky lg:top-0 lg:h-screen bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${camaraBackground})` }}
-      >
-        <div className="absolute inset-0 bg-primary/5" />
-      </div>
+      />
       
       {/* Imagem da Câmara (Mobile - Topo) */}
       <div 
-        className="h-64 lg:hidden bg-cover bg-center bg-no-repeat relative"
+        className="h-64 lg:hidden bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${camaraBackground})` }}
-      >
-        <div className="absolute inset-0 bg-primary/5" />
-      </div>
+      />
       
       {/* Lado Direito - Formulário */}
       <div className="bg-background p-8 lg:p-12 flex flex-col justify-center relative min-h-screen lg:min-h-0">
