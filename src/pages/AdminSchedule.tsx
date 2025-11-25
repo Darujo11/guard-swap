@@ -55,71 +55,78 @@ export default function AdminSchedule() {
   const handleGenerateFutureSchedules = async () => {
     setIsGenerating(true);
     try {
-      // Get all teams
-      const { data: teams, error: teamsError } = await supabase
+      // First, delete any schedules from November 2026 onwards (cleanup wrong schedules)
+      const cleanupDate = '2026-11-01';
+      const { error: deleteError } = await supabase
+        .from('team_schedules')
+        .delete()
+        .gte('shift_date', cleanupDate);
+
+      if (deleteError) {
+        console.error('Error cleaning up schedules:', deleteError);
+        // Continue anyway - might not have permissions or no schedules to delete
+      }
+
+      // Get all teams - filter only valid teams (Equipe A, B, C, D pattern)
+      const { data: allTeams, error: teamsError } = await supabase
         .from('teams')
         .select('id, name')
         .order('name');
 
       if (teamsError) throw teamsError;
 
-      if (!teams || teams.length === 0) {
+      if (!allTeams || allTeams.length === 0) {
         toast.error('Nenhuma equipe cadastrada');
         return;
       }
 
-      // Get the last scheduled date to continue the pattern
+      // Filter and sort teams to get fixed rotation order (A→B→C→D)
+      // Only include teams that follow the "Equipe X" naming pattern
+      const sortedTeams = allTeams
+        .filter(t => t.name.match(/^Equipe\s+[A-Da-d]$/i))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      if (sortedTeams.length === 0) {
+        // Fallback: use all teams sorted by name if no "Equipe X" pattern found
+        sortedTeams.push(...allTeams.sort((a, b) => a.name.localeCompare(b.name)));
+      }
+
+      console.log('Fixed team rotation:', sortedTeams.map(t => t.name));
+
+      // Get the last scheduled date before November 2026 to continue the pattern
       const { data: lastSchedules, error: lastError } = await supabase
         .from('team_schedules')
         .select('shift_date, team_id')
+        .lt('shift_date', cleanupDate)
         .order('shift_date', { ascending: false })
-        .limit(teams.length * 2);
+        .limit(1);
 
       if (lastError) throw lastError;
 
       const targetEndDate = new Date('2027-12-31');
       let startDate: Date;
-      let teamRotation: string[] = [];
+      let startTeamIndex = 0;
 
       if (lastSchedules && lastSchedules.length > 0) {
-        // Find the last date that has a schedule
+        // Continue from the day after the last existing schedule
         const lastDate = parseISO(lastSchedules[0].shift_date);
         startDate = addDays(lastDate, 1);
 
-        // Determine the rotation pattern based on last scheduled days
-        const lastDates = [...new Set(lastSchedules.map(s => s.shift_date))].sort().reverse();
+        // Find which team worked on the last day
+        const lastTeamId = lastSchedules[0].team_id;
+        const lastTeamIndex = sortedTeams.findIndex(t => t.id === lastTeamId);
         
-        // Get the order of teams from the last few days
-        const recentPattern: string[] = [];
-        for (const dateStr of lastDates) {
-          const scheduleForDate = lastSchedules.find(s => s.shift_date === dateStr);
-          if (scheduleForDate && !recentPattern.includes(scheduleForDate.team_id)) {
-            recentPattern.push(scheduleForDate.team_id);
-          }
+        // Start with the next team in rotation
+        if (lastTeamIndex !== -1) {
+          startTeamIndex = (lastTeamIndex + 1) % sortedTeams.length;
         }
 
-        // Create full rotation with all teams
-        teamRotation = [...recentPattern];
-        teams.forEach(team => {
-          if (!teamRotation.includes(team.id)) {
-            teamRotation.push(team.id);
-          }
-        });
-
-        // Find the index of the last team that worked
-        const lastTeamId = lastSchedules[0].team_id;
-        const lastTeamIndex = teamRotation.indexOf(lastTeamId);
-        
-        // Rotate to start from the next team
-        const nextIndex = (lastTeamIndex + 1) % teamRotation.length;
-        teamRotation = [
-          ...teamRotation.slice(nextIndex),
-          ...teamRotation.slice(0, nextIndex)
-        ];
+        console.log('Last schedule:', lastSchedules[0].shift_date, '- Team index:', lastTeamIndex);
+        console.log('Starting from:', format(startDate, 'yyyy-MM-dd'), '- Team:', sortedTeams[startTeamIndex]?.name);
       } else {
-        // No existing schedules, start from tomorrow with teams in order
+        // No existing schedules, start from tomorrow
         startDate = addDays(new Date(), 1);
-        teamRotation = teams.map(t => t.id);
+        console.log('No existing schedules, starting from:', format(startDate, 'yyyy-MM-dd'));
       }
 
       // Check if we need to generate anything
@@ -130,16 +137,17 @@ export default function AdminSchedule() {
       }
 
       // Generate schedules using 24/72 pattern (1 day work, 3 days off per team)
+      // Each day, one team works, then rotates to next team
       const schedulesToInsert: { team_id: string; shift_date: string; admin_id: string | null }[] = [];
       let currentDate = startDate;
-      let teamIndex = 0;
+      let teamIndex = startTeamIndex;
       const adminId = profile?.admin_id || profile?.id || null;
 
       while (currentDate <= targetEndDate) {
-        const currentTeamId = teamRotation[teamIndex % teamRotation.length];
+        const currentTeam = sortedTeams[teamIndex % sortedTeams.length];
         
         schedulesToInsert.push({
-          team_id: currentTeamId,
+          team_id: currentTeam.id,
           shift_date: format(currentDate, 'yyyy-MM-dd'),
           admin_id: adminId,
         });
