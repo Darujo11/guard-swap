@@ -91,8 +91,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
   const fetchSchedules = async () => {
     try {
       const today = new Date();
-      const maxDate = new Date(today);
-      maxDate.setMonth(maxDate.getMonth() + 2);
+      const maxDate = new Date('2027-12-31');
 
       const { data, error } = await supabase
         .from('team_schedules')
@@ -146,8 +145,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
   const validateSwapDates = (requesterDate: Date, targetDate: Date): boolean => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const maxDate = new Date(today);
-    maxDate.setMonth(maxDate.getMonth() + 2);
+    const maxDate = new Date('2027-12-31');
     
     if (requesterDate <= today) {
       toast({
@@ -170,7 +168,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
     if (requesterDate > maxDate || targetDate > maxDate) {
       toast({
         title: 'Data inválida',
-        description: 'Ambas as datas devem estar dentro de 2 meses.',
+        description: 'Ambas as datas devem ser até 31/12/2027.',
         variant: 'destructive',
       });
       return false;
@@ -285,8 +283,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const maxDateObj = new Date();
-  maxDateObj.setMonth(maxDateObj.getMonth() + 2);
+  const maxDateObj = new Date('2027-12-31');
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
