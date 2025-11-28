@@ -135,15 +135,14 @@ const AdminDashboard = () => {
     if (!decisionDialog.request || !decisionDialog.action) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
+      if (!profile?.id) throw new Error('Perfil não encontrado');
 
       const { error } = await supabase
         .from('swap_requests')
         .update({
           status: decisionDialog.action,
           admin_approved: decisionDialog.action === 'APPROVED',
-          admin_approved_by: user.id,
+          admin_approved_by: profile.id,
           admin_approved_at: new Date().toISOString(),
         })
         .eq('id', decisionDialog.request.id);
@@ -155,7 +154,7 @@ const AdminDashboard = () => {
         entity_type: 'swap_request',
         entity_id: decisionDialog.request.id,
         action: decisionDialog.action === 'APPROVED' ? 'approved' : 'rejected',
-        user_id: user.id,
+        user_id: profile.id,
         details: { reason: decisionReason },
       });
 
