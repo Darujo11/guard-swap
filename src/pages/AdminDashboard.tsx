@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { SwapRequest } from '@/lib/types';
+import { getSaudacao } from '@/lib/utils';
 import { 
   Users, 
   Clock, 
@@ -162,6 +163,7 @@ const AdminDashboard = () => {
       if (decisionDialog.action === 'REJECTED') {
         try {
           const webhookPayload = {
+            saudacao: getSaudacao(),
             evento: 'troca_rejeitada_admin',
             aprovacao_chefe_estado: 'rejeitado',
             requester_name: decisionDialog.request.requester?.name || '',

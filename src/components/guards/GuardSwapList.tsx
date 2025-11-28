@@ -26,6 +26,7 @@ import {
 import { format, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { SWAP_STATUS_CONFIG } from '@/lib/constants';
+import { getSaudacao } from '@/lib/utils';
 
 interface GuardSwapListProps {
   currentUser: Profile;
@@ -162,6 +163,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
           }
 
           const webhookPayload = {
+            saudacao: getSaudacao(),
             evento: 'troca_aceita',
             aprovacao_chefe_estado: 'pendente',
             requester_name: selectedRequest.requester.name,
@@ -223,6 +225,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
           }
 
           const webhookPayload = {
+            saudacao: getSaudacao(),
             evento: 'troca_rejeitada_alvo',
             aprovacao_chefe_estado: 'rejeitado',
             requester_name: selectedRequest.requester.name,
