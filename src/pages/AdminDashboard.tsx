@@ -302,34 +302,8 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Schedule Calendar */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <Calendar className="h-5 w-5" />
-                <span className="break-words">Escala de Plantões - Todas as Equipes</span>
-              </CardTitle>
-              <CardDescription className="mt-2">
-                Gerencie a escala completa de todas as equipes
-              </CardDescription>
-            </div>
-            <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" asChild>
-              <Link to="/admin/escalas">
-                <Calendar className="h-4 w-4" />
-                Gerenciar Escala
-              </Link>
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <TeamScheduleCalendar />
-        </CardContent>
-      </Card>
-
       {/* Swap Requests */}
-      <Card>
+      <Card className="mb-6">
         <CardHeader>
           <div className="flex flex-col gap-4">
             <div>
@@ -421,6 +395,32 @@ const AdminDashboard = () => {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Schedule Calendar */}
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex-1">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Calendar className="h-5 w-5" />
+                <span className="break-words">Escala de Plantões - Todas as Equipes</span>
+              </CardTitle>
+              <CardDescription className="mt-2">
+                Gerencie a escala completa de todas as equipes
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" asChild>
+              <Link to="/admin/escalas">
+                <Calendar className="h-4 w-4" />
+                Gerenciar Escala
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <TeamScheduleCalendar />
         </CardContent>
       </Card>
 
