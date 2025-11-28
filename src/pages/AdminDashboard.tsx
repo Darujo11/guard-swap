@@ -232,6 +232,24 @@ const AdminDashboard = () => {
     );
   }
 
+  if (!loading && !profile) {
+    return (
+      <AppLayout title="Dashboard Administrativo" user={{ name: 'Admin', role: 'ADMIN' }}>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <XCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Perfil não encontrado</h3>
+            <p className="text-muted-foreground">
+              Seu perfil de administrador não foi encontrado no sistema.
+              <br />
+              Por favor, entre em contato com o suporte.
+            </p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout
       title="Dashboard Administrativo"
