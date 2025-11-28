@@ -239,39 +239,69 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
       // Buscar dados do target para webhook
       const targetGuard = availableGuards.find(g => g.id === selectedTarget);
 
-      // Enviar webhook notificando a criação da solicitação
-      try {
-        const webhookPayload = {
-          evento: 'troca_solicitada',
-          aprovacao_chefe_estado: 'pendente',
-          requester_name: currentUser.name,
-          requester_email: currentUser.email,
-          requester_phone: currentUser.phone || '',
-          target_name: targetGuard?.name || '',
-          target_email: targetGuard?.email || '',
-          target_phone: targetGuard?.phone || '',
-          requester_shift_date: requesterDateStr,
-          target_shift_date: targetDateStr,
-          reason: reason.trim(),
-          status: 'PENDING',
-          created_at: swapData.created_at,
-          admin_approved: false,
-        };
+      // Verificar autenticação antes de enviar webhook
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔐 [GuardSwapForm][Webhook] Auth check:', session ? 'Autenticado' : 'Não autenticado');
 
-        console.log('📤 [GuardSwapForm][Webhook] Enviando payload de criação:', webhookPayload);
-
-        const { data: webhookData, error: webhookError } = await supabase.functions.invoke('send-swap-webhook', {
-          body: webhookPayload
+      if (!session) {
+        console.error('⚠️ [GuardSwapForm][Webhook] Sessão não encontrada - webhook não será enviado');
+        toast({
+          title: '⚠️ Aviso de autenticação',
+          description: 'A solicitação foi criada, mas a notificação pode ter falhado. Você pode precisar fazer login novamente.',
+          variant: 'default'
         });
+      }
 
-        if (webhookError) {
-          console.error('⚠️ [GuardSwapForm][Webhook] Erro ao enviar webhook:', webhookError);
-        } else {
-          console.log('✅ [GuardSwapForm][Webhook] Webhook enviado com sucesso:', webhookData);
+      // Enviar webhook notificando a criação da solicitação
+      if (session) {
+        try {
+          const webhookPayload = {
+            evento: 'troca_solicitada',
+            aprovacao_chefe_estado: 'pendente',
+            requester_name: currentUser.name,
+            requester_email: currentUser.email,
+            requester_phone: currentUser.phone || '',
+            target_name: targetGuard?.name || '',
+            target_email: targetGuard?.email || '',
+            target_phone: targetGuard?.phone || '',
+            requester_shift_date: requesterDateStr,
+            target_shift_date: targetDateStr,
+            reason: reason.trim(),
+            status: 'PENDING',
+            created_at: swapData.created_at,
+            admin_approved: false,
+          };
+
+          console.log('📤 [GuardSwapForm][Webhook] Enviando payload de criação:', JSON.stringify(webhookPayload, null, 2));
+
+          const { data: webhookData, error: webhookError } = await supabase.functions.invoke('send-swap-webhook', {
+            body: webhookPayload
+          });
+
+          if (webhookError) {
+            console.error('⚠️ [GuardSwapForm][Webhook] Erro ao enviar webhook:', {
+              message: webhookError.message,
+              details: webhookError
+            });
+            toast({
+              title: '⚠️ Webhook não enviado',
+              description: 'A solicitação foi criada com sucesso, mas a notificação externa falhou.',
+              variant: 'default'
+            });
+          } else {
+            console.log('✅ [GuardSwapForm][Webhook] Webhook enviado com sucesso:', webhookData);
+          }
+        } catch (webhookError: any) {
+          console.error('⚠️ [GuardSwapForm][Webhook] Exceção ao enviar webhook:', {
+            message: webhookError?.message || 'Erro desconhecido',
+            error: webhookError
+          });
+          toast({
+            title: '⚠️ Webhook não enviado',
+            description: 'A solicitação foi criada, mas houve um erro ao enviar a notificação.',
+            variant: 'default'
+          });
         }
-      } catch (webhookError) {
-        console.error('⚠️ [GuardSwapForm][Webhook] Exceção ao enviar webhook:', webhookError);
-        // Não falhar a operação principal se webhook falhar
       }
 
       await supabase.from('audit_logs').insert({
