@@ -9,22 +9,8 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useSwapNotifications } from '@/hooks/useSwapNotifications';
 import { NotificationsBell } from '@/components/notifications/NotificationsBell';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 interface AppLayoutProps {
   children: ReactNode;
   title: string;
@@ -34,35 +20,78 @@ interface AppLayoutProps {
     teamName?: string;
   };
 }
-
-export function AppLayout({ children, title, user }: AppLayoutProps) {
-  const { signOut, role } = useAuth();
-  const { notifications, markAsRead, markAllAsRead, deleteNotification, clearAllNotifications } = useSwapNotifications();
+export function AppLayout({
+  children,
+  title,
+  user
+}: AppLayoutProps) {
+  const {
+    signOut,
+    role
+  } = useAuth();
+  const {
+    notifications,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    clearAllNotifications
+  } = useSwapNotifications();
   const location = useLocation();
-  const { settings } = useOrganizationSettings();
+  const {
+    settings
+  } = useOrganizationSettings();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard/admin', icon: BarChart3, roles: ['admin', 'super_admin'] },
-    { name: settings.teams_label, href: '/admin/equipes', icon: Users, roles: ['admin', 'super_admin'] },
-    { name: settings.guards_label, href: '/admin/segurancas', icon: Shield, roles: ['admin', 'super_admin'] },
-    { name: settings.swaps_label, href: '/admin/trocas', icon: Calendar, roles: ['admin', 'super_admin'] },
-    { name: settings.schedules_label, href: '/admin/escalas', icon: ClipboardList, roles: ['admin', 'super_admin'] },
-    { name: settings.extras_label, href: '/admin/extras', icon: Clock, roles: ['admin', 'super_admin'] },
-    { name: 'Configurações', href: '/admin/configuracoes', icon: Settings, roles: ['admin', 'super_admin'] },
-  ];
-
-  
-  const superAdminNavigation = [
-    { name: 'Planos', href: '/super-admin/planos', icon: DollarSign },
-    { name: 'Administradores', href: '/super-admin/administradores', icon: Crown },
-    { name: 'Meu Perfil', href: '/perfil', icon: Settings },
-  ];
-  
+  const navigation = [{
+    name: 'Dashboard',
+    href: '/dashboard/admin',
+    icon: BarChart3,
+    roles: ['admin', 'super_admin']
+  }, {
+    name: settings.teams_label,
+    href: '/admin/equipes',
+    icon: Users,
+    roles: ['admin', 'super_admin']
+  }, {
+    name: settings.guards_label,
+    href: '/admin/segurancas',
+    icon: Shield,
+    roles: ['admin', 'super_admin']
+  }, {
+    name: settings.swaps_label,
+    href: '/admin/trocas',
+    icon: Calendar,
+    roles: ['admin', 'super_admin']
+  }, {
+    name: settings.schedules_label,
+    href: '/admin/escalas',
+    icon: ClipboardList,
+    roles: ['admin', 'super_admin']
+  }, {
+    name: settings.extras_label,
+    href: '/admin/extras',
+    icon: Clock,
+    roles: ['admin', 'super_admin']
+  }, {
+    name: 'Configurações',
+    href: '/admin/configuracoes',
+    icon: Settings,
+    roles: ['admin', 'super_admin']
+  }];
+  const superAdminNavigation = [{
+    name: 'Planos',
+    href: '/super-admin/planos',
+    icon: DollarSign
+  }, {
+    name: 'Administradores',
+    href: '/super-admin/administradores',
+    icon: Crown
+  }, {
+    name: 'Meu Perfil',
+    href: '/perfil',
+    icon: Settings
+  }];
   const isSuperAdmin = role === 'super_admin';
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
+  return <div className="min-h-screen bg-gradient-to-br from-background to-muted/50">
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between px-4">
@@ -82,55 +111,31 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="mt-6 flex flex-col gap-2">
-                  {navigation
-                    .filter((item) => !role || item.roles.includes(role))
-                    .map((item) => (
-                      <Button
-                        key={item.name}
-                        variant={location.pathname === item.href ? "secondary" : "ghost"}
-                        className="justify-start gap-3"
-                        asChild
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
+                  {navigation.filter(item => !role || item.roles.includes(role)).map(item => <Button key={item.name} variant={location.pathname === item.href ? "secondary" : "ghost"} className="justify-start gap-3" asChild onClick={() => setMobileMenuOpen(false)}>
                         <Link to={item.href}>
                           <item.icon className="h-5 w-5" />
                           {item.name}
                         </Link>
-                      </Button>
-                    ))}
+                      </Button>)}
                   
-                  {isSuperAdmin && (
-                    <>
+                  {isSuperAdmin && <>
                       <div className="my-2 border-t" />
                       <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
                         Super Admin
                       </div>
-                      {superAdminNavigation.map((item) => (
-                        <Button
-                          key={item.name}
-                          variant={location.pathname === item.href ? "secondary" : "ghost"}
-                          className="justify-start gap-3 text-amber-600 dark:text-amber-400"
-                          asChild
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
+                      {superAdminNavigation.map(item => <Button key={item.name} variant={location.pathname === item.href ? "secondary" : "ghost"} className="justify-start gap-3 text-amber-600 dark:text-amber-400" asChild onClick={() => setMobileMenuOpen(false)}>
                           <Link to={item.href}>
                             <item.icon className="h-5 w-5" />
                             {item.name}
                           </Link>
-                        </Button>
-                      ))}
-                    </>
-                  )}
+                        </Button>)}
+                    </>}
                   
                   <div className="my-2 border-t" />
-                  <Button
-                    variant="ghost"
-                    className="justify-start gap-3 text-destructive hover:text-destructive"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      signOut();
-                    }}
-                  >
+                  <Button variant="ghost" className="justify-start gap-3 text-destructive hover:text-destructive" onClick={() => {
+                  setMobileMenuOpen(false);
+                  signOut();
+                }}>
                     <LogOut className="h-5 w-5" />
                     Sair
                   </Button>
@@ -140,62 +145,35 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
 
             <div className="flex items-center gap-2">
               <img src={logoImage} alt="Escala Smart" className="h-8 w-8" />
-              <span className="font-semibold text-xl hidden sm:inline">Escala Smart</span>
+              <span className="font-semibold text-xl hidden sm:inline">Escala Smart -Seguranças Unidos</span>
             </div>
             <div className="hidden md:flex items-center gap-1 ml-6">
-              {navigation
-                .filter((item) => !role || item.roles.includes(role))
-                .map((item) => (
-                  <Button
-                    key={item.name}
-                    variant="ghost"
-                    size="sm"
-                    className="gap-2"
-                    asChild
-                  >
+              {navigation.filter(item => !role || item.roles.includes(role)).map(item => <Button key={item.name} variant="ghost" size="sm" className="gap-2" asChild>
                     <Link to={item.href}>
                       <item.icon className="h-4 w-4" />
                       {item.name}
                     </Link>
-                  </Button>
-                ))}
+                  </Button>)}
               
               {/* Super Admin Menu */}
-              {isSuperAdmin && (
-                <>
+              {isSuperAdmin && <>
                   <div className="h-6 w-px bg-border mx-2" />
-                  {superAdminNavigation.map((item) => (
-                    <Button
-                      key={item.name}
-                      variant="ghost"
-                      size="sm"
-                      className="gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
-                      asChild
-                    >
+                  {superAdminNavigation.map(item => <Button key={item.name} variant="ghost" size="sm" className="gap-2 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300" asChild>
                       <Link to={item.href}>
                         <item.icon className="h-4 w-4" />
                         {item.name}
                       </Link>
-                    </Button>
-                  ))}
-                </>
-              )}
+                    </Button>)}
+                </>}
             </div>
           </div>
 
           <div className="flex items-center gap-4">
             {/* Notifications */}
-            <NotificationsBell
-              notifications={notifications}
-              onMarkAsRead={markAsRead}
-              onMarkAllAsRead={markAllAsRead}
-              onDelete={deleteNotification}
-              onClearAll={clearAllNotifications}
-            />
+            <NotificationsBell notifications={notifications} onMarkAsRead={markAsRead} onMarkAllAsRead={markAllAsRead} onDelete={deleteNotification} onClearAll={clearAllNotifications} />
 
             {/* User Info */}
-            {user && (
-              <div className="flex items-center gap-3 pl-3 border-l">
+            {user && <div className="flex items-center gap-3 pl-3 border-l">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center gap-3">
@@ -228,8 +206,7 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </div>
-            )}
+              </div>}
           </div>
         </div>
       </header>
@@ -245,6 +222,5 @@ export function AppLayout({ children, title, user }: AppLayoutProps) {
       <main className="container py-6 px-4">
         {children}
       </main>
-    </div>
-  );
+    </div>;
 }
