@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.send-swap-webhook]
 verify_jwt = true
+
+[functions.create-test-guard]
+verify_jwt = false
+
+[functions.reset-test-guard]
+verify_jwt = false
