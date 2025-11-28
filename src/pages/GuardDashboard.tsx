@@ -195,6 +195,11 @@ const GuardDashboard = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Swap Requests */}
+      <div className="mb-6">
+        <GuardSwapList key={refreshSwapList} currentUser={currentUser} />
+      </div>
+
       {/* My Extras */}
       <Card className="mb-6">
         <CardHeader>
@@ -262,12 +267,6 @@ const GuardDashboard = () => {
           )}
         </CardContent>
       </Card>
-
-
-      <div className="grid gap-6 lg:grid-cols-1">
-        {/* Swap Requests */}
-        <GuardSwapList key={refreshSwapList} currentUser={currentUser} />
-      </div>
     </AppLayout>
   );
 };
