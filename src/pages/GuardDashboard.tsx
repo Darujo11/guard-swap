@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { TeamBadge } from '@/components/ui/team-badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { GuardSwapForm } from '@/components/guards/GuardSwapForm';
 import { GuardSwapList } from '@/components/guards/GuardSwapList';
 import { TeamScheduleCalendar } from '@/components/schedule/TeamScheduleCalendar';
@@ -21,10 +22,14 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
-  Award
+  Award,
+  FileText,
+  BarChart3
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const GuardDashboard = () => {
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
@@ -36,6 +41,9 @@ const GuardDashboard = () => {
   const [extras, setExtras] = useState<any[]>([]);
   const [loadingExtras, setLoadingExtras] = useState(false);
   const [refreshSwapList, setRefreshSwapList] = useState(0);
+  const [allGuardsExtras, setAllGuardsExtras] = useState<any[]>([]);
+  const [guards, setGuards] = useState<any[]>([]);
+  const [loadingRanking, setLoadingRanking] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,6 +53,7 @@ const GuardDashboard = () => {
   useEffect(() => {
     if (currentUser) {
       fetchExtras();
+      fetchOrganizationExtras();
     }
   }, [currentUser, extrasMonth]);
 
@@ -105,6 +114,75 @@ const GuardDashboard = () => {
     } finally {
       setLoadingExtras(false);
     }
+  };
+
+  const fetchOrganizationExtras = async () => {
+    if (!currentUser?.admin_id) return;
+    
+    setLoadingRanking(true);
+    try {
+      const monthStart = startOfMonth(extrasMonth);
+      const monthEnd = endOfMonth(extrasMonth);
+
+      // Buscar todos os guards da organização
+      const { data: guardsData, error: guardsError } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .eq('admin_id', currentUser.admin_id)
+        .not('user_id', 'is', null)
+        .order('name');
+
+      if (guardsError) throw guardsError;
+      setGuards(guardsData || []);
+
+      // Buscar todos os extras da organização no mês
+      const { data: extrasData, error: extrasError } = await supabase
+        .from('extras')
+        .select('guard_id, quantity')
+        .eq('admin_id', currentUser.admin_id)
+        .gte('extra_date', monthStart.toISOString().split('T')[0])
+        .lte('extra_date', monthEnd.toISOString().split('T')[0]);
+
+      if (extrasError) throw extrasError;
+      setAllGuardsExtras(extrasData || []);
+    } catch (error) {
+      console.error('[GuardDashboard][FetchOrganizationExtras]', error);
+    } finally {
+      setLoadingRanking(false);
+    }
+  };
+
+  const generateMyExtrasPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text('Meu Relatório de Extras', 14, 20);
+    
+    doc.setFontSize(12);
+    doc.text(`Período: ${format(extrasMonth, "MMMM yyyy", { locale: ptBR })}`, 14, 30);
+    doc.text(`Segurança: ${currentUser?.name || ''}`, 14, 37);
+    
+    const tableData = extras.map(extra => [
+      formatDate(extra.extra_date),
+      `${extra.quantity}h`,
+      extra.justification
+    ]);
+
+    autoTable(doc, {
+      startY: 45,
+      head: [['Data', 'Horas', 'Fundamentação']],
+      body: tableData,
+      foot: [[{ content: `Total: ${totalExtras} horas`, colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }]],
+      theme: 'striped',
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    doc.save(`meus-extras-${format(extrasMonth, "yyyy-MM")}.pdf`);
+    
+    toast({
+      title: 'PDF gerado',
+      description: 'Seu relatório foi gerado com sucesso.',
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -263,6 +341,155 @@ const GuardDashboard = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Relatório Mensal */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Relatório Mensal
+          </CardTitle>
+          <CardDescription>
+            Gere um PDF com seus extras do mês
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={generateMyExtrasPDF}
+            disabled={extras.length === 0}
+            className="gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Gerar PDF dos Meus Extras
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Resumo Mensal - Ranking de Extras */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Resumo Mensal - Ranking de Extras
+          </CardTitle>
+          <CardDescription>
+            Veja como você está em relação aos seus colegas
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingRanking ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Carregando ranking...</p>
+            </div>
+          ) : guards.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum dado disponível para ranking
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[80px]">Posição</TableHead>
+                    <TableHead>Segurança</TableHead>
+                    <TableHead className="text-right">Total de Extras</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {guards
+                    .map(guard => ({
+                      ...guard,
+                      total: allGuardsExtras
+                        .filter(e => e.guard_id === guard.id)
+                        .reduce((sum, e) => sum + e.quantity, 0)
+                    }))
+                    .sort((a, b) => b.total - a.total)
+                    .map((guard, index) => {
+                      const isCurrentUser = guard.id === currentUser?.id;
+                      const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                      
+                      return (
+                        <TableRow 
+                          key={guard.id}
+                          className={isCurrentUser ? 'bg-accent/50 font-medium' : ''}
+                        >
+                          <TableCell>
+                            <span className="flex items-center gap-2">
+                              {medal && <span className="text-xl">{medal}</span>}
+                              #{index + 1}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {guard.name}
+                            {isCurrentUser && (
+                              <span className="ml-2 text-xs text-primary">(Você)</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {guard.total}h
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Registros Detalhados de Extras */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Award className="h-5 w-5" />
+            Registros Detalhados de Extras
+          </CardTitle>
+          <CardDescription>
+            Visualização detalhada dos seus extras no mês
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingExtras ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Carregando registros...</p>
+            </div>
+          ) : extras.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum registro de extra neste mês
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Quantidade</TableHead>
+                    <TableHead>Fundamentação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {extras.map((extra) => (
+                    <TableRow key={extra.id}>
+                      <TableCell className="font-medium">
+                        {formatDate(extra.extra_date)}
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-semibold">{extra.quantity}h</span>
+                      </TableCell>
+                      <TableCell className="max-w-md">
+                        {extra.justification}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
