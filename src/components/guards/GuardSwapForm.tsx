@@ -13,7 +13,7 @@ import { Profile, Team } from '@/lib/types';
 import { CalendarDays, ArrowRightLeft, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { cn, getSaudacao } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 interface TeamSchedule {
   id: string;
@@ -242,7 +242,6 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
       // Enviar webhook notificando a criação da solicitação
       try {
         const webhookPayload = {
-          saudacao: getSaudacao(),
           evento: 'troca_solicitada',
           aprovacao_chefe_estado: 'pendente',
           requester_name: currentUser.name,

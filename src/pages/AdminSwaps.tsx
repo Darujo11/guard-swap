@@ -15,7 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { SwapRequest, Profile } from '@/lib/types';
 import { SWAP_STATUS_CONFIG } from '@/lib/constants';
-import { getSaudacao } from '@/lib/utils';
+
 import { 
   Calendar,
   Filter,
@@ -150,7 +150,6 @@ const AdminSwaps = () => {
           }
 
           const webhookPayload = {
-            saudacao: getSaudacao(),
             evento: 'troca_aprovada_admin',
             aprovacao_chefe_estado: 'aprovado',
             requester_name: selectedRequest.requester.name,
@@ -212,7 +211,6 @@ const AdminSwaps = () => {
           }
 
           const webhookPayload = {
-            saudacao: getSaudacao(),
             evento: 'troca_rejeitada_admin',
             aprovacao_chefe_estado: 'rejeitado',
             requester_name: selectedRequest.requester.name,
