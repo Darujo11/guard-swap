@@ -56,7 +56,7 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     if (!profile?.id) return;
     try {
-      // Solicitações pendentes do admin atual
+      // Solicitações aceitas pelo alvo aguardando aprovação do admin
       const { data: swaps, error: swapsError } = await supabase
         .from('swap_requests')
         .select(`
@@ -72,8 +72,8 @@ const AdminDashboard = () => {
             team:teams(id, name)
           )
         `)
-        .eq('status', 'PENDING')
-        .is('target_confirmation', false)
+        .eq('status', 'ACCEPTED')
+        .eq('target_confirmation', true)
         .eq('admin_id', profile.id)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -109,7 +109,7 @@ const AdminDashboard = () => {
       }
 
       setStats({
-        pendingSwaps: (allSwaps || []).filter((s: any) => s.status === 'PENDING').length,
+        pendingSwaps: (allSwaps || []).filter((s: any) => s.status === 'PENDING' || s.status === 'ACCEPTED').length,
         approvedSwaps: (allSwaps || []).filter((s: any) => s.status === 'APPROVED').length,
         rejectedSwaps: (allSwaps || []).filter((s: any) => s.status === 'REJECTED').length,
         totalGuards,
@@ -159,43 +159,41 @@ const AdminDashboard = () => {
         details: { reason: decisionReason },
       });
 
-      // Enviar webhook quando admin rejeita a troca
-      if (decisionDialog.action === 'REJECTED') {
-        try {
-          const webhookPayload = {
-            saudacao: getSaudacao(),
-            evento: 'troca_rejeitada_admin',
-            aprovacao_chefe_estado: 'rejeitado',
-            requester_name: decisionDialog.request.requester?.name || '',
-            requester_email: decisionDialog.request.requester?.email || '',
-            requester_phone: decisionDialog.request.requester?.phone || '',
-            target_name: decisionDialog.request.target?.name || '',
-            target_email: decisionDialog.request.target?.email || '',
-            target_phone: decisionDialog.request.target?.phone || '',
-            requester_shift_date: decisionDialog.request.requester_shift_date,
-            target_shift_date: decisionDialog.request.target_shift_date,
-            reason: decisionDialog.request.reason,
-            rejection_reason: decisionReason,
-            status: 'REJECTED',
-            admin_approved: false,
-            rejected_at: new Date().toISOString(),
-          };
+      // Enviar webhook para aprovação ou rejeição do admin
+      try {
+        const webhookPayload = {
+          saudacao: getSaudacao(),
+          evento: decisionDialog.action === 'APPROVED' ? 'troca_aprovada_admin' : 'troca_rejeitada_admin',
+          aprovacao_chefe_estado: decisionDialog.action === 'APPROVED' ? 'aprovado' : 'rejeitado',
+          requester_name: decisionDialog.request.requester?.name || '',
+          requester_email: decisionDialog.request.requester?.email || '',
+          requester_phone: decisionDialog.request.requester?.phone || '',
+          target_name: decisionDialog.request.target?.name || '',
+          target_email: decisionDialog.request.target?.email || '',
+          target_phone: decisionDialog.request.target?.phone || '',
+          requester_shift_date: decisionDialog.request.requester_shift_date,
+          target_shift_date: decisionDialog.request.target_shift_date,
+          reason: decisionDialog.request.reason,
+          ...(decisionDialog.action === 'REJECTED' && { rejection_reason: decisionReason }),
+          status: decisionDialog.action,
+          admin_approved: decisionDialog.action === 'APPROVED',
+          [decisionDialog.action === 'APPROVED' ? 'approved_at' : 'rejected_at']: new Date().toISOString(),
+        };
 
-          console.log('📤 [AdminDashboard][Webhook] Enviando payload de rejeição admin:', webhookPayload);
+        console.log(`📤 [AdminDashboard][Webhook] Enviando payload de ${decisionDialog.action === 'APPROVED' ? 'aprovação' : 'rejeição'} admin:`, webhookPayload);
 
-          const { data: webhookData, error: webhookError } = await supabase.functions.invoke('send-swap-webhook', {
-            body: webhookPayload
-          });
+        const { data: webhookData, error: webhookError } = await supabase.functions.invoke('send-swap-webhook', {
+          body: webhookPayload
+        });
 
-          if (webhookError) {
-            console.error('⚠️ [AdminDashboard][Webhook] Erro ao enviar webhook:', webhookError);
-          } else {
-            console.log('✅ [AdminDashboard][Webhook] Webhook enviado com sucesso:', webhookData);
-          }
-        } catch (webhookError) {
-          console.error('⚠️ [AdminDashboard][Webhook] Exceção ao enviar webhook:', webhookError);
-          // Não falhar a operação principal se webhook falhar
+        if (webhookError) {
+          console.error('⚠️ [AdminDashboard][Webhook] Erro ao enviar webhook:', webhookError);
+        } else {
+          console.log('✅ [AdminDashboard][Webhook] Webhook enviado com sucesso:', webhookData);
         }
+      } catch (webhookError) {
+        console.error('⚠️ [AdminDashboard][Webhook] Exceção ao enviar webhook:', webhookError);
+        // Não falhar a operação principal se webhook falhar
       }
 
       toast({
@@ -409,15 +407,32 @@ const AdminDashboard = () => {
                     </div>
                     
                     <div className="mt-2">
-                      <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Aguardando confirmação de {request.target?.name}
+                      <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Aceita por {request.target?.name} - Aguardando aprovação
                       </Badge>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3 mt-3 sm:mt-0">
-                    <StatusBadge status={request.status} />
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => openDecisionDialog(request, 'APPROVED')}
+                      className="gap-2"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Aprovar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openDecisionDialog(request, 'REJECTED')}
+                      className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Rejeitar
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
