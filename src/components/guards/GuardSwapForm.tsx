@@ -208,7 +208,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
       const requesterDateStr = format(requesterShiftDate, 'yyyy-MM-dd');
       const targetDateStr = format(targetShiftDate, 'yyyy-MM-dd');
 
-      const { error } = await supabase
+      const { data: swapData, error } = await supabase
         .from('swap_requests')
         .insert([
           {
@@ -220,7 +220,9 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
             status: 'PENDING',
             admin_id: currentUser.admin_id
           }
-        ]);
+        ])
+        .select()
+        .single();
 
       if (error) {
         if (error.code === '23514') {
@@ -232,6 +234,44 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
           return;
         }
         throw error;
+      }
+
+      // Buscar dados do target para webhook
+      const targetGuard = availableGuards.find(g => g.id === selectedTarget);
+
+      // Enviar webhook notificando a criação da solicitação
+      try {
+        const webhookPayload = {
+          evento: 'troca_solicitada',
+          aprovacao_chefe_estado: 'pendente',
+          requester_name: currentUser.name,
+          requester_email: currentUser.email,
+          requester_phone: currentUser.phone || '',
+          target_name: targetGuard?.name || '',
+          target_email: targetGuard?.email || '',
+          target_phone: targetGuard?.phone || '',
+          requester_shift_date: requesterDateStr,
+          target_shift_date: targetDateStr,
+          reason: reason.trim(),
+          status: 'PENDING',
+          created_at: swapData.created_at,
+          admin_approved: false,
+        };
+
+        console.log('📤 [GuardSwapForm][Webhook] Enviando payload de criação:', webhookPayload);
+
+        const { data: webhookData, error: webhookError } = await supabase.functions.invoke('send-swap-webhook', {
+          body: webhookPayload
+        });
+
+        if (webhookError) {
+          console.error('⚠️ [GuardSwapForm][Webhook] Erro ao enviar webhook:', webhookError);
+        } else {
+          console.log('✅ [GuardSwapForm][Webhook] Webhook enviado com sucesso:', webhookData);
+        }
+      } catch (webhookError) {
+        console.error('⚠️ [GuardSwapForm][Webhook] Exceção ao enviar webhook:', webhookError);
+        // Não falhar a operação principal se webhook falhar
       }
 
       await supabase.from('audit_logs').insert({
