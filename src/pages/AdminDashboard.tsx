@@ -64,11 +64,15 @@ const AdminDashboard = () => {
           requester:profiles!swap_requests_requester_id_fkey(
             id,
             name,
+            email,
+            phone,
             team:teams(id, name)
           ),
           target:profiles!swap_requests_target_id_fkey(
             id,
             name,
+            email,
+            phone,
             team:teams(id, name)
           )
         `)
