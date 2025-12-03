@@ -64,6 +64,9 @@ export default function AdminExtras() {
   // Details filter state (separate from filterMonth)
   const [detailsMonth, setDetailsMonth] = useState<Date>(new Date());
   
+  // Report percentage filter state
+  const [reportPercentageFilter, setReportPercentageFilter] = useState<'all' | '50' | '100'>('all');
+  
   // Edit dialog state
   const [editingExtra, setEditingExtra] = useState<Extra | null>(null);
   const [editGuardId, setEditGuardId] = useState<string>("");
@@ -199,6 +202,14 @@ export default function AdminExtras() {
         return dateA.getTime() - dateB.getTime();
       });
   }, [extras, detailsMonth]);
+
+  // Filtered extras for report based on percentage type
+  const reportFilteredExtras = useMemo(() => {
+    if (reportPercentageFilter === 'all') {
+      return filteredExtras;
+    }
+    return filteredExtras.filter(e => e.percentage_type === parseInt(reportPercentageFilter));
+  }, [filteredExtras, reportPercentageFilter]);
 
   const fetchGuards = async () => {
     const { data: rolesData, error: rolesError } = await supabase
@@ -547,30 +558,41 @@ export default function AdminExtras() {
 
   const generatePDF = () => {
     try {
-      if (filteredExtras.length === 0) {
+      if (reportFilteredExtras.length === 0) {
         toast({
           variant: "destructive",
           title: "Sem dados",
-          description: "Nenhum registro no período selecionado.",
+          description: "Nenhum registro no período e tipo selecionado.",
         });
         return;
       }
       const doc = new jsPDF();
       
+      // Dynamic title based on filter
+      const filterLabel = reportPercentageFilter === 'all' 
+        ? '' 
+        : ` - ${reportPercentageFilter}%`;
+      
       doc.setFontSize(18);
-      doc.text("Relatório Mensal de Plantões Extras", 14, 20);
+      doc.text(`Relatório Mensal de Plantões Extras${filterLabel}`, 14, 20);
       
       doc.setFontSize(11);
       doc.text(`Período: ${format(filterMonth, "MMMM 'de' yyyy", { locale: ptBR })}`, 14, 30);
-      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 36);
+      
+      let yPos = 36;
+      if (reportPercentageFilter !== 'all') {
+        doc.text(`Tipo: Extras a ${reportPercentageFilter}%`, 14, yPos);
+        yPos += 6;
+      }
+      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, yPos);
 
       doc.setFontSize(14);
-      doc.text("Resumo", 14, 46);
+      doc.text("Resumo", 14, yPos + 10);
       doc.setFontSize(10);
-      const totalExtras = filteredExtras.reduce((sum, extra) => sum + (Number(extra.quantity) || 1), 0);
-      doc.text(`Total de extras no período: ${totalExtras}`, 14, 52);
+      const totalExtras = reportFilteredExtras.reduce((sum, extra) => sum + (Number(extra.quantity) || 1), 0);
+      doc.text(`Total de extras no período: ${totalExtras}`, 14, yPos + 16);
 
-      const tableData = filteredExtras.map(extra => [
+      const tableData = reportFilteredExtras.map(extra => [
         extra.guard?.name || "Desconhecido",
         (extra.quantity || 1).toString(),
         `${extra.percentage_type || 100}%`,
@@ -579,7 +601,7 @@ export default function AdminExtras() {
       ]);
 
       autoTable(doc, {
-        startY: 60,
+        startY: yPos + 24,
         head: [["Segurança", "Quantidade", "Tipo", "Dia", "Fundamentação"]],
         body: tableData,
         styles: { fontSize: 9 },
@@ -605,7 +627,9 @@ export default function AdminExtras() {
         );
       }
 
-      doc.save(`relatorio-extras-${format(filterMonth, "MM-yyyy")}.pdf`);
+      // Dynamic filename
+      const typeSuffix = reportPercentageFilter === 'all' ? '' : `-${reportPercentageFilter}`;
+      doc.save(`relatorio-extras${typeSuffix}-${format(filterMonth, "MM-yyyy")}.pdf`);
       
       toast({
         title: "PDF gerado",
@@ -891,11 +915,14 @@ export default function AdminExtras() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Relatório Mensal</CardTitle>
-          <CardDescription>Selecione o período e gere o relatório em PDF</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Relatório Mensal
+          </CardTitle>
+          <CardDescription>Selecione o período e o tipo de extras para gerar o relatório</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Período</Label>
               <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background">
@@ -924,8 +951,25 @@ export default function AdminExtras() {
             </div>
 
             <div className="space-y-2">
+              <Label>Tipo de Extra</Label>
+              <Select 
+                value={reportPercentageFilter} 
+                onValueChange={(value: 'all' | '50' | '100') => setReportPercentageFilter(value)}
+              >
+                <SelectTrigger className="h-[60px]">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="50">Apenas 50%</SelectItem>
+                  <SelectItem value="100">Apenas 100%</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label>&nbsp;</Label>
-              <Button onClick={generatePDF} variant="outline" className="w-full">
+              <Button onClick={generatePDF} variant="outline" className="w-full h-[60px]">
                 <FileText className="mr-2 h-4 w-4" />
                 Gerar Relatório PDF
               </Button>
