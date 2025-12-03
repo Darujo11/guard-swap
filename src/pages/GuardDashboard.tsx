@@ -242,7 +242,21 @@ const GuardDashboard = () => {
 
   const totalExtras = extras.reduce((sum, extra) => sum + extra.quantity, 0);
 
-  const RankingTable = ({ data, title, percentageType }: { data: any[], title: string, percentageType: number }) => (
+  const RankingTable = ({ 
+    data, 
+    title, 
+    percentageType,
+    currentMonth,
+    onPreviousMonth,
+    onNextMonth
+  }: { 
+    data: any[], 
+    title: string, 
+    percentageType: number,
+    currentMonth: Date,
+    onPreviousMonth: () => void,
+    onNextMonth: () => void
+  }) => (
     <Card className="mb-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -250,10 +264,35 @@ const GuardDashboard = () => {
           {title}
         </CardTitle>
         <CardDescription>
-          Ranking de extras a {percentageType}% - {format(extrasMonth, "MMMM yyyy", { locale: ptBR })}
+          Ranking de extras a {percentageType}%
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Navegação por mês */}
+        <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background mb-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onPreviousMonth}
+            className="h-8 w-8"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="text-center flex-1">
+            <p className="text-lg font-semibold capitalize">
+              {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onNextMonth}
+            className="h-8 w-8"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
         {loadingRanking ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -490,14 +529,21 @@ const GuardDashboard = () => {
       <RankingTable 
         data={ranking50} 
         title="Resumo Mensal - Ranking de Extras a 50%" 
-        percentageType={50} 
+        percentageType={50}
+        currentMonth={extrasMonth}
+        onPreviousMonth={() => setExtrasMonth(startOfMonth(subMonths(extrasMonth, 1)))}
+        onNextMonth={() => setExtrasMonth(startOfMonth(addMonths(extrasMonth, 1)))}
       />
 
       {/* Ranking de Extras - 100% */}
       <RankingTable 
         data={ranking100} 
         title="Resumo Mensal - Ranking de Extras a 100%" 
-        percentageType={100} 
+        percentageType={100}
+        currentMonth={extrasMonth}
+        onPreviousMonth={() => setExtrasMonth(startOfMonth(subMonths(extrasMonth, 1)))}
+        onNextMonth={() => setExtrasMonth(startOfMonth(addMonths(extrasMonth, 1)))}
+      
       />
 
       {/* Registros Detalhados de Extras - Todos os Seguranças */}
