@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,15 @@ import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+interface OrgExtra {
+  id: string;
+  guard_id: string;
+  quantity: number;
+  percentage_type: number;
+  extra_date: string;
+  justification: string;
+}
+
 const GuardDashboard = () => {
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
@@ -41,7 +50,7 @@ const GuardDashboard = () => {
   const [extras, setExtras] = useState<any[]>([]);
   const [loadingExtras, setLoadingExtras] = useState(false);
   const [refreshSwapList, setRefreshSwapList] = useState(0);
-  const [allGuardsExtras, setAllGuardsExtras] = useState<any[]>([]);
+  const [allGuardsExtras, setAllGuardsExtras] = useState<OrgExtra[]>([]);
   const [guards, setGuards] = useState<any[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
   const { toast } = useToast();
@@ -135,22 +144,59 @@ const GuardDashboard = () => {
       if (guardsError) throw guardsError;
       setGuards(guardsData || []);
 
-      // Buscar todos os extras da organização no mês
+      // Buscar todos os extras da organização no mês (incluindo percentage_type para transparência)
       const { data: extrasData, error: extrasError } = await supabase
         .from('extras')
-        .select('guard_id, quantity')
+        .select('id, guard_id, quantity, percentage_type, extra_date, justification')
         .eq('admin_id', currentUser.admin_id)
         .gte('extra_date', monthStart.toISOString().split('T')[0])
-        .lte('extra_date', monthEnd.toISOString().split('T')[0]);
+        .lte('extra_date', monthEnd.toISOString().split('T')[0])
+        .order('extra_date', { ascending: false });
 
       if (extrasError) throw extrasError;
-      setAllGuardsExtras(extrasData || []);
+      setAllGuardsExtras((extrasData || []) as OrgExtra[]);
     } catch (error) {
       console.error('[GuardDashboard][FetchOrganizationExtras]', error);
     } finally {
       setLoadingRanking(false);
     }
   };
+
+  // Rankings separados por tipo de porcentagem
+  const ranking50 = useMemo(() => {
+    const extras50 = allGuardsExtras.filter(e => e.percentage_type === 50);
+    return guards
+      .map(guard => ({
+        ...guard,
+        total: extras50
+          .filter(e => e.guard_id === guard.id)
+          .reduce((sum, e) => sum + e.quantity, 0)
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [guards, allGuardsExtras]);
+
+  const ranking100 = useMemo(() => {
+    const extras100 = allGuardsExtras.filter(e => e.percentage_type === 100);
+    return guards
+      .map(guard => ({
+        ...guard,
+        total: extras100
+          .filter(e => e.guard_id === guard.id)
+          .reduce((sum, e) => sum + e.quantity, 0)
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [guards, allGuardsExtras]);
+
+  // Registros detalhados de todos os guards com nome
+  const allExtrasWithNames = useMemo(() => {
+    return allGuardsExtras.map(extra => {
+      const guard = guards.find(g => g.id === extra.guard_id);
+      return {
+        ...extra,
+        guardName: guard?.name || 'Desconhecido'
+      };
+    });
+  }, [allGuardsExtras, guards]);
 
   const generateMyExtrasPDF = () => {
     const doc = new jsPDF();
@@ -165,14 +211,15 @@ const GuardDashboard = () => {
     const tableData = extras.map(extra => [
       formatDate(extra.extra_date),
       `${extra.quantity}h`,
+      `${extra.percentage_type}%`,
       extra.justification
     ]);
 
     autoTable(doc, {
       startY: 45,
-      head: [['Data', 'Horas', 'Fundamentação']],
+      head: [['Data', 'Horas', 'Tipo', 'Fundamentação']],
       body: tableData,
-      foot: [[{ content: `Total: ${totalExtras} horas`, colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }]],
+      foot: [[{ content: `Total: ${totalExtras} horas`, colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } }]],
       theme: 'striped',
       headStyles: { fillColor: [59, 130, 246] },
     });
@@ -186,7 +233,6 @@ const GuardDashboard = () => {
   };
 
   const formatDate = (dateString: string) => {
-    // Adiciona T00:00:00 para interpretar como hora local, não UTC
     return new Date(`${dateString}T00:00:00`).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
@@ -195,6 +241,73 @@ const GuardDashboard = () => {
   };
 
   const totalExtras = extras.reduce((sum, extra) => sum + extra.quantity, 0);
+
+  const RankingTable = ({ data, title, percentageType }: { data: any[], title: string, percentageType: number }) => (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />
+          {title}
+        </CardTitle>
+        <CardDescription>
+          Ranking de extras a {percentageType}% - {format(extrasMonth, "MMMM yyyy", { locale: ptBR })}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loadingRanking ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando ranking...</p>
+          </div>
+        ) : data.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Nenhum dado disponível para ranking
+          </div>
+        ) : (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[80px]">Posição</TableHead>
+                  <TableHead>Segurança</TableHead>
+                  <TableHead className="text-right">Total de Extras</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.map((guard, index) => {
+                  const isCurrentUser = guard.id === currentUser?.id;
+                  const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                  
+                  return (
+                    <TableRow 
+                      key={guard.id}
+                      className={isCurrentUser ? 'bg-accent/50 font-medium' : ''}
+                    >
+                      <TableCell>
+                        <span className="flex items-center gap-2">
+                          {medal && <span className="text-xl">{medal}</span>}
+                          #{index + 1}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {guard.name}
+                        {isCurrentUser && (
+                          <span className="ml-2 text-xs text-primary">(Você)</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {guard.total}h
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   if (loading) {
     return (
@@ -339,6 +452,9 @@ const GuardDashboard = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-semibold">{extra.quantity} horas</p>
+                    <span className={`text-xs px-2 py-0.5 rounded ${extra.percentage_type === 50 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                      {extra.percentage_type}%
+                    </span>
                   </div>
                 </div>
               ))}
@@ -370,81 +486,21 @@ const GuardDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Resumo Mensal - Ranking de Extras */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Resumo Mensal - Ranking de Extras
-          </CardTitle>
-          <CardDescription>
-            Veja como você está em relação aos seus colegas
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loadingRanking ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Carregando ranking...</p>
-            </div>
-          ) : guards.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhum dado disponível para ranking
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[80px]">Posição</TableHead>
-                    <TableHead>Segurança</TableHead>
-                    <TableHead className="text-right">Total de Extras</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {guards
-                    .map(guard => ({
-                      ...guard,
-                      total: allGuardsExtras
-                        .filter(e => e.guard_id === guard.id)
-                        .reduce((sum, e) => sum + e.quantity, 0)
-                    }))
-                    .sort((a, b) => b.total - a.total)
-                    .map((guard, index) => {
-                      const isCurrentUser = guard.id === currentUser?.id;
-                      const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
-                      
-                      return (
-                        <TableRow 
-                          key={guard.id}
-                          className={isCurrentUser ? 'bg-accent/50 font-medium' : ''}
-                        >
-                          <TableCell>
-                            <span className="flex items-center gap-2">
-                              {medal && <span className="text-xl">{medal}</span>}
-                              #{index + 1}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {guard.name}
-                            {isCurrentUser && (
-                              <span className="ml-2 text-xs text-primary">(Você)</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {guard.total}h
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Ranking de Extras - 50% */}
+      <RankingTable 
+        data={ranking50} 
+        title="Resumo Mensal - Ranking de Extras a 50%" 
+        percentageType={50} 
+      />
 
-      {/* Registros Detalhados de Extras */}
+      {/* Ranking de Extras - 100% */}
+      <RankingTable 
+        data={ranking100} 
+        title="Resumo Mensal - Ranking de Extras a 100%" 
+        percentageType={100} 
+      />
+
+      {/* Registros Detalhados de Extras - Todos os Seguranças */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -452,16 +508,16 @@ const GuardDashboard = () => {
             Registros Detalhados de Extras
           </CardTitle>
           <CardDescription>
-            Visualização detalhada dos seus extras no mês
+            Todos os extras da organização no mês - {format(extrasMonth, "MMMM yyyy", { locale: ptBR })}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loadingExtras ? (
+          {loadingRanking ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
               <p className="text-muted-foreground">Carregando registros...</p>
             </div>
-          ) : extras.length === 0 ? (
+          ) : allExtrasWithNames.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Nenhum registro de extra neste mês
             </div>
@@ -471,24 +527,43 @@ const GuardDashboard = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data</TableHead>
-                    <TableHead>Quantidade</TableHead>
+                    <TableHead>Segurança</TableHead>
+                    <TableHead>Horas</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead>Fundamentação</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {extras.map((extra) => (
-                    <TableRow key={extra.id}>
-                      <TableCell className="font-medium">
-                        {formatDate(extra.extra_date)}
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-semibold">{extra.quantity}h</span>
-                      </TableCell>
-                      <TableCell className="max-w-md">
-                        {extra.justification}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {allExtrasWithNames.map((extra) => {
+                    const isCurrentUser = extra.guard_id === currentUser?.id;
+                    return (
+                      <TableRow 
+                        key={extra.id}
+                        className={isCurrentUser ? 'bg-accent/50' : ''}
+                      >
+                        <TableCell className="font-medium">
+                          {formatDate(extra.extra_date)}
+                        </TableCell>
+                        <TableCell>
+                          {extra.guardName}
+                          {isCurrentUser && (
+                            <span className="ml-2 text-xs text-primary">(Você)</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-semibold">{extra.quantity}h</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${extra.percentage_type === 50 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                            {extra.percentage_type}%
+                          </span>
+                        </TableCell>
+                        <TableCell className="max-w-md truncate">
+                          {extra.justification}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
