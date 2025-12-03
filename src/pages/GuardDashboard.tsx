@@ -687,9 +687,11 @@ const GuardDashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rankingFiltered.map((guard, index) => {
+                  {rankingFiltered.map((guard) => {
                     const isCurrentUser = guard.id === currentUser?.id;
-                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                    // Calcular posição real considerando empates
+                    const position = rankingFiltered.filter(g => g.total > guard.total).length + 1;
+                    const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : '';
                     
                     return (
                       <TableRow 
@@ -699,7 +701,7 @@ const GuardDashboard = () => {
                         <TableCell>
                           <span className="flex items-center gap-2">
                             {medal && <span className="text-xl">{medal}</span>}
-                            #{index + 1}
+                            #{position}
                           </span>
                         </TableCell>
                         <TableCell>
