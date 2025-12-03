@@ -131,10 +131,16 @@ export default function AdminExtras() {
     const startDate = startOfMonth(detailsMonth);
     const endDate = endOfMonth(detailsMonth);
 
-    return extras.filter((extra) => {
-      const extraDate = new Date(`${extra.extra_date}T00:00:00`);
-      return extraDate >= startDate && extraDate <= endDate;
-    });
+    return extras
+      .filter((extra) => {
+        const extraDate = new Date(`${extra.extra_date}T00:00:00`);
+        return extraDate >= startDate && extraDate <= endDate;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(`${a.extra_date}T00:00:00`);
+        const dateB = new Date(`${b.extra_date}T00:00:00`);
+        return dateA.getTime() - dateB.getTime();
+      });
   }, [extras, detailsMonth]);
 
   const fetchGuards = async () => {
