@@ -66,6 +66,7 @@ export default function AdminExtras() {
   
   // Report percentage filter state
   const [reportPercentageFilter, setReportPercentageFilter] = useState<'all' | '50' | '100'>('all');
+  const [reportAllMonths, setReportAllMonths] = useState<boolean>(false);
   
   // Edit dialog state
   const [editingExtra, setEditingExtra] = useState<Extra | null>(null);
@@ -203,13 +204,26 @@ export default function AdminExtras() {
       });
   }, [extras, detailsMonth]);
 
-  // Filtered extras for report based on percentage type
+  // Filtered extras for report based on percentage type and period
   const reportFilteredExtras = useMemo(() => {
-    if (reportPercentageFilter === 'all') {
-      return filteredExtras;
+    let baseExtras = extras;
+    
+    // If not "all months", filter by selected month
+    if (!reportAllMonths) {
+      const targetKey = format(startOfMonth(filterMonth), "yyyy-MM");
+      baseExtras = extras.filter((extra) => {
+        const extraKey = format(new Date(`${extra.month_reference}T00:00:00`), "yyyy-MM");
+        return extraKey === targetKey;
+      });
     }
-    return filteredExtras.filter(e => e.percentage_type === parseInt(reportPercentageFilter));
-  }, [filteredExtras, reportPercentageFilter]);
+    
+    // Filter by percentage type
+    if (reportPercentageFilter !== 'all') {
+      return baseExtras.filter(e => e.percentage_type === parseInt(reportPercentageFilter));
+    }
+    
+    return baseExtras;
+  }, [extras, filterMonth, reportAllMonths, reportPercentageFilter]);
 
   const fetchGuards = async () => {
     const { data: rolesData, error: rolesError } = await supabase
@@ -573,11 +587,15 @@ export default function AdminExtras() {
         ? '' 
         : ` - ${reportPercentageFilter}%`;
       
+      const periodLabel = reportAllMonths 
+        ? 'Acumulado (Todos os Meses)' 
+        : format(filterMonth, "MMMM 'de' yyyy", { locale: ptBR });
+      
       doc.setFontSize(18);
-      doc.text(`Relatório Mensal de Plantões Extras${filterLabel}`, 14, 20);
+      doc.text(`Relatório de Plantões Extras${filterLabel}`, 14, 20);
       
       doc.setFontSize(11);
-      doc.text(`Período: ${format(filterMonth, "MMMM 'de' yyyy", { locale: ptBR })}`, 14, 30);
+      doc.text(`Período: ${periodLabel}`, 14, 30);
       
       let yPos = 36;
       if (reportPercentageFilter !== 'all') {
@@ -629,7 +647,8 @@ export default function AdminExtras() {
 
       // Dynamic filename
       const typeSuffix = reportPercentageFilter === 'all' ? '' : `-${reportPercentageFilter}`;
-      doc.save(`relatorio-extras${typeSuffix}-${format(filterMonth, "MM-yyyy")}.pdf`);
+      const periodSuffix = reportAllMonths ? 'acumulado' : format(filterMonth, "MM-yyyy");
+      doc.save(`relatorio-extras${typeSuffix}-${periodSuffix}.pdf`);
       
       toast({
         title: "PDF gerado",
@@ -922,33 +941,51 @@ export default function AdminExtras() {
           <CardDescription>Selecione o período e o tipo de extras para gerar o relatório</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>Período</Label>
-              <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setFilterMonth(startOfMonth(subMonths(filterMonth, 1)))}
-                  className="h-8 w-8"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div className="text-center flex-1">
-                  <p className="text-lg font-semibold capitalize">
-                    {format(filterMonth, "MMMM yyyy", { locale: ptBR })}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setFilterMonth(startOfMonth(addMonths(filterMonth, 1)))}
-                  className="h-8 w-8"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              <Select 
+                value={reportAllMonths ? 'all' : 'specific'} 
+                onValueChange={(value) => setReportAllMonths(value === 'all')}
+              >
+                <SelectTrigger className="h-[60px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="specific">Mês Específico</SelectItem>
+                  <SelectItem value="all">Todos os Meses (Acumulado)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {!reportAllMonths && (
+              <div className="space-y-2">
+                <Label>Mês</Label>
+                <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background h-[60px]">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setFilterMonth(startOfMonth(subMonths(filterMonth, 1)))}
+                    className="h-8 w-8"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="text-center flex-1">
+                    <p className="text-sm font-semibold capitalize">
+                      {format(filterMonth, "MMM yyyy", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setFilterMonth(startOfMonth(addMonths(filterMonth, 1)))}
+                    className="h-8 w-8"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Tipo de Extra</Label>
@@ -981,7 +1018,7 @@ export default function AdminExtras() {
       {/* Monthly Summary */}
       <Card>
         <CardHeader>
-          <CardTitle>Resumo Mensal - Ranking de Extras</CardTitle>
+          <CardTitle>Ranking de Extras</CardTitle>
           <CardDescription>
             Total de horas de extras por segurança no período selecionado
           </CardDescription>
