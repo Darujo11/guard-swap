@@ -200,7 +200,7 @@ const GuardDashboard = () => {
         .from('extras')
         .select('id, guard_id, quantity, percentage_type, extra_date, justification')
         .eq('admin_id', currentUser.admin_id)
-        .order('extra_date', { ascending: false });
+      .order('extra_date', { ascending: true });
 
       if (!detailedAllMonths) {
         const monthStart = startOfMonth(detailedMonth);
