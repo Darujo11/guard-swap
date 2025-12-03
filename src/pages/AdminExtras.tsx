@@ -725,9 +725,11 @@ export default function AdminExtras() {
       doc.text(`Período: ${format(rankingDate, "MMMM 'de' yyyy", { locale: ptBR })}`, 14, 30);
       doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 36);
 
+      // Obter valores únicos de total, ordenados decrescente
+      const uniqueTotals = [...new Set(rankingData.data.map(i => i.totalHours))].sort((a, b) => b - a);
       const tableData = rankingData.data.map((item) => {
-        // Calcular posição real considerando empates
-        const position = rankingData.data.filter(i => i.totalHours > item.totalHours).length + 1;
+        // Calcular posição baseada em valores únicos
+        const position = uniqueTotals.indexOf(item.totalHours) + 1;
         return [
           `${position}º`,
           item.guardName,
@@ -1145,9 +1147,12 @@ export default function AdminExtras() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rankingFilteredSummary.map((item) => {
-                    // Calcular posição real considerando empates
-                    const position = rankingFilteredSummary.filter(i => i.totalHours > item.totalHours).length + 1;
+                  {(() => {
+                    // Obter valores únicos de total, ordenados decrescente
+                    const uniqueTotals = [...new Set(rankingFilteredSummary.map(i => i.totalHours))].sort((a, b) => b - a);
+                    return rankingFilteredSummary.map((item) => {
+                    // Calcular posição baseada em valores únicos
+                    const position = uniqueTotals.indexOf(item.totalHours) + 1;
                     const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : '';
                     return (
                       <TableRow key={item.guardId}>
@@ -1161,7 +1166,7 @@ export default function AdminExtras() {
                         <TableCell className="text-center font-semibold">{item.totalHours}h</TableCell>
                       </TableRow>
                     );
-                  })}
+                  })})()}
                 </TableBody>
               </Table>
             </div>
@@ -1362,9 +1367,12 @@ export default function AdminExtras() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {rankingSummary50.data.map((item) => {
-                          // Calcular posição real considerando empates
-                          const position = rankingSummary50.data.filter(i => i.totalHours > item.totalHours).length + 1;
+                        {(() => {
+                          // Obter valores únicos de total, ordenados decrescente
+                          const uniqueTotals = [...new Set(rankingSummary50.data.map(i => i.totalHours))].sort((a, b) => b - a);
+                          return rankingSummary50.data.map((item) => {
+                          // Calcular posição baseada em valores únicos
+                          const position = uniqueTotals.indexOf(item.totalHours) + 1;
                           return (
                             <TableRow key={item.guardId}>
                               <TableCell className="font-bold text-lg">
@@ -1379,7 +1387,7 @@ export default function AdminExtras() {
                               </TableCell>
                             </TableRow>
                           );
-                        })}
+                        })})()}
                       </TableBody>
                     </Table>
                   </div>
@@ -1443,9 +1451,12 @@ export default function AdminExtras() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {rankingSummary100.data.map((item) => {
-                          // Calcular posição real considerando empates
-                          const position = rankingSummary100.data.filter(i => i.totalHours > item.totalHours).length + 1;
+                        {(() => {
+                          // Obter valores únicos de total, ordenados decrescente
+                          const uniqueTotals = [...new Set(rankingSummary100.data.map(i => i.totalHours))].sort((a, b) => b - a);
+                          return rankingSummary100.data.map((item) => {
+                          // Calcular posição baseada em valores únicos
+                          const position = uniqueTotals.indexOf(item.totalHours) + 1;
                           return (
                             <TableRow key={item.guardId}>
                               <TableCell className="font-bold text-lg">
@@ -1460,7 +1471,7 @@ export default function AdminExtras() {
                               </TableCell>
                             </TableRow>
                           );
-                        })}
+                        })})()}
                       </TableBody>
                     </Table>
                   </div>
