@@ -113,6 +113,7 @@ export type Database = {
           id: string
           justification: string
           month_reference: string
+          percentage_type: number
           quantity: number
           updated_at: string
         }
@@ -125,6 +126,7 @@ export type Database = {
           id?: string
           justification: string
           month_reference: string
+          percentage_type?: number
           quantity?: number
           updated_at?: string
         }
@@ -137,6 +139,7 @@ export type Database = {
           id?: string
           justification?: string
           month_reference?: string
+          percentage_type?: number
           quantity?: number
           updated_at?: string
         }
