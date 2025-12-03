@@ -554,10 +554,35 @@ const GuardDashboard = () => {
             Registros Detalhados de Extras
           </CardTitle>
           <CardDescription>
-            Todos os extras da organização no mês - {format(extrasMonth, "MMMM yyyy", { locale: ptBR })}
+            Todos os extras da organização
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Navegação por mês */}
+          <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background mb-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setExtrasMonth(startOfMonth(subMonths(extrasMonth, 1)))}
+              className="h-8 w-8"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-center flex-1">
+              <p className="text-lg font-semibold capitalize">
+                {format(extrasMonth, "MMMM yyyy", { locale: ptBR })}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setExtrasMonth(startOfMonth(addMonths(extrasMonth, 1)))}
+              className="h-8 w-8"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
           {loadingRanking ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
