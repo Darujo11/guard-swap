@@ -60,6 +60,8 @@ export default function AdminExtras() {
   
   // Ranking filter state
   const [rankingDate, setRankingDate] = useState<Date>(new Date());
+  const [rankingAllMonths, setRankingAllMonths] = useState<boolean>(false);
+  const [rankingPercentageFilter, setRankingPercentageFilter] = useState<'all' | '50' | '100'>('all');
   
   // Details filter state (separate from filterMonth)
   const [detailsMonth, setDetailsMonth] = useState<Date>(new Date());
@@ -159,6 +161,39 @@ export default function AdminExtras() {
       endDate
     };
   }, [guards, extras, rankingDate]);
+
+  // Ranking filtrado com período e tipo de porcentagem
+  const rankingFilteredSummary = useMemo(() => {
+    let baseExtras = extras;
+    
+    // Filtrar por período
+    if (!rankingAllMonths) {
+      const startDate = startOfMonth(rankingDate);
+      const endDate = endOfMonth(rankingDate);
+      baseExtras = extras.filter((extra) => {
+        const extraDate = new Date(`${extra.extra_date}T00:00:00`);
+        return extraDate >= startDate && extraDate <= endDate;
+      });
+    }
+    
+    // Filtrar por tipo de porcentagem
+    if (rankingPercentageFilter !== 'all') {
+      baseExtras = baseExtras.filter(e => e.percentage_type === parseInt(rankingPercentageFilter));
+    }
+    
+    // Calcular totais por guard
+    const summary = guards.map(guard => {
+      const guardExtras = baseExtras.filter(e => e.guard_id === guard.id);
+      const totalHours = guardExtras.reduce((sum, e) => sum + (Number(e.quantity) || 0), 0);
+      return {
+        guardId: guard.id,
+        guardName: guard.name,
+        totalHours
+      };
+    });
+    
+    return summary.filter(s => s.totalHours > 0).sort((a, b) => b.totalHours - a.totalHours);
+  }, [guards, extras, rankingDate, rankingAllMonths, rankingPercentageFilter]);
 
   // Keep combined ranking for backward compatibility (PDF export, etc.)
   const rankingSummary = useMemo(() => {
@@ -1015,7 +1050,7 @@ export default function AdminExtras() {
         </CardContent>
       </Card>
 
-      {/* Monthly Summary */}
+      {/* Ranking de Extras com Filtros */}
       <Card>
         <CardHeader>
           <CardTitle>Ranking de Extras</CardTitle>
@@ -1024,8 +1059,77 @@ export default function AdminExtras() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Filtros do Ranking */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="space-y-2">
+              <Label>Período</Label>
+              <Select 
+                value={rankingAllMonths ? "all" : "specific"} 
+                onValueChange={(value) => setRankingAllMonths(value === "all")}
+              >
+                <SelectTrigger className="h-[60px]">
+                  <SelectValue placeholder="Selecione o período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="specific">Mês Específico</SelectItem>
+                  <SelectItem value="all">Todos os Meses (Acumulado)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {!rankingAllMonths && (
+              <div className="space-y-2">
+                <Label>Mês</Label>
+                <div className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-background h-[60px]">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRankingDate(subMonths(rankingDate, 1))}
+                    className="h-8 w-8"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="text-center flex-1">
+                    <p className="text-sm font-semibold capitalize">
+                      {format(rankingDate, "MMMM yyyy", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRankingDate(addMonths(rankingDate, 1))}
+                    className="h-8 w-8"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Tipo de Extra</Label>
+              <Select 
+                value={rankingPercentageFilter} 
+                onValueChange={(value: 'all' | '50' | '100') => setRankingPercentageFilter(value)}
+              >
+                <SelectTrigger className="h-[60px]">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="50">Apenas 50%</SelectItem>
+                  <SelectItem value="100">Apenas 100%</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {extrasLoading ? (
             <div className="text-center py-8">Carregando...</div>
+          ) : rankingFilteredSummary.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum registro encontrado para os filtros selecionados
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -1034,41 +1138,21 @@ export default function AdminExtras() {
                     <TableHead>Posição</TableHead>
                     <TableHead>Segurança</TableHead>
                     <TableHead className="text-center">Total de Horas</TableHead>
-                    <TableHead className="text-center">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {monthlySummary.map((item, index) => {
-                    const guardExtras = filteredExtras.filter(e => e.guard_id === item.guardId);
+                  {rankingFilteredSummary.map((item, index) => {
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
                     return (
                       <TableRow key={item.guardId}>
-                        <TableCell className="font-medium">{index + 1}º</TableCell>
-                        <TableCell>{item.guardName}</TableCell>
-                        <TableCell className="text-center font-semibold">{item.totalHours}</TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {guardExtras.length > 0 && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openEditDialog(guardExtras[0])}
-                                  className="text-primary hover:text-primary"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setDeletingExtraId(guardExtras[0].id)}
-                                  className="text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
+                        <TableCell className="font-medium">
+                          <span className="flex items-center gap-2">
+                            {medal && <span className="text-xl">{medal}</span>}
+                            {index + 1}º
+                          </span>
                         </TableCell>
+                        <TableCell>{item.guardName}</TableCell>
+                        <TableCell className="text-center font-semibold">{item.totalHours}h</TableCell>
                       </TableRow>
                     );
                   })}

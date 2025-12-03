@@ -6,6 +6,8 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { TeamBadge } from '@/components/ui/team-badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { GuardSwapForm } from '@/components/guards/GuardSwapForm';
 import { GuardSwapList } from '@/components/guards/GuardSwapList';
 import { TeamScheduleCalendar } from '@/components/schedule/TeamScheduleCalendar';
@@ -53,6 +55,9 @@ const GuardDashboard = () => {
   const [allGuardsExtras, setAllGuardsExtras] = useState<OrgExtra[]>([]);
   const [guards, setGuards] = useState<any[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
+  const [rankingAllMonths, setRankingAllMonths] = useState<boolean>(false);
+  const [rankingPercentageFilter, setRankingPercentageFilter] = useState<'all' | '50' | '100'>('all');
+  const [rankingMonth, setRankingMonth] = useState(startOfMonth(new Date()));
   const { toast } = useToast();
 
   useEffect(() => {
@@ -62,9 +67,14 @@ const GuardDashboard = () => {
   useEffect(() => {
     if (currentUser) {
       fetchExtras();
-      fetchOrganizationExtras();
     }
   }, [currentUser, extrasMonth]);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchOrganizationExtras();
+    }
+  }, [currentUser, rankingMonth, rankingAllMonths]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -130,9 +140,6 @@ const GuardDashboard = () => {
     
     setLoadingRanking(true);
     try {
-      const monthStart = startOfMonth(extrasMonth);
-      const monthEnd = endOfMonth(extrasMonth);
-
       // Buscar todos os guards da organização
       const { data: guardsData, error: guardsError } = await supabase
         .from('profiles')
@@ -144,14 +151,22 @@ const GuardDashboard = () => {
       if (guardsError) throw guardsError;
       setGuards(guardsData || []);
 
-      // Buscar todos os extras da organização no mês (incluindo percentage_type para transparência)
-      const { data: extrasData, error: extrasError } = await supabase
+      // Buscar extras baseado no filtro de período
+      let query = supabase
         .from('extras')
         .select('id, guard_id, quantity, percentage_type, extra_date, justification')
         .eq('admin_id', currentUser.admin_id)
-        .gte('extra_date', monthStart.toISOString().split('T')[0])
-        .lte('extra_date', monthEnd.toISOString().split('T')[0])
         .order('extra_date', { ascending: false });
+
+      if (!rankingAllMonths) {
+        const monthStart = startOfMonth(rankingMonth);
+        const monthEnd = endOfMonth(rankingMonth);
+        query = query
+          .gte('extra_date', monthStart.toISOString().split('T')[0])
+          .lte('extra_date', monthEnd.toISOString().split('T')[0]);
+      }
+
+      const { data: extrasData, error: extrasError } = await query;
 
       if (extrasError) throw extrasError;
       setAllGuardsExtras((extrasData || []) as OrgExtra[]);
@@ -162,30 +177,25 @@ const GuardDashboard = () => {
     }
   };
 
-  // Rankings separados por tipo de porcentagem
-  const ranking50 = useMemo(() => {
-    const extras50 = allGuardsExtras.filter(e => e.percentage_type === 50);
+  // Ranking filtrado por tipo de porcentagem
+  const rankingFiltered = useMemo(() => {
+    let filteredExtras = allGuardsExtras;
+    
+    // Filtrar por tipo se não for "all"
+    if (rankingPercentageFilter !== 'all') {
+      filteredExtras = filteredExtras.filter(e => e.percentage_type === parseInt(rankingPercentageFilter));
+    }
+    
     return guards
       .map(guard => ({
         ...guard,
-        total: extras50
+        total: filteredExtras
           .filter(e => e.guard_id === guard.id)
           .reduce((sum, e) => sum + e.quantity, 0)
       }))
+      .filter(g => g.total > 0)
       .sort((a, b) => b.total - a.total);
-  }, [guards, allGuardsExtras]);
-
-  const ranking100 = useMemo(() => {
-    const extras100 = allGuardsExtras.filter(e => e.percentage_type === 100);
-    return guards
-      .map(guard => ({
-        ...guard,
-        total: extras100
-          .filter(e => e.guard_id === guard.id)
-          .reduce((sum, e) => sum + e.quantity, 0)
-      }))
-      .sort((a, b) => b.total - a.total);
-  }, [guards, allGuardsExtras]);
+  }, [guards, allGuardsExtras, rankingPercentageFilter]);
 
   // Registros detalhados de todos os guards com nome
   const allExtrasWithNames = useMemo(() => {
@@ -305,111 +315,6 @@ const GuardDashboard = () => {
 
   const totalExtras = extras.reduce((sum, extra) => sum + extra.quantity, 0);
 
-  const RankingTable = ({ 
-    data, 
-    title, 
-    percentageType,
-    currentMonth,
-    onPreviousMonth,
-    onNextMonth
-  }: { 
-    data: any[], 
-    title: string, 
-    percentageType: number,
-    currentMonth: Date,
-    onPreviousMonth: () => void,
-    onNextMonth: () => void
-  }) => (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BarChart3 className="h-5 w-5" />
-          {title}
-        </CardTitle>
-        <CardDescription>
-          Ranking de extras a {percentageType}%
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {/* Navegação por mês */}
-        <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background mb-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onPreviousMonth}
-            className="h-8 w-8"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="text-center flex-1">
-            <p className="text-lg font-semibold capitalize">
-              {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onNextMonth}
-            className="h-8 w-8"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {loadingRanking ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Carregando ranking...</p>
-          </div>
-        ) : data.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Nenhum dado disponível para ranking
-          </div>
-        ) : (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[80px]">Posição</TableHead>
-                  <TableHead>Segurança</TableHead>
-                  <TableHead className="text-right">Total de Extras</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.map((guard, index) => {
-                  const isCurrentUser = guard.id === currentUser?.id;
-                  const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
-                  
-                  return (
-                    <TableRow 
-                      key={guard.id}
-                      className={isCurrentUser ? 'bg-accent/50 font-medium' : ''}
-                    >
-                      <TableCell>
-                        <span className="flex items-center gap-2">
-                          {medal && <span className="text-xl">{medal}</span>}
-                          #{index + 1}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {guard.name}
-                        {isCurrentUser && (
-                          <span className="ml-2 text-xs text-primary">(Você)</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {guard.total}h
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
 
   if (loading) {
     return (
@@ -623,26 +528,136 @@ const GuardDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Ranking de Extras - 50% */}
-      <RankingTable 
-        data={ranking50} 
-        title="Resumo Mensal - Ranking de Extras a 50%" 
-        percentageType={50}
-        currentMonth={extrasMonth}
-        onPreviousMonth={() => setExtrasMonth(startOfMonth(subMonths(extrasMonth, 1)))}
-        onNextMonth={() => setExtrasMonth(startOfMonth(addMonths(extrasMonth, 1)))}
-      />
+      {/* Ranking de Extras Unificado com Filtros */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Ranking de Extras
+          </CardTitle>
+          <CardDescription>
+            Ranking de extras na organização
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Filtros do Ranking */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Período</Label>
+              <Select 
+                value={rankingAllMonths ? "all" : "specific"} 
+                onValueChange={(value) => setRankingAllMonths(value === "all")}
+              >
+                <SelectTrigger className="h-[50px]">
+                  <SelectValue placeholder="Selecione o período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="specific">Mês Específico</SelectItem>
+                  <SelectItem value="all">Todos os Meses (Acumulado)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-      {/* Ranking de Extras - 100% */}
-      <RankingTable 
-        data={ranking100} 
-        title="Resumo Mensal - Ranking de Extras a 100%" 
-        percentageType={100}
-        currentMonth={extrasMonth}
-        onPreviousMonth={() => setExtrasMonth(startOfMonth(subMonths(extrasMonth, 1)))}
-        onNextMonth={() => setExtrasMonth(startOfMonth(addMonths(extrasMonth, 1)))}
-      
-      />
+            {!rankingAllMonths && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Mês</Label>
+                <div className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-background h-[50px]">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRankingMonth(subMonths(rankingMonth, 1))}
+                    className="h-8 w-8"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="text-center flex-1">
+                    <p className="text-sm font-semibold capitalize">
+                      {format(rankingMonth, "MMMM yyyy", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRankingMonth(addMonths(rankingMonth, 1))}
+                    className="h-8 w-8"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Tipo de Extra</Label>
+              <Select 
+                value={rankingPercentageFilter} 
+                onValueChange={(value: 'all' | '50' | '100') => setRankingPercentageFilter(value)}
+              >
+                <SelectTrigger className="h-[50px]">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="50">Apenas 50%</SelectItem>
+                  <SelectItem value="100">Apenas 100%</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {loadingRanking ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Carregando ranking...</p>
+            </div>
+          ) : rankingFiltered.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum dado disponível para os filtros selecionados
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[80px]">Posição</TableHead>
+                    <TableHead>Segurança</TableHead>
+                    <TableHead className="text-right">Total de Extras</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rankingFiltered.map((guard, index) => {
+                    const isCurrentUser = guard.id === currentUser?.id;
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                    
+                    return (
+                      <TableRow 
+                        key={guard.id}
+                        className={isCurrentUser ? 'bg-accent/50 font-medium' : ''}
+                      >
+                        <TableCell>
+                          <span className="flex items-center gap-2">
+                            {medal && <span className="text-xl">{medal}</span>}
+                            #{index + 1}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {guard.name}
+                          {isCurrentUser && (
+                            <span className="ml-2 text-xs text-primary">(Você)</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {guard.total}h
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Registros Detalhados de Extras - Todos os Seguranças */}
       <Card className="mb-6">
