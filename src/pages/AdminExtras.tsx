@@ -518,7 +518,7 @@ export default function AdminExtras() {
       const tableData = filteredExtras.map(extra => [
         extra.guard?.name || "Desconhecido",
         (extra.quantity || 1).toString(),
-        format(new Date(extra.extra_date), "dd/MM/yyyy", { locale: ptBR }),
+        format(new Date(`${extra.extra_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR }),
         extra.justification,
       ]);
 
@@ -948,7 +948,7 @@ export default function AdminExtras() {
                     <TableRow key={extra.id}>
                       <TableCell className="font-medium">{extra.guard?.name || "Desconhecido"}</TableCell>
                       <TableCell className="text-center font-semibold">{extra.quantity}</TableCell>
-                      <TableCell>{format(new Date(extra.extra_date), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
+                      <TableCell>{format(new Date(`${extra.extra_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
                       <TableCell className="max-w-md">{extra.justification}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
