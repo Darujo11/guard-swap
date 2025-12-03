@@ -33,6 +33,7 @@ interface Extra {
   month_reference: string;
   justification: string;
   quantity: number;
+  percentage_type: number;
   created_at: string;
   guard?: Profile;
 }
@@ -50,6 +51,7 @@ export default function AdminExtras() {
   const [extraDate, setExtraDate] = useState<Date>();
   const [justification, setJustification] = useState("");
   const [quantity, setQuantity] = useState<number>(1);
+  const [percentageType, setPercentageType] = useState<number>(100);
   const [guardShiftDates, setGuardShiftDates] = useState<Date[]>([]);
   const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
   
@@ -68,6 +70,7 @@ export default function AdminExtras() {
   const [editDate, setEditDate] = useState<Date>();
   const [editJustification, setEditJustification] = useState("");
   const [editQuantity, setEditQuantity] = useState<number>(1);
+  const [editPercentageType, setEditPercentageType] = useState<number>(100);
   
   // Delete confirmation state
   const [deletingExtraId, setDeletingExtraId] = useState<string | null>(null);
@@ -99,12 +102,66 @@ export default function AdminExtras() {
     return summary.sort((a, b) => b.totalHours - a.totalHours);
   }, [guards, filteredExtras]);
 
+  // Ranking for 50% extras
+  const rankingSummary50 = useMemo(() => {
+    const startDate = startOfMonth(rankingDate);
+    const endDate = endOfMonth(rankingDate);
+
+    const periodExtras = extras.filter((extra) => {
+      const extraDate = new Date(`${extra.extra_date}T00:00:00`);
+      return extraDate >= startDate && extraDate <= endDate && extra.percentage_type === 50;
+    });
+
+    const summary = guards.map(guard => {
+      const guardExtras = periodExtras.filter(e => e.guard_id === guard.id);
+      const totalHours = guardExtras.reduce((sum, e) => sum + (Number(e.quantity) || 0), 0);
+      return {
+        guardId: guard.id,
+        guardName: guard.name,
+        totalHours
+      };
+    });
+
+    return {
+      data: summary.filter(s => s.totalHours > 0).sort((a, b) => b.totalHours - a.totalHours),
+      startDate,
+      endDate
+    };
+  }, [guards, extras, rankingDate]);
+
+  // Ranking for 100% extras
+  const rankingSummary100 = useMemo(() => {
+    const startDate = startOfMonth(rankingDate);
+    const endDate = endOfMonth(rankingDate);
+
+    const periodExtras = extras.filter((extra) => {
+      const extraDate = new Date(`${extra.extra_date}T00:00:00`);
+      return extraDate >= startDate && extraDate <= endDate && extra.percentage_type === 100;
+    });
+
+    const summary = guards.map(guard => {
+      const guardExtras = periodExtras.filter(e => e.guard_id === guard.id);
+      const totalHours = guardExtras.reduce((sum, e) => sum + (Number(e.quantity) || 0), 0);
+      return {
+        guardId: guard.id,
+        guardName: guard.name,
+        totalHours
+      };
+    });
+
+    return {
+      data: summary.filter(s => s.totalHours > 0).sort((a, b) => b.totalHours - a.totalHours),
+      startDate,
+      endDate
+    };
+  }, [guards, extras, rankingDate]);
+
+  // Keep combined ranking for backward compatibility (PDF export, etc.)
   const rankingSummary = useMemo(() => {
     const startDate = startOfMonth(rankingDate);
     const endDate = endOfMonth(rankingDate);
 
     const periodExtras = extras.filter((extra) => {
-      // Adiciona T00:00:00 para interpretar como hora local, não UTC
       const extraDate = new Date(`${extra.extra_date}T00:00:00`);
       return extraDate >= startDate && extraDate <= endDate;
     });
@@ -144,7 +201,6 @@ export default function AdminExtras() {
   }, [extras, detailsMonth]);
 
   const fetchGuards = async () => {
-    // 1) Buscar todos os user_ids com papel de guard
     const { data: rolesData, error: rolesError } = await supabase
       .from("user_roles")
       .select("user_id")
@@ -166,7 +222,6 @@ export default function AdminExtras() {
       return;
     }
 
-    // 2) Buscar perfis desses usuários
     const { data: profilesData, error: profilesError } = await supabase
       .from("profiles")
       .select("*")
@@ -188,7 +243,6 @@ export default function AdminExtras() {
   const fetchExtras = async () => {
     setExtrasLoading(true);
 
-    // 1) Buscar extras sem join
     const { data: extrasData, error: extrasError } = await supabase
       .from("extras")
       .select("*")
@@ -206,7 +260,6 @@ export default function AdminExtras() {
 
     const extrasList = extrasData || [];
 
-    // 2) Buscar perfis dos guards usados nos extras
     const guardIds = Array.from(new Set(extrasList.map((e) => e.guard_id).filter(Boolean)));
 
     let profilesMap: Record<string, Profile> = {};
@@ -233,6 +286,7 @@ export default function AdminExtras() {
     const withGuards: Extra[] = extrasList.map((e) => ({
       ...(e as any),
       quantity: (e as any).quantity ?? 1,
+      percentage_type: (e as any).percentage_type ?? 100,
       guard: e.guard_id ? profilesMap[e.guard_id] : undefined,
     }));
 
@@ -247,14 +301,11 @@ export default function AdminExtras() {
     }
 
     try {
-      // 1) Buscar o team_id e nome do segurança para debug
       const { data: guardProfile, error: profileError } = await supabase
         .from("profiles")
         .select("team_id, name")
         .eq("id", guardId)
         .maybeSingle();
-
-      console.log("[fetchGuardShiftDates] Guard profile:", guardProfile);
 
       if (profileError) {
         console.error("[fetchGuardShiftDates] Error fetching profile:", profileError);
@@ -263,16 +314,13 @@ export default function AdminExtras() {
       }
 
       if (!guardProfile?.team_id) {
-        console.log("[fetchGuardShiftDates] Guard has no team_id");
         setGuardShiftDates([]);
         return;
       }
 
-      // Preparar intervalo do mês atual do calendário
       const start = startOfMonth(month);
       const end = endOfMonth(month);
 
-      // 2) Buscar todas as datas de plantões daquela equipe APENAS no mês visível
       const { data: schedules, error: schedulesError } = await supabase
         .from("team_schedules")
         .select("shift_date, team_id")
@@ -281,8 +329,6 @@ export default function AdminExtras() {
         .lte("shift_date", format(end, "yyyy-MM-dd"))
         .order("shift_date", { ascending: true });
 
-      console.log("[fetchGuardShiftDates] Schedules found:", schedules);
-
       if (schedulesError) {
         console.error("[fetchGuardShiftDates] Error fetching schedules:", schedulesError);
         setGuardShiftDates([]);
@@ -290,19 +336,16 @@ export default function AdminExtras() {
       }
 
       if (!schedules || schedules.length === 0) {
-        console.log("[fetchGuardShiftDates] No schedules found for team in month");
         setGuardShiftDates([]);
         return;
       }
 
-      // Conversão segura YYYY-MM-DD -> Date (sem problemas de fuso)
       const parseYmd = (ymd: string) => {
         const [y, m, d] = ymd.split("-").map(Number);
         return new Date(y, (m || 1) - 1, d || 1);
       };
 
       const dates = schedules.map((s) => parseYmd(s.shift_date));
-      console.log("[fetchGuardShiftDates] Dates to highlight:", dates.map((d) => d.toISOString()));
       setGuardShiftDates(dates);
     } catch (error) {
       console.error("[fetchGuardShiftDates] Unexpected error:", error);
@@ -317,7 +360,6 @@ export default function AdminExtras() {
       return extraKey === targetKey;
     });
 
-    // Ordenar por nome do guarda em ordem alfabética
     const sorted = filtered.sort((a, b) => {
       const nameA = a.guard?.name || "Desconhecido";
       const nameB = b.guard?.name || "Desconhecido";
@@ -327,12 +369,9 @@ export default function AdminExtras() {
     setFilteredExtras(sorted);
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[AdminExtras] handleSubmit iniciado', { selectedGuard, extraDate, justification, quantity, profile });
 
-    // Validações detalhadas
     if (!selectedGuard) {
       toast({
         variant: "destructive",
@@ -385,16 +424,14 @@ export default function AdminExtras() {
         month_reference: format(startOfMonth(extraDate), "yyyy-MM-dd"),
         justification: justification.trim(),
         quantity,
+        percentage_type: percentageType,
         created_by: profile.id,
         admin_id: profile.id,
       };
 
-      console.log('[AdminExtras] Inserindo dados:', insertData);
-
       const { data, error } = await supabase.from("extras").insert(insertData).select();
 
       if (error) {
-        console.error('[AdminExtras] Erro ao inserir:', error);
         toast({
           variant: "destructive",
           title: "Erro ao cadastrar extra",
@@ -402,8 +439,6 @@ export default function AdminExtras() {
         });
         return;
       }
-
-      console.log('[AdminExtras] Extra cadastrado com sucesso:', data);
 
       toast({
         title: "Extra cadastrado",
@@ -415,6 +450,7 @@ export default function AdminExtras() {
       setExtraDate(undefined);
       setJustification("");
       setQuantity(1);
+      setPercentageType(100);
       setGuardShiftDates([]);
       
       fetchExtras();
@@ -431,10 +467,10 @@ export default function AdminExtras() {
   const openEditDialog = (extra: Extra) => {
     setEditingExtra(extra);
     setEditGuardId(extra.guard_id);
-    // Adiciona T00:00:00 para interpretar como hora local, não UTC
     setEditDate(new Date(`${extra.extra_date}T00:00:00`));
     setEditJustification(extra.justification);
     setEditQuantity(extra.quantity);
+    setEditPercentageType(extra.percentage_type || 100);
   };
 
   const closeEditDialog = () => {
@@ -443,6 +479,7 @@ export default function AdminExtras() {
     setEditDate(undefined);
     setEditJustification("");
     setEditQuantity(1);
+    setEditPercentageType(100);
   };
 
   const handleUpdate = async () => {
@@ -463,6 +500,7 @@ export default function AdminExtras() {
         month_reference: format(startOfMonth(editDate), "yyyy-MM-dd"),
         justification: editJustification,
         quantity: editQuantity,
+        percentage_type: editPercentageType,
       })
       .eq("id", editingExtra.id);
 
@@ -519,7 +557,6 @@ export default function AdminExtras() {
       }
       const doc = new jsPDF();
       
-      // Header
       doc.setFontSize(18);
       doc.text("Relatório Mensal de Plantões Extras", 14, 20);
       
@@ -527,36 +564,35 @@ export default function AdminExtras() {
       doc.text(`Período: ${format(filterMonth, "MMMM 'de' yyyy", { locale: ptBR })}`, 14, 30);
       doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 36);
 
-      // Summary
       doc.setFontSize(14);
       doc.text("Resumo", 14, 46);
       doc.setFontSize(10);
       const totalExtras = filteredExtras.reduce((sum, extra) => sum + (Number(extra.quantity) || 1), 0);
       doc.text(`Total de extras no período: ${totalExtras}`, 14, 52);
 
-      // Table data - já ordenado alfabeticamente em applyFilters
       const tableData = filteredExtras.map(extra => [
         extra.guard?.name || "Desconhecido",
         (extra.quantity || 1).toString(),
+        `${extra.percentage_type || 100}%`,
         format(new Date(`${extra.extra_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR }),
         extra.justification,
       ]);
 
       autoTable(doc, {
         startY: 60,
-        head: [["Segurança", "Quantidade", "Dia", "Fundamentação"]],
+        head: [["Segurança", "Quantidade", "Tipo", "Dia", "Fundamentação"]],
         body: tableData,
         styles: { fontSize: 9 },
         headStyles: { fillColor: [59, 130, 246] },
         columnStyles: {
-          0: { cellWidth: 40 },
-          1: { cellWidth: 25, halign: 'center' },
-          2: { cellWidth: 30 },
-          3: { cellWidth: 'auto' }
+          0: { cellWidth: 35 },
+          1: { cellWidth: 20, halign: 'center' },
+          2: { cellWidth: 15, halign: 'center' },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 'auto' }
         }
       });
 
-      // Footer
       const pageCount = doc.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -585,9 +621,11 @@ export default function AdminExtras() {
     }
   };
 
-  const generateRankingPDF = () => {
+  const generateRankingPDF = (type: '50' | '100' | 'all') => {
     try {
-      if (rankingSummary.data.length === 0) {
+      const rankingData = type === '50' ? rankingSummary50 : type === '100' ? rankingSummary100 : rankingSummary;
+      
+      if (rankingData.data.length === 0) {
         toast({
           variant: "destructive",
           title: "Sem dados",
@@ -598,16 +636,18 @@ export default function AdminExtras() {
 
       const doc = new jsPDF();
       
-      // Header
+      const title = type === 'all' 
+        ? "Ranking de Plantões Extras" 
+        : `Ranking de Plantões Extras - ${type}%`;
+      
       doc.setFontSize(18);
-      doc.text("Ranking de Plantões Extras", 14, 20);
+      doc.text(title, 14, 20);
 
       doc.setFontSize(11);
       doc.text(`Período: ${format(rankingDate, "MMMM 'de' yyyy", { locale: ptBR })}`, 14, 30);
       doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 36);
 
-      // Table data
-      const tableData = rankingSummary.data.map((item, index) => [
+      const tableData = rankingData.data.map((item, index) => [
         `${index + 1}º`,
         item.guardName,
         item.totalHours.toString()
@@ -626,7 +666,6 @@ export default function AdminExtras() {
         }
       });
 
-      // Footer
       const pageCount = doc.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
@@ -639,7 +678,8 @@ export default function AdminExtras() {
         );
       }
 
-      doc.save(`ranking-extras-${format(rankingDate, "MM-yyyy")}.pdf`);
+      const suffix = type === 'all' ? '' : `-${type}`;
+      doc.save(`ranking-extras${suffix}-${format(rankingDate, "MM-yyyy")}.pdf`);
       
       toast({
         title: "PDF gerado",
@@ -655,9 +695,11 @@ export default function AdminExtras() {
     }
   };
 
-  const exportToCSV = () => {
+  const exportToCSV = (type: '50' | '100' | 'all') => {
     try {
-      if (rankingSummary.data.length === 0) {
+      const rankingData = type === '50' ? rankingSummary50 : type === '100' ? rankingSummary100 : rankingSummary;
+      
+      if (rankingData.data.length === 0) {
         toast({
           variant: "destructive",
           title: "Sem dados",
@@ -666,20 +708,25 @@ export default function AdminExtras() {
         return;
       }
 
+      const title = type === 'all' 
+        ? "Ranking de Plantões Extras" 
+        : `Ranking de Plantões Extras - ${type}%`;
+
       let csvContent = "data:text/csv;charset=utf-8,";
-      csvContent += `Ranking de Plantões Extras\n`;
+      csvContent += `${title}\n`;
       csvContent += `Período: ${format(rankingDate, "MMMM 'de' yyyy", { locale: ptBR })}\n`;
       csvContent += `Gerado em: ${format(new Date(), "dd/MM/yyyy HH:mm")}\n\n`;
       csvContent += "Posição,Segurança,Total de Horas\n";
 
-      rankingSummary.data.forEach((item, index) => {
+      rankingData.data.forEach((item, index) => {
         csvContent += `${index + 1},${item.guardName},${item.totalHours}\n`;
       });
 
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `ranking-extras-${format(rankingDate, "MM-yyyy")}.csv`);
+      const suffix = type === 'all' ? '' : `-${type}`;
+      link.setAttribute("download", `ranking-extras${suffix}-${format(rankingDate, "MM-yyyy")}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -697,7 +744,6 @@ export default function AdminExtras() {
       });
     }
   };
-
 
   return (
     <AppLayout title="Plantões Extras" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
@@ -804,6 +850,22 @@ export default function AdminExtras() {
                   onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                   placeholder="1"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tipo de Extra *</Label>
+                <Select 
+                  value={percentageType.toString()} 
+                  onValueChange={(value) => setPercentageType(parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="50">50%</SelectItem>
+                    <SelectItem value="100">100%</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -983,8 +1045,9 @@ export default function AdminExtras() {
                   <TableRow>
                     <TableHead>Segurança</TableHead>
                     <TableHead className="text-center">Horas</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Fundamentação/Justificativa</TableHead>
+                    <TableHead className="text-center">Tipo</TableHead>
+                    <TableHead className="text-center">Data</TableHead>
+                    <TableHead>Fundamentação</TableHead>
                     <TableHead className="text-center">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -992,9 +1055,21 @@ export default function AdminExtras() {
                   {detailsExtras.map((extra) => (
                     <TableRow key={extra.id}>
                       <TableCell className="font-medium">{extra.guard?.name || "Desconhecido"}</TableCell>
-                      <TableCell className="text-center font-semibold">{extra.quantity}</TableCell>
-                      <TableCell>{format(new Date(`${extra.extra_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
-                      <TableCell className="max-w-md">{extra.justification}</TableCell>
+                      <TableCell className="text-center">{extra.quantity || 1}</TableCell>
+                      <TableCell className="text-center">
+                        <span className={cn(
+                          "px-2 py-1 rounded-full text-xs font-medium",
+                          extra.percentage_type === 50 
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" 
+                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                        )}>
+                          {extra.percentage_type || 100}%
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {format(new Date(`${extra.extra_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">{extra.justification}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
                           <Button
@@ -1068,97 +1143,159 @@ export default function AdminExtras() {
                     {format(rankingSummary.startDate, "dd/MM/yyyy")} até {format(rankingSummary.endDate, "dd/MM/yyyy")}
                   </p>
                 </div>
-
-                <div className="flex gap-2">
-                  <Button onClick={generateRankingPDF} variant="outline" className="flex-1">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Exportar PDF
-                  </Button>
-                  <Button onClick={exportToCSV} variant="outline" className="flex-1">
-                    <Download className="mr-2 h-4 w-4" />
-                    Exportar CSV
-                  </Button>
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Ranking Chart */}
+          {/* Ranking 50% */}
           <Card>
             <CardHeader>
-              <CardTitle>Gráfico - Ranking de Extras</CardTitle>
-              <CardDescription>Visualização comparativa de horas extras por segurança</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded-full text-sm bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">50%</span>
+                Ranking de Extras - 50%
+              </CardTitle>
+              <CardDescription>Ranking de horas extras com adicional de 50%</CardDescription>
             </CardHeader>
             <CardContent>
               {extrasLoading ? (
                 <div className="text-center py-8">Carregando...</div>
-              ) : rankingSummary.data.length === 0 ? (
+              ) : rankingSummary50.data.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  Nenhum registro encontrado para o período selecionado.
+                  Nenhum registro de 50% encontrado para o período selecionado.
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={rankingSummary.data}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="guardName" 
-                      angle={-45}
-                      textAnchor="end"
-                      height={100}
-                      interval={0}
-                    />
-                    <YAxis label={{ value: 'Horas de Extras', angle: -90, position: 'insideLeft' }} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="totalHours" fill="hsl(var(--primary))" name="Total de Horas" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="space-y-4">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={rankingSummary50.data}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="guardName" 
+                        angle={-45}
+                        textAnchor="end"
+                        height={100}
+                        interval={0}
+                      />
+                      <YAxis label={{ value: 'Horas', angle: -90, position: 'insideLeft' }} />
+                      <Tooltip />
+                      <Bar dataKey="totalHours" fill="hsl(45, 93%, 47%)" name="Total de Horas" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-24">Posição</TableHead>
+                          <TableHead>Segurança</TableHead>
+                          <TableHead className="text-center w-32">Total de Horas</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {rankingSummary50.data.map((item, index) => (
+                          <TableRow key={item.guardId}>
+                            <TableCell className="font-bold text-lg">
+                              {index === 0 && "🥇 "}
+                              {index === 1 && "🥈 "}
+                              {index === 2 && "🥉 "}
+                              {index + 1}º
+                            </TableCell>
+                            <TableCell className="font-medium">{item.guardName}</TableCell>
+                            <TableCell className="text-center font-bold text-lg text-amber-600">
+                              {item.totalHours}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button onClick={() => generateRankingPDF('50')} variant="outline" className="flex-1">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Exportar PDF
+                    </Button>
+                    <Button onClick={() => exportToCSV('50')} variant="outline" className="flex-1">
+                      <Download className="mr-2 h-4 w-4" />
+                      Exportar CSV
+                    </Button>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Ranking Table */}
+          {/* Ranking 100% */}
           <Card>
             <CardHeader>
-              <CardTitle>Tabela - Ranking de Extras</CardTitle>
-              <CardDescription>
-                {rankingSummary.data.length} {rankingSummary.data.length === 1 ? "segurança listado" : "seguranças listados"}
-              </CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded-full text-sm bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">100%</span>
+                Ranking de Extras - 100%
+              </CardTitle>
+              <CardDescription>Ranking de horas extras com adicional de 100%</CardDescription>
             </CardHeader>
             <CardContent>
               {extrasLoading ? (
                 <div className="text-center py-8">Carregando...</div>
-              ) : rankingSummary.data.length === 0 ? (
+              ) : rankingSummary100.data.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  Nenhum registro encontrado para o período selecionado.
+                  Nenhum registro de 100% encontrado para o período selecionado.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-24">Posição</TableHead>
-                        <TableHead>Segurança</TableHead>
-                        <TableHead className="text-center w-32">Total de Horas</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {rankingSummary.data.map((item, index) => (
-                        <TableRow key={item.guardId}>
-                          <TableCell className="font-bold text-lg">
-                            {index === 0 && "🥇 "}
-                            {index === 1 && "🥈 "}
-                            {index === 2 && "🥉 "}
-                            {index + 1}º
-                          </TableCell>
-                          <TableCell className="font-medium">{item.guardName}</TableCell>
-                          <TableCell className="text-center font-bold text-lg text-primary">
-                            {item.totalHours}
-                          </TableCell>
+                <div className="space-y-4">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={rankingSummary100.data}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="guardName" 
+                        angle={-45}
+                        textAnchor="end"
+                        height={100}
+                        interval={0}
+                      />
+                      <YAxis label={{ value: 'Horas', angle: -90, position: 'insideLeft' }} />
+                      <Tooltip />
+                      <Bar dataKey="totalHours" fill="hsl(152, 69%, 31%)" name="Total de Horas" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-24">Posição</TableHead>
+                          <TableHead>Segurança</TableHead>
+                          <TableHead className="text-center w-32">Total de Horas</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {rankingSummary100.data.map((item, index) => (
+                          <TableRow key={item.guardId}>
+                            <TableCell className="font-bold text-lg">
+                              {index === 0 && "🥇 "}
+                              {index === 1 && "🥈 "}
+                              {index === 2 && "🥉 "}
+                              {index + 1}º
+                            </TableCell>
+                            <TableCell className="font-medium">{item.guardName}</TableCell>
+                            <TableCell className="text-center font-bold text-lg text-emerald-600">
+                              {item.totalHours}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button onClick={() => generateRankingPDF('100')} variant="outline" className="flex-1">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Exportar PDF
+                    </Button>
+                    <Button onClick={() => exportToCSV('100')} variant="outline" className="flex-1">
+                      <Download className="mr-2 h-4 w-4" />
+                      Exportar CSV
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -1228,6 +1365,22 @@ export default function AdminExtras() {
                   onChange={(e) => setEditQuantity(parseInt(e.target.value) || 1)}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tipo de Extra *</Label>
+              <Select 
+                value={editPercentageType.toString()} 
+                onValueChange={(value) => setEditPercentageType(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="50">50%</SelectItem>
+                  <SelectItem value="100">100%</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
