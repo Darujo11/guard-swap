@@ -131,8 +131,8 @@ const GuardDashboard = () => {
         .from('extras')
         .select('*')
         .eq('guard_id', currentUser.id)
-        .gte('extra_date', monthStart.toISOString().split('T')[0])
-        .lte('extra_date', monthEnd.toISOString().split('T')[0])
+        .gte('extra_date', format(monthStart, 'yyyy-MM-dd'))
+        .lte('extra_date', format(monthEnd, 'yyyy-MM-dd'))
         .order('extra_date', { ascending: false });
 
       if (error) throw error;
@@ -176,8 +176,8 @@ const GuardDashboard = () => {
         const monthStart = startOfMonth(rankingMonth);
         const monthEnd = endOfMonth(rankingMonth);
         query = query
-          .gte('extra_date', monthStart.toISOString().split('T')[0])
-          .lte('extra_date', monthEnd.toISOString().split('T')[0]);
+          .gte('extra_date', format(monthStart, 'yyyy-MM-dd'))
+          .lte('extra_date', format(monthEnd, 'yyyy-MM-dd'));
       }
 
       const { data: extrasData, error: extrasError } = await query;
@@ -206,8 +206,8 @@ const GuardDashboard = () => {
         const monthStart = startOfMonth(detailedMonth);
         const monthEnd = endOfMonth(detailedMonth);
         query = query
-          .gte('extra_date', monthStart.toISOString().split('T')[0])
-          .lte('extra_date', monthEnd.toISOString().split('T')[0]);
+          .gte('extra_date', format(monthStart, 'yyyy-MM-dd'))
+          .lte('extra_date', format(monthEnd, 'yyyy-MM-dd'));
       }
 
       const { data, error } = await query;
