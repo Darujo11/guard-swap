@@ -50,7 +50,7 @@ export default function AdminExtras() {
   const [selectedGuard, setSelectedGuard] = useState<string>("");
   const [extraDate, setExtraDate] = useState<Date>();
   const [justification, setJustification] = useState("");
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantity, setQuantity] = useState<number | undefined>(undefined);
   const [percentageType, setPercentageType] = useState<number>(100);
   const [guardShiftDates, setGuardShiftDates] = useState<Date[]>([]);
   const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
@@ -509,7 +509,7 @@ export default function AdminExtras() {
       setSelectedGuard("");
       setExtraDate(undefined);
       setJustification("");
-      setQuantity(1);
+      setQuantity(undefined);
       setPercentageType(100);
       setGuardShiftDates([]);
       
@@ -924,9 +924,9 @@ export default function AdminExtras() {
                   id="quantity"
                   type="number"
                   min="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                  placeholder="1"
+                  value={quantity ?? ''}
+                  onChange={(e) => setQuantity(e.target.value ? parseInt(e.target.value) : undefined)}
+                  placeholder="Informe as horas"
                 />
               </div>
 
