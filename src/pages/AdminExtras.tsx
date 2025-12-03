@@ -725,11 +725,15 @@ export default function AdminExtras() {
       doc.text(`Período: ${format(rankingDate, "MMMM 'de' yyyy", { locale: ptBR })}`, 14, 30);
       doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 36);
 
-      const tableData = rankingData.data.map((item, index) => [
-        `${index + 1}º`,
-        item.guardName,
-        item.totalHours.toString()
-      ]);
+      const tableData = rankingData.data.map((item) => {
+        // Calcular posição real considerando empates
+        const position = rankingData.data.filter(i => i.totalHours > item.totalHours).length + 1;
+        return [
+          `${position}º`,
+          item.guardName,
+          item.totalHours.toString()
+        ];
+      });
 
       autoTable(doc, {
         startY: 50,
@@ -1141,14 +1145,16 @@ export default function AdminExtras() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rankingFilteredSummary.map((item, index) => {
-                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                  {rankingFilteredSummary.map((item) => {
+                    // Calcular posição real considerando empates
+                    const position = rankingFilteredSummary.filter(i => i.totalHours > item.totalHours).length + 1;
+                    const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : '';
                     return (
                       <TableRow key={item.guardId}>
                         <TableCell className="font-medium">
                           <span className="flex items-center gap-2">
                             {medal && <span className="text-xl">{medal}</span>}
-                            {index + 1}º
+                            {position}º
                           </span>
                         </TableCell>
                         <TableCell>{item.guardName}</TableCell>
@@ -1356,20 +1362,24 @@ export default function AdminExtras() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {rankingSummary50.data.map((item, index) => (
-                          <TableRow key={item.guardId}>
-                            <TableCell className="font-bold text-lg">
-                              {index === 0 && "🥇 "}
-                              {index === 1 && "🥈 "}
-                              {index === 2 && "🥉 "}
-                              {index + 1}º
-                            </TableCell>
-                            <TableCell className="font-medium">{item.guardName}</TableCell>
-                            <TableCell className="text-center font-bold text-lg text-amber-600">
-                              {item.totalHours}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {rankingSummary50.data.map((item) => {
+                          // Calcular posição real considerando empates
+                          const position = rankingSummary50.data.filter(i => i.totalHours > item.totalHours).length + 1;
+                          return (
+                            <TableRow key={item.guardId}>
+                              <TableCell className="font-bold text-lg">
+                                {position === 1 && "🥇 "}
+                                {position === 2 && "🥈 "}
+                                {position === 3 && "🥉 "}
+                                {position}º
+                              </TableCell>
+                              <TableCell className="font-medium">{item.guardName}</TableCell>
+                              <TableCell className="text-center font-bold text-lg text-amber-600">
+                                {item.totalHours}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -1433,20 +1443,24 @@ export default function AdminExtras() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {rankingSummary100.data.map((item, index) => (
-                          <TableRow key={item.guardId}>
-                            <TableCell className="font-bold text-lg">
-                              {index === 0 && "🥇 "}
-                              {index === 1 && "🥈 "}
-                              {index === 2 && "🥉 "}
-                              {index + 1}º
-                            </TableCell>
-                            <TableCell className="font-medium">{item.guardName}</TableCell>
-                            <TableCell className="text-center font-bold text-lg text-emerald-600">
-                              {item.totalHours}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {rankingSummary100.data.map((item) => {
+                          // Calcular posição real considerando empates
+                          const position = rankingSummary100.data.filter(i => i.totalHours > item.totalHours).length + 1;
+                          return (
+                            <TableRow key={item.guardId}>
+                              <TableCell className="font-bold text-lg">
+                                {position === 1 && "🥇 "}
+                                {position === 2 && "🥈 "}
+                                {position === 3 && "🥉 "}
+                                {position}º
+                              </TableCell>
+                              <TableCell className="font-medium">{item.guardName}</TableCell>
+                              <TableCell className="text-center font-bold text-lg text-emerald-600">
+                                {item.totalHours}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
