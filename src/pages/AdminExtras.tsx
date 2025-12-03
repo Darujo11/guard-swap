@@ -101,7 +101,8 @@ export default function AdminExtras() {
     const endDate = endOfMonth(rankingDate);
 
     const periodExtras = extras.filter((extra) => {
-      const extraDate = new Date(extra.extra_date);
+      // Adiciona T00:00:00 para interpretar como hora local, não UTC
+      const extraDate = new Date(`${extra.extra_date}T00:00:00`);
       return extraDate >= startDate && extraDate <= endDate;
     });
 
@@ -410,7 +411,8 @@ export default function AdminExtras() {
   const openEditDialog = (extra: Extra) => {
     setEditingExtra(extra);
     setEditGuardId(extra.guard_id);
-    setEditDate(new Date(extra.extra_date));
+    // Adiciona T00:00:00 para interpretar como hora local, não UTC
+    setEditDate(new Date(`${extra.extra_date}T00:00:00`));
     setEditJustification(extra.justification);
     setEditQuantity(extra.quantity);
   };
