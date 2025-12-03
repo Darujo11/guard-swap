@@ -59,6 +59,9 @@ export default function AdminExtras() {
   // Ranking filter state
   const [rankingDate, setRankingDate] = useState<Date>(new Date());
   
+  // Details filter state (separate from filterMonth)
+  const [detailsMonth, setDetailsMonth] = useState<Date>(new Date());
+  
   // Edit dialog state
   const [editingExtra, setEditingExtra] = useState<Extra | null>(null);
   const [editGuardId, setEditGuardId] = useState<string>("");
@@ -122,6 +125,17 @@ export default function AdminExtras() {
       endDate
     };
   }, [guards, extras, rankingDate]);
+
+  // Filtered extras for details section
+  const detailsExtras = useMemo(() => {
+    const startDate = startOfMonth(detailsMonth);
+    const endDate = endOfMonth(detailsMonth);
+
+    return extras.filter((extra) => {
+      const extraDate = new Date(`${extra.extra_date}T00:00:00`);
+      return extraDate >= startDate && extraDate <= endDate;
+    });
+  }, [extras, detailsMonth]);
 
   const fetchGuards = async () => {
     // 1) Buscar todos os user_ids com papel de guard
@@ -921,13 +935,38 @@ export default function AdminExtras() {
         <CardHeader>
           <CardTitle>Registros Detalhados de Extras</CardTitle>
           <CardDescription>
-            {filteredExtras.length} {filteredExtras.length === 1 ? "registro encontrado" : "registros encontrados"}
+            {detailsExtras.length} {detailsExtras.length === 1 ? "registro encontrado" : "registros encontrados"}
           </CardDescription>
+          
+          {/* Month Navigation */}
+          <div className="flex items-center justify-center gap-2 pt-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setDetailsMonth(subMonths(detailsMonth, 1))}
+              className="h-8 w-8"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-center min-w-[150px]">
+              <p className="text-lg font-semibold capitalize">
+                {format(detailsMonth, "MMMM yyyy", { locale: ptBR })}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setDetailsMonth(addMonths(detailsMonth, 1))}
+              className="h-8 w-8"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {extrasLoading ? (
             <div className="text-center py-8">Carregando...</div>
-          ) : filteredExtras.length === 0 ? (
+          ) : detailsExtras.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Nenhum registro encontrado para o período selecionado.
             </div>
@@ -944,7 +983,7 @@ export default function AdminExtras() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredExtras.map((extra) => (
+                  {detailsExtras.map((extra) => (
                     <TableRow key={extra.id}>
                       <TableCell className="font-medium">{extra.guard?.name || "Desconhecido"}</TableCell>
                       <TableCell className="text-center font-semibold">{extra.quantity}</TableCell>
