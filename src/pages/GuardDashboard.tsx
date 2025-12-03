@@ -228,8 +228,71 @@ const GuardDashboard = () => {
     
     toast({
       title: 'PDF gerado',
-      description: 'Seu relatório foi gerado com sucesso.',
+      description: 'Seu relatório mensal foi gerado com sucesso.',
     });
+  };
+
+  const generateCompleteExtrasPDF = async () => {
+    try {
+      // Buscar todos os extras do usuário
+      const { data: allExtras, error } = await supabase
+        .from('extras')
+        .select('*')
+        .eq('guard_id', currentUser?.id)
+        .order('extra_date', { ascending: false });
+
+      if (error) throw error;
+
+      if (!allExtras || allExtras.length === 0) {
+        toast({
+          title: 'Sem dados',
+          description: 'Você não possui extras registrados.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const doc = new jsPDF();
+      
+      doc.setFontSize(18);
+      doc.text('Relatório Completo de Extras', 14, 20);
+      
+      doc.setFontSize(12);
+      doc.text(`Segurança: ${currentUser?.name || ''}`, 14, 30);
+      doc.text(`Data de geração: ${format(new Date(), "dd/MM/yyyy", { locale: ptBR })}`, 14, 37);
+      
+      const tableData = allExtras.map(extra => [
+        formatDate(extra.extra_date),
+        `${extra.quantity}h`,
+        `${extra.percentage_type}%`,
+        extra.justification
+      ]);
+
+      const totalCompleteExtras = allExtras.reduce((sum, extra) => sum + extra.quantity, 0);
+
+      autoTable(doc, {
+        startY: 45,
+        head: [['Data', 'Horas', 'Tipo', 'Fundamentação']],
+        body: tableData,
+        foot: [[{ content: `Total Geral: ${totalCompleteExtras} horas`, colSpan: 4, styles: { halign: 'right', fontStyle: 'bold' } }]],
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246] },
+      });
+
+      doc.save(`meus-extras-completo-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      
+      toast({
+        title: 'PDF gerado',
+        description: 'Seu relatório completo foi gerado com sucesso.',
+      });
+    } catch (error) {
+      console.error('[GuardDashboard][GenerateCompletePDF]', error);
+      toast({
+        title: 'Erro ao gerar PDF',
+        description: 'Não foi possível gerar o relatório completo.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -510,18 +573,53 @@ const GuardDashboard = () => {
             Relatório Mensal
           </CardTitle>
           <CardDescription>
-            Gere um PDF com seus extras do mês
+            Gere um PDF com seus extras
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button 
-            onClick={generateMyExtrasPDF}
-            disabled={extras.length === 0}
-            className="gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            Gerar PDF dos Meus Extras
-          </Button>
+        <CardContent className="space-y-4">
+          {/* Navegação por mês */}
+          <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setExtrasMonth(startOfMonth(subMonths(extrasMonth, 1)))}
+              className="h-8 w-8"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-center flex-1">
+              <p className="text-lg font-semibold capitalize">
+                {format(extrasMonth, "MMMM yyyy", { locale: ptBR })}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setExtrasMonth(startOfMonth(addMonths(extrasMonth, 1)))}
+              className="h-8 w-8"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              onClick={generateMyExtrasPDF}
+              disabled={extras.length === 0}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Gerar PDF do Mês
+            </Button>
+            <Button 
+              onClick={generateCompleteExtrasPDF}
+              variant="outline"
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Gerar PDF Completo
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
