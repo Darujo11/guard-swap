@@ -687,10 +687,13 @@ const GuardDashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rankingFiltered.map((guard) => {
+                  {(() => {
+                    // Obter valores únicos de total, ordenados decrescente
+                    const uniqueTotals = [...new Set(rankingFiltered.map(g => g.total))].sort((a, b) => b - a);
+                    return rankingFiltered.map((guard) => {
                     const isCurrentUser = guard.id === currentUser?.id;
-                    // Calcular posição real considerando empates
-                    const position = rankingFiltered.filter(g => g.total > guard.total).length + 1;
+                    // Calcular posição baseada em valores únicos
+                    const position = uniqueTotals.indexOf(guard.total) + 1;
                     const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : '';
                     
                     return (
@@ -715,7 +718,7 @@ const GuardDashboard = () => {
                         </TableCell>
                       </TableRow>
                     );
-                  })}
+                  })})()}
                 </TableBody>
               </Table>
             </div>
