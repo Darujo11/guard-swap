@@ -58,6 +58,14 @@ const GuardDashboard = () => {
   const [rankingAllMonths, setRankingAllMonths] = useState<boolean>(false);
   const [rankingPercentageFilter, setRankingPercentageFilter] = useState<'all' | '50' | '100'>('all');
   const [rankingMonth, setRankingMonth] = useState(startOfMonth(new Date()));
+  
+  // Estados independentes para Registros Detalhados
+  const [detailedAllMonths, setDetailedAllMonths] = useState<boolean>(false);
+  const [detailedPercentageFilter, setDetailedPercentageFilter] = useState<'all' | '50' | '100'>('all');
+  const [detailedMonth, setDetailedMonth] = useState(startOfMonth(new Date()));
+  const [detailedExtras, setDetailedExtras] = useState<OrgExtra[]>([]);
+  const [loadingDetailed, setLoadingDetailed] = useState(false);
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -75,6 +83,12 @@ const GuardDashboard = () => {
       fetchOrganizationExtras();
     }
   }, [currentUser, rankingMonth, rankingAllMonths]);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchDetailedExtras();
+    }
+  }, [currentUser, detailedMonth, detailedAllMonths]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -177,6 +191,36 @@ const GuardDashboard = () => {
     }
   };
 
+  const fetchDetailedExtras = async () => {
+    if (!currentUser?.admin_id) return;
+    
+    setLoadingDetailed(true);
+    try {
+      let query = supabase
+        .from('extras')
+        .select('id, guard_id, quantity, percentage_type, extra_date, justification')
+        .eq('admin_id', currentUser.admin_id)
+        .order('extra_date', { ascending: false });
+
+      if (!detailedAllMonths) {
+        const monthStart = startOfMonth(detailedMonth);
+        const monthEnd = endOfMonth(detailedMonth);
+        query = query
+          .gte('extra_date', monthStart.toISOString().split('T')[0])
+          .lte('extra_date', monthEnd.toISOString().split('T')[0]);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      setDetailedExtras((data || []) as OrgExtra[]);
+    } catch (error) {
+      console.error('[GuardDashboard][FetchDetailedExtras]', error);
+    } finally {
+      setLoadingDetailed(false);
+    }
+  };
+
   // Ranking filtrado por tipo de porcentagem
   const rankingFiltered = useMemo(() => {
     let filteredExtras = allGuardsExtras;
@@ -197,7 +241,7 @@ const GuardDashboard = () => {
       .sort((a, b) => b.total - a.total);
   }, [guards, allGuardsExtras, rankingPercentageFilter]);
 
-  // Registros detalhados de todos os guards com nome
+  // Registros detalhados de todos os guards com nome (para ranking)
   const allExtrasWithNames = useMemo(() => {
     return allGuardsExtras.map(extra => {
       const guard = guards.find(g => g.id === extra.guard_id);
@@ -207,6 +251,24 @@ const GuardDashboard = () => {
       };
     });
   }, [allGuardsExtras, guards]);
+
+  // Registros detalhados filtrados independentemente
+  const detailedExtrasFiltered = useMemo(() => {
+    let filtered = detailedExtras;
+    
+    // Filtrar por tipo se não for "all"
+    if (detailedPercentageFilter !== 'all') {
+      filtered = filtered.filter(e => e.percentage_type === parseInt(detailedPercentageFilter));
+    }
+    
+    return filtered.map(extra => {
+      const guard = guards.find(g => g.id === extra.guard_id);
+      return {
+        ...extra,
+        guardName: guard?.name || 'Desconhecido'
+      };
+    });
+  }, [detailedExtras, guards, detailedPercentageFilter]);
 
   const generateMyExtrasPDF = () => {
     const doc = new jsPDF();
@@ -671,39 +733,79 @@ const GuardDashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Navegação por mês */}
-          <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background mb-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setExtrasMonth(startOfMonth(subMonths(extrasMonth, 1)))}
-              className="h-8 w-8"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="text-center flex-1">
-              <p className="text-lg font-semibold capitalize">
-                {format(extrasMonth, "MMMM yyyy", { locale: ptBR })}
-              </p>
+          {/* Filtros independentes */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Período</Label>
+              <Select 
+                value={detailedAllMonths ? "all" : "specific"} 
+                onValueChange={(value) => setDetailedAllMonths(value === "all")}
+              >
+                <SelectTrigger className="h-[50px]">
+                  <SelectValue placeholder="Selecione o período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="specific">Mês Específico</SelectItem>
+                  <SelectItem value="all">Todos os Meses (Acumulado)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setExtrasMonth(startOfMonth(addMonths(extrasMonth, 1)))}
-              className="h-8 w-8"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+
+            {!detailedAllMonths && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Mês</Label>
+                <div className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-background h-[50px]">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDetailedMonth(subMonths(detailedMonth, 1))}
+                    className="h-8 w-8"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="text-center flex-1">
+                    <p className="text-sm font-semibold capitalize">
+                      {format(detailedMonth, "MMMM yyyy", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDetailedMonth(addMonths(detailedMonth, 1))}
+                    className="h-8 w-8"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Tipo de Extra</Label>
+              <Select 
+                value={detailedPercentageFilter} 
+                onValueChange={(value: 'all' | '50' | '100') => setDetailedPercentageFilter(value)}
+              >
+                <SelectTrigger className="h-[50px]">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="50">Apenas 50%</SelectItem>
+                  <SelectItem value="100">Apenas 100%</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {loadingRanking ? (
+          {loadingDetailed ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
               <p className="text-muted-foreground">Carregando registros...</p>
             </div>
-          ) : allExtrasWithNames.length === 0 ? (
+          ) : detailedExtrasFiltered.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              Nenhum registro de extra neste mês
+              Nenhum registro de extra para os filtros selecionados
             </div>
           ) : (
             <div className="rounded-md border">
@@ -718,7 +820,7 @@ const GuardDashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {allExtrasWithNames.map((extra) => {
+                  {detailedExtrasFiltered.map((extra) => {
                     const isCurrentUser = extra.guard_id === currentUser?.id;
                     return (
                       <TableRow 
