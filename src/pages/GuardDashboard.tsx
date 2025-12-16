@@ -24,6 +24,9 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
   Award,
   FileText,
   BarChart3
@@ -65,6 +68,10 @@ const GuardDashboard = () => {
   const [detailedMonth, setDetailedMonth] = useState(startOfMonth(new Date()));
   const [detailedExtras, setDetailedExtras] = useState<OrgExtra[]>([]);
   const [loadingDetailed, setLoadingDetailed] = useState(false);
+  
+  // Estados para ordenação da tabela detalhada
+  const [sortColumn, setSortColumn] = useState<'extra_date' | 'guardName' | 'quantity' | 'percentage_type' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
   const { toast } = useToast();
 
@@ -252,6 +259,21 @@ const GuardDashboard = () => {
     });
   }, [allGuardsExtras, guards]);
 
+  // Função para alternar ordenação
+  const handleSort = (column: 'extra_date' | 'guardName' | 'quantity' | 'percentage_type') => {
+    if (sortColumn === column) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else {
+        setSortColumn(null);
+        setSortDirection('asc');
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
   // Registros detalhados filtrados independentemente
   const detailedExtrasFiltered = useMemo(() => {
     let filtered = detailedExtras;
@@ -261,14 +283,33 @@ const GuardDashboard = () => {
       filtered = filtered.filter(e => e.percentage_type === parseInt(detailedPercentageFilter));
     }
     
-    return filtered.map(extra => {
+    let result = filtered.map(extra => {
       const guard = guards.find(g => g.id === extra.guard_id);
       return {
         ...extra,
         guardName: guard?.name || 'Desconhecido'
       };
     });
-  }, [detailedExtras, guards, detailedPercentageFilter]);
+
+    // Aplicar ordenação
+    if (sortColumn) {
+      result = [...result].sort((a, b) => {
+        let comparison = 0;
+        
+        if (sortColumn === 'guardName') {
+          comparison = a.guardName.localeCompare(b.guardName, 'pt-BR');
+        } else if (sortColumn === 'extra_date') {
+          comparison = new Date(a.extra_date).getTime() - new Date(b.extra_date).getTime();
+        } else if (sortColumn === 'quantity' || sortColumn === 'percentage_type') {
+          comparison = a[sortColumn] - b[sortColumn];
+        }
+        
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    return result;
+  }, [detailedExtras, guards, detailedPercentageFilter, sortColumn, sortDirection]);
 
   const generateMyExtrasPDF = () => {
     const doc = new jsPDF();
@@ -817,10 +858,58 @@ const GuardDashboard = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Segurança</TableHead>
-                    <TableHead>Horas</TableHead>
-                    <TableHead>Tipo</TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('extra_date')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Data
+                        {sortColumn === 'extra_date' ? (
+                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('guardName')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Segurança
+                        {sortColumn === 'guardName' ? (
+                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('quantity')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Horas
+                        {sortColumn === 'quantity' ? (
+                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('percentage_type')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Tipo
+                        {sortColumn === 'percentage_type' ? (
+                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </div>
+                    </TableHead>
                     <TableHead>Fundamentação</TableHead>
                   </TableRow>
                 </TableHeader>
