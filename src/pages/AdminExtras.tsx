@@ -544,9 +544,33 @@ export default function AdminExtras() {
     }
 
     try {
+      const extraDateFormatted = format(extraDate, "yyyy-MM-dd");
+
+      // Check for duplicate: same guard + same date
+      const { data: existingExtra, error: checkError } = await supabase
+        .from("extras")
+        .select("id, percentage_type")
+        .eq("guard_id", selectedGuard)
+        .eq("extra_date", extraDateFormatted)
+        .eq("admin_id", profile.id)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('[AdminExtras] Erro ao verificar duplicata:', checkError);
+      }
+
+      if (existingExtra) {
+        toast({
+          variant: "destructive",
+          title: "Registro duplicado",
+          description: `Já existe um extra cadastrado para este segurança em ${format(extraDate, "dd/MM/yyyy")} (${existingExtra.percentage_type}%). Edite o registro existente ou escolha outra data.`,
+        });
+        return;
+      }
+
       const insertData = {
         guard_id: selectedGuard,
-        extra_date: format(extraDate, "yyyy-MM-dd"),
+        extra_date: extraDateFormatted,
         month_reference: format(startOfMonth(extraDate), "yyyy-MM-dd"),
         justification: justification.trim(),
         quantity,
@@ -618,11 +642,35 @@ export default function AdminExtras() {
       return;
     }
 
+    const editDateFormatted = format(editDate, "yyyy-MM-dd");
+
+    // Check for duplicate: same guard + same date (excluding current record)
+    const { data: existingExtra, error: checkError } = await supabase
+      .from("extras")
+      .select("id")
+      .eq("guard_id", editGuardId)
+      .eq("extra_date", editDateFormatted)
+      .neq("id", editingExtra.id)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('[AdminExtras] Erro ao verificar duplicata:', checkError);
+    }
+
+    if (existingExtra) {
+      toast({
+        variant: "destructive",
+        title: "Registro duplicado",
+        description: `Já existe outro extra cadastrado para este segurança em ${format(editDate, "dd/MM/yyyy")}. Escolha outra data.`,
+      });
+      return;
+    }
+
     const { error } = await supabase
       .from("extras")
       .update({
         guard_id: editGuardId,
-        extra_date: format(editDate, "yyyy-MM-dd"),
+        extra_date: editDateFormatted,
         month_reference: format(startOfMonth(editDate), "yyyy-MM-dd"),
         justification: editJustification,
         quantity: editQuantity,
