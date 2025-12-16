@@ -50,7 +50,7 @@ export default function AdminExtras() {
   const [selectedGuard, setSelectedGuard] = useState<string>("");
   const [extraDate, setExtraDate] = useState<Date>();
   const [justification, setJustification] = useState("");
-  const [quantity, setQuantity] = useState<number | undefined>(undefined);
+  const [quantity, setQuantity] = useState<number | undefined>(24);
   const [percentageType, setPercentageType] = useState<number>(100);
   const [guardShiftDates, setGuardShiftDates] = useState<Date[]>([]);
   const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
@@ -509,7 +509,7 @@ export default function AdminExtras() {
       setSelectedGuard("");
       setExtraDate(undefined);
       setJustification("");
-      setQuantity(undefined);
+      setQuantity(24);
       setPercentageType(100);
       setGuardShiftDates([]);
       
