@@ -17,6 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Plus, FileText, Trash2, Download, BarChart3, ChevronLeft, ChevronRight, Edit, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
@@ -150,6 +151,44 @@ export default function AdminExtras() {
   // Sorting state for details table
   const [detailsSortColumn, setDetailsSortColumn] = useState<'guardName' | 'quantity' | 'percentage_type' | 'extra_date' | null>(null);
   const [detailsSortDirection, setDetailsSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // State for expanded ranking rows
+  const [expandedGuards, setExpandedGuards] = useState<Set<string>>(new Set());
+
+  const toggleGuardExpanded = (guardId: string) => {
+    setExpandedGuards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(guardId)) {
+        newSet.delete(guardId);
+      } else {
+        newSet.add(guardId);
+      }
+      return newSet;
+    });
+  };
+
+  const getGuardExtrasDetails = (guardId: string) => {
+    let baseExtras = extras.filter(e => e.guard_id === guardId);
+    
+    if (!rankingAllMonths) {
+      const startDate = startOfMonth(rankingDate);
+      const endDate = endOfMonth(rankingDate);
+      baseExtras = baseExtras.filter((extra) => {
+        const extraDate = new Date(`${extra.extra_date}T00:00:00`);
+        return extraDate >= startDate && extraDate <= endDate;
+      });
+    }
+    
+    if (rankingPercentageFilter !== 'all') {
+      baseExtras = baseExtras.filter(e => e.percentage_type === parseInt(rankingPercentageFilter));
+    }
+    
+    return baseExtras.sort((a, b) => {
+      const dateA = new Date(`${a.extra_date}T00:00:00`);
+      const dateB = new Date(`${b.extra_date}T00:00:00`);
+      return dateA.getTime() - dateB.getTime();
+    });
+  };
 
   const handleDetailsSort = (column: 'guardName' | 'quantity' | 'percentage_type' | 'extra_date') => {
     if (detailsSortColumn === column) {
@@ -1302,32 +1341,90 @@ export default function AdminExtras() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Posição</TableHead>
+                    <TableHead className="w-[80px]">Posição</TableHead>
                     <TableHead>Segurança</TableHead>
                     <TableHead className="text-center">Total de Horas</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(() => {
-                    // Obter valores únicos de total, ordenados decrescente
                     const uniqueTotals = [...new Set(rankingFilteredSummary.map(i => i.totalHours))].sort((a, b) => b - a);
                     return rankingFilteredSummary.map((item) => {
-                    // Calcular posição baseada em valores únicos
-                    const position = uniqueTotals.indexOf(item.totalHours) + 1;
-                    const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : '';
-                    return (
-                      <TableRow key={item.guardId}>
-                        <TableCell className="font-medium">
-                          <span className="flex items-center gap-2">
-                            {medal && <span className="text-xl">{medal}</span>}
-                            {position}º
-                          </span>
-                        </TableCell>
-                        <TableCell>{item.guardName}</TableCell>
-                        <TableCell className="text-center font-semibold">{item.totalHours}h</TableCell>
-                      </TableRow>
-                    );
-                  })})()}
+                      const position = uniqueTotals.indexOf(item.totalHours) + 1;
+                      const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : '';
+                      const isExpanded = expandedGuards.has(item.guardId);
+                      const guardExtras = getGuardExtrasDetails(item.guardId);
+                      
+                      return (
+                        <Collapsible key={item.guardId} open={isExpanded} onOpenChange={() => toggleGuardExpanded(item.guardId)} asChild>
+                          <>
+                            <CollapsibleTrigger asChild>
+                              <TableRow className="cursor-pointer hover:bg-muted/50">
+                                <TableCell className="font-medium">
+                                  <span className="flex items-center gap-2">
+                                    {medal && <span className="text-xl">{medal}</span>}
+                                    {position}º
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                    {item.guardName}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center font-semibold">{item.totalHours}h</TableCell>
+                              </TableRow>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent asChild>
+                              <TableRow className="bg-muted/30 hover:bg-muted/30">
+                                <TableCell colSpan={3} className="p-0">
+                                  <div className="p-4 pl-12">
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow>
+                                          <TableHead>Data</TableHead>
+                                          <TableHead className="text-center">Horas</TableHead>
+                                          <TableHead className="text-center">Tipo</TableHead>
+                                          <TableHead>Fundamentação</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {guardExtras.map((extra) => (
+                                          <TableRow key={extra.id}>
+                                            <TableCell>
+                                              {format(new Date(`${extra.extra_date}T00:00:00`), "dd/MM/yyyy")}
+                                            </TableCell>
+                                            <TableCell className="text-center">{extra.quantity}h</TableCell>
+                                            <TableCell className="text-center">
+                                              <span className={cn(
+                                                "px-2 py-1 rounded-full text-xs font-medium",
+                                                extra.percentage_type === 100 
+                                                  ? "bg-green-100 text-green-800" 
+                                                  : "bg-yellow-100 text-yellow-800"
+                                              )}>
+                                                {extra.percentage_type}%
+                                              </span>
+                                            </TableCell>
+                                            <TableCell className="max-w-[300px] truncate" title={extra.justification}>
+                                              {extra.justification}
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            </CollapsibleContent>
+                          </>
+                        </Collapsible>
+                      );
+                    });
+                  })()}
                 </TableBody>
               </Table>
             </div>
