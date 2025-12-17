@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Plus, FileText, Trash2, Download, BarChart3, ChevronLeft, ChevronRight, Edit } from "lucide-react";
+import { CalendarIcon, Plus, FileText, Trash2, Download, BarChart3, ChevronLeft, ChevronRight, Edit, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
@@ -146,6 +146,24 @@ export default function AdminExtras() {
   
   // Delete confirmation state
   const [deletingExtraId, setDeletingExtraId] = useState<string | null>(null);
+
+  // Sorting state for details table
+  const [detailsSortColumn, setDetailsSortColumn] = useState<'guardName' | 'quantity' | 'percentage_type' | 'extra_date' | null>(null);
+  const [detailsSortDirection, setDetailsSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleDetailsSort = (column: 'guardName' | 'quantity' | 'percentage_type' | 'extra_date') => {
+    if (detailsSortColumn === column) {
+      if (detailsSortDirection === 'asc') {
+        setDetailsSortDirection('desc');
+      } else {
+        setDetailsSortColumn(null);
+        setDetailsSortDirection('asc');
+      }
+    } else {
+      setDetailsSortColumn(column);
+      setDetailsSortDirection('asc');
+    }
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -293,17 +311,41 @@ export default function AdminExtras() {
     const startDate = startOfMonth(detailsMonth);
     const endDate = endOfMonth(detailsMonth);
 
-    return extras
-      .filter((extra) => {
-        const extraDate = new Date(`${extra.extra_date}T00:00:00`);
-        return extraDate >= startDate && extraDate <= endDate;
-      })
-      .sort((a, b) => {
+    let filtered = extras.filter((extra) => {
+      const extraDate = new Date(`${extra.extra_date}T00:00:00`);
+      return extraDate >= startDate && extraDate <= endDate;
+    });
+
+    // Apply sorting
+    if (detailsSortColumn) {
+      filtered = [...filtered].sort((a, b) => {
+        let comparison = 0;
+        
+        if (detailsSortColumn === 'guardName') {
+          const nameA = a.guard?.name || 'Desconhecido';
+          const nameB = b.guard?.name || 'Desconhecido';
+          comparison = nameA.localeCompare(nameB, 'pt-BR');
+        } else if (detailsSortColumn === 'extra_date') {
+          comparison = new Date(`${a.extra_date}T00:00:00`).getTime() - new Date(`${b.extra_date}T00:00:00`).getTime();
+        } else if (detailsSortColumn === 'quantity') {
+          comparison = (a.quantity || 0) - (b.quantity || 0);
+        } else if (detailsSortColumn === 'percentage_type') {
+          comparison = (a.percentage_type || 100) - (b.percentage_type || 100);
+        }
+        
+        return detailsSortDirection === 'asc' ? comparison : -comparison;
+      });
+    } else {
+      // Default sort by date if no column selected
+      filtered = filtered.sort((a, b) => {
         const dateA = new Date(`${a.extra_date}T00:00:00`);
         const dateB = new Date(`${b.extra_date}T00:00:00`);
         return dateA.getTime() - dateB.getTime();
       });
-  }, [extras, detailsMonth]);
+    }
+
+    return filtered;
+  }, [extras, detailsMonth, detailsSortColumn, detailsSortDirection]);
 
   // Filtered extras for report based on percentage type and period
   const reportFilteredExtras = useMemo(() => {
@@ -1338,10 +1380,58 @@ export default function AdminExtras() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Segurança</TableHead>
-                    <TableHead className="text-center">Horas</TableHead>
-                    <TableHead className="text-center">Tipo</TableHead>
-                    <TableHead className="text-center">Data</TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleDetailsSort('guardName')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Segurança
+                        {detailsSortColumn === 'guardName' ? (
+                          detailsSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-center cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleDetailsSort('quantity')}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        Horas
+                        {detailsSortColumn === 'quantity' ? (
+                          detailsSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-center cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleDetailsSort('percentage_type')}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        Tipo
+                        {detailsSortColumn === 'percentage_type' ? (
+                          detailsSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-center cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleDetailsSort('extra_date')}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        Data
+                        {detailsSortColumn === 'extra_date' ? (
+                          detailsSortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </div>
+                    </TableHead>
                     <TableHead>Fundamentação</TableHead>
                     <TableHead className="text-center">Ações</TableHead>
                   </TableRow>
