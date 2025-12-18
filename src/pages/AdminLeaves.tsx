@@ -83,6 +83,7 @@ export default function AdminLeaves() {
   const [reportMonth, setReportMonth] = useState<Date>(new Date());
   const [reportLeaveType, setReportLeaveType] = useState<string>('all');
   const [reportGuardFilter, setReportGuardFilter] = useState<string>('all');
+  const [reportSortBy, setReportSortBy] = useState<string>('name');
 
   useEffect(() => {
     if (profile?.id) {
@@ -333,7 +334,17 @@ export default function AdminLeaves() {
       filtered = filtered.filter(leave => leave.guard_id === reportGuardFilter);
     }
 
-    return filtered.sort((a, b) => (a.guard?.name || '').localeCompare(b.guard?.name || ''));
+    // Apply sorting based on selected option
+    switch (reportSortBy) {
+      case 'name':
+        return filtered.sort((a, b) => (a.guard?.name || '').localeCompare(b.guard?.name || ''));
+      case 'date':
+        return filtered.sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
+      case 'type':
+        return filtered.sort((a, b) => a.leave_type.localeCompare(b.leave_type));
+      default:
+        return filtered.sort((a, b) => (a.guard?.name || '').localeCompare(b.guard?.name || ''));
+    }
   };
 
   const capitalizeFirst = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
@@ -691,7 +702,7 @@ export default function AdminLeaves() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
               {/* Period Type */}
               <div className="space-y-2">
                 <Label>Período</Label>
@@ -770,6 +781,21 @@ export default function AdminLeaves() {
                         {guard.name}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Sort By */}
+              <div className="space-y-2">
+                <Label>Ordenar por</Label>
+                <Select value={reportSortBy} onValueChange={setReportSortBy}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">Nome (A-Z)</SelectItem>
+                    <SelectItem value="date">Data (Recente)</SelectItem>
+                    <SelectItem value="type">Tipo de Folga</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
