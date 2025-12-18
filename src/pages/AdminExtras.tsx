@@ -1248,7 +1248,7 @@ export default function AdminExtras() {
 
       // Enviar para webhook
       const response = await fetch(
-        'https://n8n.autozapx.com/webhook-test/preferencia-extra',
+        'https://webhook.autozapx.com/webhook/preferencia-extra',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
