@@ -1312,7 +1312,7 @@ export default function AdminExtras() {
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Data de Referência</label>
+              <label className="text-sm font-medium">Data do Extra</label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
