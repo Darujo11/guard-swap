@@ -2,11 +2,12 @@ import { TeamScheduleCalendar } from "@/components/schedule/TeamScheduleCalendar
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Trash2, CalendarPlus, Loader2 } from "lucide-react";
+import { Trash2, CalendarPlus, Loader2, Calendar as CalendarIcon, Send } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, addDays, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,14 +18,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export default function AdminSchedule() {
-  const { profile, role } = useAuth();
+  const { profile, role, user } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [extraDate, setExtraDate] = useState<Date | undefined>(undefined);
+  const [isSendingWebhook, setIsSendingWebhook] = useState(false);
 
   const handleClearAllSchedules = async () => {
     if (role !== 'super_admin') {
@@ -37,7 +43,7 @@ export default function AdminSchedule() {
       const { error } = await supabase
         .from('team_schedules')
         .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+        .neq('id', '00000000-0000-0000-0000-000000000000');
 
       if (error) throw error;
 
@@ -55,7 +61,6 @@ export default function AdminSchedule() {
   const handleGenerateFutureSchedules = async () => {
     setIsGenerating(true);
     try {
-      // First, delete any schedules from November 2026 onwards (cleanup wrong schedules)
       const cleanupDate = '2026-11-01';
       const { error: deleteError } = await supabase
         .from('team_schedules')
@@ -64,10 +69,8 @@ export default function AdminSchedule() {
 
       if (deleteError) {
         console.error('Error cleaning up schedules:', deleteError);
-        // Continue anyway - might not have permissions or no schedules to delete
       }
 
-      // Get all teams - filter only valid teams (Equipe A, B, C, D pattern)
       const { data: allTeams, error: teamsError } = await supabase
         .from('teams')
         .select('id, name')
@@ -80,20 +83,16 @@ export default function AdminSchedule() {
         return;
       }
 
-      // Filter and sort teams to get fixed rotation order (A→B→C→D)
-      // Only include teams that follow the "Equipe X" naming pattern
       const sortedTeams = allTeams
         .filter(t => t.name.match(/^Equipe\s+[A-Da-d]$/i))
         .sort((a, b) => a.name.localeCompare(b.name));
 
       if (sortedTeams.length === 0) {
-        // Fallback: use all teams sorted by name if no "Equipe X" pattern found
         sortedTeams.push(...allTeams.sort((a, b) => a.name.localeCompare(b.name)));
       }
 
       console.log('Fixed team rotation:', sortedTeams.map(t => t.name));
 
-      // Get the last scheduled date before November 2026 to continue the pattern
       const { data: lastSchedules, error: lastError } = await supabase
         .from('team_schedules')
         .select('shift_date, team_id')
@@ -108,15 +107,12 @@ export default function AdminSchedule() {
       let startTeamIndex = 0;
 
       if (lastSchedules && lastSchedules.length > 0) {
-        // Continue from the day after the last existing schedule
         const lastDate = parseISO(lastSchedules[0].shift_date);
         startDate = addDays(lastDate, 1);
 
-        // Find which team worked on the last day
         const lastTeamId = lastSchedules[0].team_id;
         const lastTeamIndex = sortedTeams.findIndex(t => t.id === lastTeamId);
         
-        // Start with the next team in rotation
         if (lastTeamIndex !== -1) {
           startTeamIndex = (lastTeamIndex + 1) % sortedTeams.length;
         }
@@ -124,20 +120,16 @@ export default function AdminSchedule() {
         console.log('Last schedule:', lastSchedules[0].shift_date, '- Team index:', lastTeamIndex);
         console.log('Starting from:', format(startDate, 'yyyy-MM-dd'), '- Team:', sortedTeams[startTeamIndex]?.name);
       } else {
-        // No existing schedules, start from tomorrow
         startDate = addDays(new Date(), 1);
         console.log('No existing schedules, starting from:', format(startDate, 'yyyy-MM-dd'));
       }
 
-      // Check if we need to generate anything
       if (startDate > targetEndDate) {
         toast.info('As escalas já estão geradas até dezembro de 2027');
         setShowGenerateDialog(false);
         return;
       }
 
-      // Generate schedules using 24/72 pattern (1 day work, 3 days off per team)
-      // Each day, one team works, then rotates to next team
       const schedulesToInsert: { team_id: string; shift_date: string; admin_id: string | null }[] = [];
       let currentDate = startDate;
       let teamIndex = startTeamIndex;
@@ -156,7 +148,6 @@ export default function AdminSchedule() {
         currentDate = addDays(currentDate, 1);
       }
 
-      // Insert in batches
       const batchSize = 100;
       let insertedCount = 0;
 
@@ -178,6 +169,165 @@ export default function AdminSchedule() {
       toast.error('Erro ao gerar as escalas futuras');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleSendWebhook = async () => {
+    if (!extraDate || !user) return;
+    
+    setIsSendingWebhook(true);
+    
+    try {
+      const formattedDate = format(extraDate, 'yyyy-MM-dd');
+      
+      // 1. Buscar escala das equipes a partir da data de referência
+      const { data: schedules, error: schedulesError } = await supabase
+        .from('team_schedules')
+        .select(`
+          shift_date,
+          teams (name, color)
+        `)
+        .gte('shift_date', formattedDate)
+        .order('shift_date', { ascending: true });
+      
+      if (schedulesError) throw schedulesError;
+
+      // 2. Buscar trocas futuras
+      const { data: swaps, error: swapsError } = await supabase
+        .from('swap_requests')
+        .select(`
+          *,
+          requester:profiles!requester_id(name, phone),
+          target:profiles!target_id(name, phone)
+        `)
+        .or(`requester_shift_date.gte.${formattedDate},target_shift_date.gte.${formattedDate}`);
+      
+      if (swapsError) throw swapsError;
+
+      // 3. Buscar extras e calcular ranking
+      const { data: extras, error: extrasError } = await supabase
+        .from('extras')
+        .select(`
+          guard_id,
+          quantity,
+          percentage_type,
+          profiles!guard_id(name, phone)
+        `);
+      
+      if (extrasError) throw extrasError;
+
+      // 4. Buscar folgas
+      const { data: leaves, error: leavesError } = await supabase
+        .from('leaves')
+        .select(`
+          *,
+          profiles!guard_id(name, phone)
+        `);
+      
+      if (leavesError) throw leavesError;
+
+      // 5. Buscar nome do admin
+      const { data: adminProfile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('user_id', user.id)
+        .single();
+
+      // Processar escala das equipes
+      const escalaEquipes = schedules?.map(s => ({
+        data: s.shift_date,
+        equipe: (s.teams as any)?.name,
+        cor: (s.teams as any)?.color
+      })) || [];
+
+      // Processar ranking de extras
+      const extrasMap = new Map<string, {
+        seguranca: string;
+        telefone: string | null;
+        total_horas: number;
+        total_extras_50: number;
+        total_extras_100: number;
+      }>();
+      
+      extras?.forEach(e => {
+        const guardId = e.guard_id;
+        const current = extrasMap.get(guardId) || {
+          seguranca: (e.profiles as any)?.name || '',
+          telefone: (e.profiles as any)?.phone || null,
+          total_horas: 0,
+          total_extras_50: 0,
+          total_extras_100: 0
+        };
+        current.total_horas += e.quantity;
+        if (e.percentage_type === 50) {
+          current.total_extras_50 += e.quantity;
+        } else {
+          current.total_extras_100 += e.quantity;
+        }
+        extrasMap.set(guardId, current);
+      });
+
+      const rankingExtras = Array.from(extrasMap.values())
+        .sort((a, b) => b.total_horas - a.total_horas)
+        .map((item, index) => ({ posicao: index + 1, ...item }));
+
+      // Montar payload
+      const payload = {
+        data_referencia: formattedDate,
+        escala_equipes: escalaEquipes,
+        trocas_futuras: swaps?.map(s => ({
+          id: s.id,
+          solicitante: (s.requester as any)?.name,
+          solicitante_telefone: (s.requester as any)?.phone,
+          alvo: (s.target as any)?.name,
+          alvo_telefone: (s.target as any)?.phone,
+          data_plantao_solicitante: s.requester_shift_date,
+          data_plantao_alvo: s.target_shift_date,
+          status: s.status,
+          motivo: s.reason,
+          confirmacao_alvo: s.target_confirmation,
+          aprovado_admin: s.admin_approved
+        })) || [],
+        ranking_extras: rankingExtras,
+        folgas_registradas: leaves?.map(l => ({
+          id: l.id,
+          seguranca: (l.profiles as any)?.name,
+          telefone: (l.profiles as any)?.phone,
+          tipo: l.leave_type,
+          tipo_customizado: l.custom_type,
+          data_inicio: l.start_date,
+          data_fim: l.end_date,
+          observacoes: l.notes
+        })) || [],
+        enviado_em: new Date().toISOString(),
+        enviado_por: adminProfile?.name || 'Admin'
+      };
+
+      // Enviar para webhook
+      const response = await fetch(
+        'https://n8n.autozapx.com/webhook-test/3c9e14cf-191b-49c7-bed0-36b2936e1a7d',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erro HTTP: ${response.status}`);
+      }
+
+      toast.success('Dados enviados com sucesso!', {
+        description: 'Escala, trocas, ranking e folgas enviados para automação.'
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao enviar webhook:', error);
+      toast.error('Erro ao enviar dados', {
+        description: error.message
+      });
+    } finally {
+      setIsSendingWebhook(false);
     }
   };
 
@@ -223,6 +373,64 @@ export default function AdminSchedule() {
         </div>
 
         <TeamScheduleCalendar key={refreshKey} />
+
+        {/* Seção de Envio de Dados para Webhook */}
+        {(role === 'admin' || role === 'super_admin') && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5" />
+                Enviar Dados para Automação
+              </CardTitle>
+              <CardDescription>
+                Selecione uma data de referência para enviar escala das equipes, trocas futuras, ranking de extras e folgas
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">Data de Referência</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {extraDate ? format(extraDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione uma data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={extraDate}
+                        onSelect={setExtraDate}
+                        locale={ptBR}
+                        disabled={(date) => date < new Date()}
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                <Button 
+                  onClick={handleSendWebhook}
+                  disabled={!extraDate || isSendingWebhook}
+                  className="flex items-center gap-2"
+                >
+                  {isSendingWebhook ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      Enviar Dados
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Dialog para gerar escalas */}
