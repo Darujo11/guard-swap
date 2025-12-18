@@ -207,11 +207,22 @@ const Login = () => {
         </Card>
       </div>
       
-      {/* Version Footer */}
-      <div className="absolute bottom-4 left-0 right-0 z-10 text-center">
+      {/* Footer with Version and Credits */}
+      <div className="absolute bottom-4 left-0 right-0 z-10 text-center space-y-1">
         <span className="text-xs text-muted-foreground/70">
           Versão {APP_VERSION}
         </span>
+        <div className="text-xs text-muted-foreground/70">
+          Feito com ❤️ por{' '}
+          <a 
+            href="https://wa.me/5522999491428" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="font-medium hover:text-primary transition-colors underline underline-offset-2"
+          >
+            VentureWise - Fabio Ventura
+          </a>
+        </div>
       </div>
     </div>
   );
