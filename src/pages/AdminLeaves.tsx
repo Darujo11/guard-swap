@@ -336,6 +336,8 @@ export default function AdminLeaves() {
     return filtered.sort((a, b) => (a.guard?.name || '').localeCompare(b.guard?.name || ''));
   };
 
+  const capitalizeFirst = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
+
   const generatePDF = () => {
     const reportLeaves = getReportFilteredLeaves();
 
@@ -358,7 +360,7 @@ export default function AdminLeaves() {
     doc.setFontSize(10);
     let filterInfo = reportAllMonths 
       ? 'Período: Todos os meses' 
-      : `Período: ${format(reportMonth, 'MMMM yyyy', { locale: ptBR })}`;
+      : `Período: ${capitalizeFirst(format(reportMonth, 'MMMM yyyy', { locale: ptBR }))}`;
     if (reportLeaveType !== 'all') {
       const typeLabel = LEAVE_TYPES.find(t => t.value === reportLeaveType)?.label || reportLeaveType;
       filterInfo += ` | Tipo: ${typeLabel}`;
@@ -401,6 +403,20 @@ export default function AdminLeaves() {
         4: { cellWidth: 'auto' },
       },
     });
+
+    // Signature field
+    const finalY = (doc as any).lastAutoTable.finalY || 48;
+    const signatureY = Math.max(finalY + 40, doc.internal.pageSize.height - 50);
+    
+    doc.setFontSize(10);
+    doc.setLineWidth(0.5);
+    
+    // Signature line
+    doc.line(14, signatureY, 100, signatureY);
+    doc.text('Coordenador(a)', 14, signatureY + 6);
+    
+    // Date field
+    doc.text('Data: ____/____/________', 120, signatureY);
 
     // Pagination
     const pageCount = doc.getNumberOfPages();
