@@ -12,6 +12,7 @@ import { NotificationsBell } from '@/components/notifications/NotificationsBell'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { forceAppUpdate } from '@/components/VersionChecker';
+import { APP_VERSION } from '@/lib/version';
 interface AppLayoutProps {
   children: ReactNode;
   title: string;
@@ -204,6 +205,10 @@ export function AppLayout({
                       <RefreshCw className="mr-2 h-4 w-4" />
                       <span>Verificar Atualizações</span>
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground text-center">
+                      Versão {APP_VERSION}
+                    </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onSelect={() => signOut()} className="cursor-pointer">
                       <LogOut className="mr-2 h-4 w-4" />
