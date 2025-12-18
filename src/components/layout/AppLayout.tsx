@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign, Settings, Menu, CalendarOff } from 'lucide-react';
+import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign, Settings, Menu, CalendarOff, RefreshCw } from 'lucide-react';
 import logoImage from '@/assets/logo.png';
 import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { useSwapNotifications } from '@/hooks/useSwapNotifications';
 import { NotificationsBell } from '@/components/notifications/NotificationsBell';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { forceAppUpdate } from '@/components/VersionChecker';
 interface AppLayoutProps {
   children: ReactNode;
   title: string;
@@ -198,6 +199,10 @@ export function AppLayout({
                         <UserCircle className="mr-2 h-4 w-4" />
                         <span>Perfil</span>
                       </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => forceAppUpdate()} className="cursor-pointer">
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      <span>Verificar Atualizações</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onSelect={() => signOut()} className="cursor-pointer">

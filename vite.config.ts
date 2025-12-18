@@ -60,6 +60,8 @@ export default defineConfig(({ mode }) => ({
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg}'],
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/version\.json$/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
@@ -68,9 +70,13 @@ export default defineConfig(({ mode }) => ({
               cacheName: 'supabase-cache',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
+                maxAgeSeconds: 60 * 60 * 24 // 1 day (reduced from 7)
               }
             }
+          },
+          {
+            urlPattern: /\/version\.json$/,
+            handler: 'NetworkOnly'
           }
         ]
       }

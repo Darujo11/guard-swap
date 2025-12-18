@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/guards/ProtectedRoute";
 import { VersionChecker } from "@/components/VersionChecker";
+import { PWAUpdateChecker } from "@/components/PWAUpdateChecker";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import TrialSignup from "./pages/TrialSignup";
@@ -31,6 +32,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <VersionChecker />
+      <PWAUpdateChecker />
       <Toaster />
       <Sonner />
       <HashRouter>
