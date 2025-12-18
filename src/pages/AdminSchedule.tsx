@@ -226,12 +226,40 @@ export default function AdminSchedule() {
       
       if (leavesError) throw leavesError;
 
-      // 5. Buscar nome do admin
+      // 5. Buscar equipes com integrantes
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select(`
+          id,
+          name,
+          color,
+          profiles!team_id(id, name, phone, email, is_shift_chief, is_active)
+        `)
+        .order('name');
+      
+      if (teamsError) throw teamsError;
+
+      // 6. Buscar nome do admin
       const { data: adminProfile } = await supabase
         .from('profiles')
         .select('name')
         .eq('user_id', user.id)
         .single();
+
+      // Processar equipes com integrantes
+      const equipesComIntegrantes = teams?.map(team => ({
+        id: team.id,
+        nome: team.name,
+        cor: team.color,
+        integrantes: ((team as any).profiles as any[])?.map(member => ({
+          id: member.id,
+          nome: member.name,
+          telefone: member.phone,
+          email: member.email,
+          chefe_de_plantao: member.is_shift_chief,
+          ativo: member.is_active
+        })) || []
+      })) || [];
 
       // Processar escala das equipes
       const escalaEquipes = schedules?.map(s => ({
@@ -274,6 +302,7 @@ export default function AdminSchedule() {
       // Montar payload
       const payload = {
         data_referencia: formattedDate,
+        equipes_com_integrantes: equipesComIntegrantes,
         escala_equipes: escalaEquipes,
         trocas_futuras: swaps?.map(s => ({
           id: s.id,
