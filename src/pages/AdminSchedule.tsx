@@ -505,7 +505,7 @@ export default function AdminSchedule() {
                   ) : (
                     <>
                       <Send className="h-4 w-4" />
-                      Enviar Dados
+                      Preferência no Extra
                     </>
                   )}
                 </Button>
