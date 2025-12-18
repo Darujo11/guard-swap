@@ -1390,6 +1390,9 @@ export default function AdminExtras() {
                                           <TableHead className="text-center">Horas</TableHead>
                                           <TableHead className="text-center">Tipo</TableHead>
                                           <TableHead>Fundamentação</TableHead>
+                                          {role === 'admin' && (
+                                            <TableHead className="text-center">Ações</TableHead>
+                                          )}
                                         </TableRow>
                                       </TableHeader>
                                       <TableBody>
@@ -1412,6 +1415,35 @@ export default function AdminExtras() {
                                             <TableCell className="max-w-[300px] truncate" title={extra.justification}>
                                               {extra.justification}
                                             </TableCell>
+                                            {role === 'admin' && (
+                                              <TableCell className="text-center">
+                                                <div className="flex items-center justify-center gap-2">
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      openEditDialog(extra);
+                                                    }}
+                                                    title="Editar"
+                                                  >
+                                                    <Edit className="h-4 w-4" />
+                                                  </Button>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setDeletingExtraId(extra.id);
+                                                    }}
+                                                    title="Excluir"
+                                                    className="text-destructive hover:text-destructive"
+                                                  >
+                                                    <Trash2 className="h-4 w-4" />
+                                                  </Button>
+                                                </div>
+                                              </TableCell>
+                                            )}
                                           </TableRow>
                                         ))}
                                       </TableBody>
