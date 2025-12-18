@@ -850,7 +850,7 @@ export default function AdminExtras() {
 
       autoTable(doc, {
         startY: yPos + 24,
-        head: [["Segurança", "Quantidade", "Tipo", "Dia", "Fundamentação"]],
+        head: [["Segurança", "Horas", "Tipo", "Dia", "Fundamentação"]],
         body: tableData,
         styles: { fontSize: 9 },
         headStyles: { fillColor: [59, 130, 246] },
