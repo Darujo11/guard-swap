@@ -136,6 +136,7 @@ export default function AdminExtras() {
   // Report percentage filter state
   const [reportPercentageFilter, setReportPercentageFilter] = useState<'all' | '50' | '100'>('all');
   const [reportAllMonths, setReportAllMonths] = useState<boolean>(false);
+  const [reportSortOrder, setReportSortOrder] = useState<'alphabetical' | 'date'>('alphabetical');
   
   // Edit dialog state
   const [editingExtra, setEditingExtra] = useState<Extra | null>(null);
@@ -840,7 +841,18 @@ export default function AdminExtras() {
       const totalExtras = reportFilteredExtras.reduce((sum, extra) => sum + (Number(extra.quantity) || 1), 0);
       doc.text(`Total de extras no período: ${totalExtras}`, 14, yPos + 16);
 
-      const tableData = reportFilteredExtras.map(extra => [
+      // Sort extras based on selected order
+      const sortedExtras = [...reportFilteredExtras].sort((a, b) => {
+        if (reportSortOrder === 'alphabetical') {
+          const nameA = a.guard?.name || 'ZZZ';
+          const nameB = b.guard?.name || 'ZZZ';
+          return nameA.localeCompare(nameB, 'pt-BR');
+        } else {
+          return new Date(a.extra_date).getTime() - new Date(b.extra_date).getTime();
+        }
+      });
+
+      const tableData = sortedExtras.map(extra => [
         extra.guard?.name || "Desconhecido",
         (extra.quantity || 1).toString(),
         `${extra.percentage_type || 100}%`,
@@ -1182,7 +1194,7 @@ export default function AdminExtras() {
           <CardDescription>Selecione o período e o tipo de extras para gerar o relatório</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="space-y-2">
               <Label>Período</Label>
               <Select 
@@ -1241,6 +1253,22 @@ export default function AdminExtras() {
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="50">Apenas 50%</SelectItem>
                   <SelectItem value="100">Apenas 100%</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Ordenar por</Label>
+              <Select 
+                value={reportSortOrder} 
+                onValueChange={(value: 'alphabetical' | 'date') => setReportSortOrder(value)}
+              >
+                <SelectTrigger className="h-[60px]">
+                  <SelectValue placeholder="Selecione a ordenação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alphabetical">Ordem Alfabética (A-Z)</SelectItem>
+                  <SelectItem value="date">Ordem por Data</SelectItem>
                 </SelectContent>
               </Select>
             </div>
