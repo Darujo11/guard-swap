@@ -17,7 +17,7 @@ import AdminSwaps from "./pages/AdminSwaps";
 import AdminGuards from "./pages/AdminGuards";
 import AdminSchedule from "./pages/AdminSchedule";
 import AdminExtras from "./pages/AdminExtras";
-import AdminSettings from "./pages/AdminSettings";
+import AdminLeaves from "./pages/AdminLeaves";
 import SuperAdminPlans from "./pages/SuperAdminPlans";
 import SuperAdminManagement from "./pages/SuperAdminManagement";
 import SuperAdminResetPassword from "./pages/SuperAdminResetPassword";
@@ -90,10 +90,10 @@ const App = () => (
             } 
           />
           <Route 
-            path="/admin/configuracoes" 
+            path="/admin/folgas" 
             element={
-              <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-                <AdminSettings />
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLeaves />
               </ProtectedRoute>
             } 
           />
