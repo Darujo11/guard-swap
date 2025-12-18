@@ -784,61 +784,65 @@ const GuardDashboard = () => {
                     const guardExtras = getGuardExtrasDetails(guard.id);
                     
                     return (
-                      <Collapsible key={guard.id} open={isExpanded} onOpenChange={() => toggleGuardExpanded(guard.id)}>
-                        <TableRow 
-                          className={isCurrentUser ? 'bg-accent/50 font-medium' : ''}
-                        >
-                          <TableCell>
-                            <span className="flex items-center gap-2">
-                              {medal && <span className="text-xl">{medal}</span>}
-                              #{position}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <CollapsibleTrigger className="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors w-full text-left">
-                              <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                              {guard.name}
-                              {isCurrentUser && (
-                                <span className="ml-2 text-xs text-primary">(Você)</span>
-                              )}
-                            </CollapsibleTrigger>
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {guard.total}h
-                          </TableCell>
-                        </TableRow>
-                        <CollapsibleContent asChild>
-                          <tr>
-                            <td colSpan={3} className="p-0">
-                              <div className="bg-muted/30 p-4 border-t">
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead className="text-xs">Data</TableHead>
-                                      <TableHead className="text-xs">Horas</TableHead>
-                                      <TableHead className="text-xs">Tipo</TableHead>
-                                      <TableHead className="text-xs">Fundamentação</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {guardExtras.map((extra) => (
-                                      <TableRow key={extra.id}>
-                                        <TableCell className="text-sm">{formatDate(extra.extra_date)}</TableCell>
-                                        <TableCell className="text-sm font-semibold">{extra.quantity}h</TableCell>
-                                        <TableCell>
-                                          <span className={`px-2 py-1 rounded text-xs font-medium ${extra.percentage_type === 50 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
-                                            {extra.percentage_type}%
-                                          </span>
-                                        </TableCell>
-                                        <TableCell className="text-sm max-w-xs truncate">{extra.justification}</TableCell>
+                      <Collapsible key={guard.id} open={isExpanded} onOpenChange={() => toggleGuardExpanded(guard.id)} asChild>
+                        <>
+                          <CollapsibleTrigger asChild>
+                            <TableRow 
+                              className={`cursor-pointer hover:bg-muted/50 ${isCurrentUser ? 'bg-accent/50 font-medium' : ''}`}
+                            >
+                              <TableCell>
+                                <span className="flex items-center gap-2">
+                                  {medal && <span className="text-xl">{medal}</span>}
+                                  #{position}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                                  {guard.name}
+                                  {isCurrentUser && (
+                                    <span className="ml-2 text-xs text-primary">(Você)</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {guard.total}h
+                              </TableCell>
+                            </TableRow>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent asChild>
+                            <TableRow className="bg-muted/30 hover:bg-muted/30">
+                              <TableCell colSpan={3} className="p-0">
+                                <div className="p-4 border-t">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="text-xs">Data</TableHead>
+                                        <TableHead className="text-xs">Horas</TableHead>
+                                        <TableHead className="text-xs">Tipo</TableHead>
+                                        <TableHead className="text-xs">Fundamentação</TableHead>
                                       </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </div>
-                            </td>
-                          </tr>
-                        </CollapsibleContent>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {guardExtras.map((extra) => (
+                                        <TableRow key={extra.id}>
+                                          <TableCell className="text-sm">{formatDate(extra.extra_date)}</TableCell>
+                                          <TableCell className="text-sm font-semibold">{extra.quantity}h</TableCell>
+                                          <TableCell>
+                                            <span className={`px-2 py-1 rounded text-xs font-medium ${extra.percentage_type === 50 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                                              {extra.percentage_type}%
+                                            </span>
+                                          </TableCell>
+                                          <TableCell className="text-sm max-w-xs truncate">{extra.justification}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          </CollapsibleContent>
+                        </>
                       </Collapsible>
                     );
                   })})()}
