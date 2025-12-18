@@ -21,6 +21,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function AdminSchedule() {
   const { profile, role, user } = useAuth();
@@ -31,6 +32,7 @@ export default function AdminSchedule() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [extraDate, setExtraDate] = useState<Date | undefined>(undefined);
   const [isSendingWebhook, setIsSendingWebhook] = useState(false);
+  const [webhookResponse, setWebhookResponse] = useState<string>('');
 
   const handleClearAllSchedules = async () => {
     if (role !== 'super_admin') {
@@ -391,6 +393,15 @@ export default function AdminSchedule() {
         throw new Error(`Erro HTTP: ${response.status}`);
       }
 
+      // Capturar resposta do webhook
+      const responseData = await response.text();
+      try {
+        const jsonResponse = JSON.parse(responseData);
+        setWebhookResponse(JSON.stringify(jsonResponse, null, 2));
+      } catch {
+        setWebhookResponse(responseData || 'Resposta vazia');
+      }
+
       toast.success('Dados enviados com sucesso!', {
         description: 'Escala, trocas, ranking e folgas enviados para automação.'
       });
@@ -502,6 +513,26 @@ export default function AdminSchedule() {
                   )}
                 </Button>
               </div>
+
+              {/* Campo de resposta do webhook */}
+              {webhookResponse && (
+                <div className="mt-4">
+                  <label className="text-sm font-medium">Resposta da Automação</label>
+                  <Textarea
+                    value={webhookResponse}
+                    readOnly
+                    className="mt-2 font-mono text-sm min-h-[150px] bg-muted"
+                  />
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="mt-2"
+                    onClick={() => setWebhookResponse('')}
+                  >
+                    Limpar resposta
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
