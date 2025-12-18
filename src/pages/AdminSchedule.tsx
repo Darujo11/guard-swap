@@ -467,9 +467,6 @@ export default function AdminSchedule() {
                 <Send className="h-5 w-5" />
                 Preferência no Extra
               </CardTitle>
-              <CardDescription>
-                Selecione uma data de referência para enviar escala das equipes, trocas futuras, ranking de extras e folgas
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
