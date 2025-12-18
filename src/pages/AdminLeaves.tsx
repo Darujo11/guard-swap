@@ -11,14 +11,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { CalendarOff, CalendarIcon, Plus, Pencil, Trash2 } from 'lucide-react';
+import { CalendarOff, CalendarIcon, Plus, Pencil, Trash2, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInDays, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Guard {
   id: string;
@@ -75,6 +77,12 @@ export default function AdminLeaves() {
 
   // Filter state
   const [filterGuard, setFilterGuard] = useState<string>('all');
+
+  // Report state
+  const [reportAllMonths, setReportAllMonths] = useState(false);
+  const [reportMonth, setReportMonth] = useState<Date>(new Date());
+  const [reportLeaveType, setReportLeaveType] = useState<string>('all');
+  const [reportGuardFilter, setReportGuardFilter] = useState<string>('all');
 
   useEffect(() => {
     if (profile?.id) {
@@ -301,6 +309,116 @@ export default function AdminLeaves() {
   const filteredLeaves = filterGuard === 'all' 
     ? leaves 
     : leaves.filter(l => l.guard_id === filterGuard);
+
+  const getReportFilteredLeaves = () => {
+    let filtered = [...leaves];
+
+    // Filter by month
+    if (!reportAllMonths) {
+      const monthStart = startOfMonth(reportMonth);
+      const monthEnd = endOfMonth(reportMonth);
+      filtered = filtered.filter(leave => {
+        const leaveStart = new Date(`${leave.start_date}T00:00:00`);
+        return leaveStart >= monthStart && leaveStart <= monthEnd;
+      });
+    }
+
+    // Filter by leave type
+    if (reportLeaveType !== 'all') {
+      filtered = filtered.filter(leave => leave.leave_type === reportLeaveType);
+    }
+
+    // Filter by guard
+    if (reportGuardFilter !== 'all') {
+      filtered = filtered.filter(leave => leave.guard_id === reportGuardFilter);
+    }
+
+    return filtered.sort((a, b) => (a.guard?.name || '').localeCompare(b.guard?.name || ''));
+  };
+
+  const generatePDF = () => {
+    const reportLeaves = getReportFilteredLeaves();
+
+    if (reportLeaves.length === 0) {
+      toast({
+        title: 'Sem dados',
+        description: 'Não há folgas para o período/filtros selecionados.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFontSize(18);
+    doc.text('Relatório de Folgas', 14, 20);
+
+    // Filter info
+    doc.setFontSize(10);
+    let filterInfo = reportAllMonths 
+      ? 'Período: Todos os meses' 
+      : `Período: ${format(reportMonth, 'MMMM yyyy', { locale: ptBR })}`;
+    if (reportLeaveType !== 'all') {
+      const typeLabel = LEAVE_TYPES.find(t => t.value === reportLeaveType)?.label || reportLeaveType;
+      filterInfo += ` | Tipo: ${typeLabel}`;
+    }
+    if (reportGuardFilter !== 'all') {
+      const guardName = guards.find(g => g.id === reportGuardFilter)?.name || '';
+      filterInfo += ` | ${settings.guard_label}: ${guardName}`;
+    }
+    doc.text(filterInfo, 14, 28);
+    doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 34);
+
+    // Summary
+    const totalLeaves = reportLeaves.length;
+    const totalDays = reportLeaves.reduce((sum, leave) => sum + calculateDays(leave.start_date, leave.end_date), 0);
+    doc.setFontSize(11);
+    doc.text(`Total de folgas: ${totalLeaves} | Total de dias: ${totalDays}`, 14, 42);
+
+    // Table
+    const tableData = reportLeaves.map(leave => [
+      leave.guard?.name || 'Desconhecido',
+      getLeaveTypeLabel(leave.leave_type, leave.custom_type),
+      leave.start_date === leave.end_date
+        ? format(new Date(`${leave.start_date}T00:00:00`), 'dd/MM/yyyy', { locale: ptBR })
+        : `${format(new Date(`${leave.start_date}T00:00:00`), 'dd/MM/yyyy', { locale: ptBR })} - ${format(new Date(`${leave.end_date}T00:00:00`), 'dd/MM/yyyy', { locale: ptBR })}`,
+      calculateDays(leave.start_date, leave.end_date).toString(),
+      leave.notes || '-',
+    ]);
+
+    autoTable(doc, {
+      startY: 48,
+      head: [[settings.guard_label, 'Tipo', 'Período', 'Dias', 'Observações']],
+      body: tableData,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [59, 130, 246] },
+      columnStyles: {
+        0: { cellWidth: 40 },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 45 },
+        3: { cellWidth: 15, halign: 'center' },
+        4: { cellWidth: 'auto' },
+      },
+    });
+
+    // Pagination
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
+    }
+
+    // Save
+    const monthName = reportAllMonths ? 'todos' : format(reportMonth, 'yyyy-MM', { locale: ptBR });
+    doc.save(`relatorio-folgas-${monthName}.pdf`);
+
+    toast({
+      title: 'Sucesso',
+      description: 'Relatório PDF gerado com sucesso!',
+    });
+  };
 
   return (
     <AppLayout
@@ -542,6 +660,110 @@ export default function AdminLeaves() {
                 </Table>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Report Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Relatório de Folgas
+            </CardTitle>
+            <CardDescription>
+              Gere um relatório em PDF com as folgas do período selecionado
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+              {/* Period Type */}
+              <div className="space-y-2">
+                <Label>Período</Label>
+                <Select 
+                  value={reportAllMonths ? 'all' : 'month'} 
+                  onValueChange={(v) => setReportAllMonths(v === 'all')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="month">Mês Específico</SelectItem>
+                    <SelectItem value="all">Todos os Meses</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Month Picker */}
+              <div className="space-y-2">
+                <Label>Mês/Ano</Label>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setReportMonth(subMonths(reportMonth, 1))}
+                    disabled={reportAllMonths}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className={cn(
+                    "flex-1 text-center py-2 border rounded-md text-sm",
+                    reportAllMonths && "opacity-50"
+                  )}>
+                    {format(reportMonth, 'MMM/yyyy', { locale: ptBR })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setReportMonth(addMonths(reportMonth, 1))}
+                    disabled={reportAllMonths}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Leave Type Filter */}
+              <div className="space-y-2">
+                <Label>Tipo de Folga</Label>
+                <Select value={reportLeaveType} onValueChange={setReportLeaveType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {LEAVE_TYPES.map(type => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Guard Filter */}
+              <div className="space-y-2">
+                <Label>{settings.guard_label}</Label>
+                <Select value={reportGuardFilter} onValueChange={setReportGuardFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {guards.map(guard => (
+                      <SelectItem key={guard.id} value={guard.id}>
+                        {guard.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Generate Button */}
+              <Button onClick={generatePDF} className="w-full">
+                <FileText className="h-4 w-4 mr-2" />
+                Gerar PDF
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
