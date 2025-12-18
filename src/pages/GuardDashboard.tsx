@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { GuardSwapForm } from '@/components/guards/GuardSwapForm';
 import { GuardSwapList } from '@/components/guards/GuardSwapList';
 import { TeamScheduleCalendar } from '@/components/schedule/TeamScheduleCalendar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -72,6 +73,9 @@ const GuardDashboard = () => {
   // Estados para ordenação da tabela detalhada
   const [sortColumn, setSortColumn] = useState<'extra_date' | 'guardName' | 'quantity' | 'percentage_type' | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // Estado para expansão do ranking
+  const [expandedGuards, setExpandedGuards] = useState<Set<string>>(new Set());
   
   const { toast } = useToast();
 
@@ -272,6 +276,46 @@ const GuardDashboard = () => {
       setSortColumn(column);
       setSortDirection('asc');
     }
+  };
+
+  // Função para alternar expansão do ranking
+  const toggleGuardExpanded = (guardId: string) => {
+    setExpandedGuards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(guardId)) {
+        newSet.delete(guardId);
+      } else {
+        newSet.add(guardId);
+      }
+      return newSet;
+    });
+  };
+
+  // Função para obter detalhes dos extras do segurança no ranking
+  const getGuardExtrasDetails = (guardId: string) => {
+    let baseExtras = allGuardsExtras.filter(e => e.guard_id === guardId);
+    
+    // Aplicar filtro de período (usa os mesmos filtros do ranking)
+    if (!rankingAllMonths) {
+      const startDate = startOfMonth(rankingMonth);
+      const endDate = endOfMonth(rankingMonth);
+      baseExtras = baseExtras.filter((extra) => {
+        const extraDate = new Date(`${extra.extra_date}T00:00:00`);
+        return extraDate >= startDate && extraDate <= endDate;
+      });
+    }
+    
+    // Aplicar filtro de porcentagem
+    if (rankingPercentageFilter !== 'all') {
+      baseExtras = baseExtras.filter(e => e.percentage_type === parseInt(rankingPercentageFilter));
+    }
+    
+    // Ordenar por data
+    return baseExtras.sort((a, b) => {
+      const dateA = new Date(`${a.extra_date}T00:00:00`);
+      const dateB = new Date(`${b.extra_date}T00:00:00`);
+      return dateA.getTime() - dateB.getTime();
+    });
   };
 
   // Registros detalhados filtrados independentemente
@@ -736,28 +780,66 @@ const GuardDashboard = () => {
                     // Calcular posição baseada em valores únicos
                     const position = uniqueTotals.indexOf(guard.total) + 1;
                     const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : '';
+                    const isExpanded = expandedGuards.has(guard.id);
+                    const guardExtras = getGuardExtrasDetails(guard.id);
                     
                     return (
-                      <TableRow 
-                        key={guard.id}
-                        className={isCurrentUser ? 'bg-accent/50 font-medium' : ''}
-                      >
-                        <TableCell>
-                          <span className="flex items-center gap-2">
-                            {medal && <span className="text-xl">{medal}</span>}
-                            #{position}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {guard.name}
-                          {isCurrentUser && (
-                            <span className="ml-2 text-xs text-primary">(Você)</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {guard.total}h
-                        </TableCell>
-                      </TableRow>
+                      <Collapsible key={guard.id} open={isExpanded} onOpenChange={() => toggleGuardExpanded(guard.id)}>
+                        <TableRow 
+                          className={isCurrentUser ? 'bg-accent/50 font-medium' : ''}
+                        >
+                          <TableCell>
+                            <span className="flex items-center gap-2">
+                              {medal && <span className="text-xl">{medal}</span>}
+                              #{position}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <CollapsibleTrigger className="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors w-full text-left">
+                              <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                              {guard.name}
+                              {isCurrentUser && (
+                                <span className="ml-2 text-xs text-primary">(Você)</span>
+                              )}
+                            </CollapsibleTrigger>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {guard.total}h
+                          </TableCell>
+                        </TableRow>
+                        <CollapsibleContent asChild>
+                          <tr>
+                            <td colSpan={3} className="p-0">
+                              <div className="bg-muted/30 p-4 border-t">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead className="text-xs">Data</TableHead>
+                                      <TableHead className="text-xs">Horas</TableHead>
+                                      <TableHead className="text-xs">Tipo</TableHead>
+                                      <TableHead className="text-xs">Fundamentação</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {guardExtras.map((extra) => (
+                                      <TableRow key={extra.id}>
+                                        <TableCell className="text-sm">{formatDate(extra.extra_date)}</TableCell>
+                                        <TableCell className="text-sm font-semibold">{extra.quantity}h</TableCell>
+                                        <TableCell>
+                                          <span className={`px-2 py-1 rounded text-xs font-medium ${extra.percentage_type === 50 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                                            {extra.percentage_type}%
+                                          </span>
+                                        </TableCell>
+                                        <TableCell className="text-sm max-w-xs truncate">{extra.justification}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </td>
+                          </tr>
+                        </CollapsibleContent>
+                      </Collapsible>
                     );
                   })})()}
                 </TableBody>
