@@ -160,6 +160,60 @@ export type Database = {
           },
         ]
       }
+      leaves: {
+        Row: {
+          admin_id: string | null
+          created_at: string
+          custom_type: string | null
+          end_date: string
+          guard_id: string
+          id: string
+          leave_type: string
+          notes: string | null
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          admin_id?: string | null
+          created_at?: string
+          custom_type?: string | null
+          end_date: string
+          guard_id: string
+          id?: string
+          leave_type: string
+          notes?: string | null
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          admin_id?: string | null
+          created_at?: string
+          custom_type?: string | null
+          end_date?: string
+          guard_id?: string
+          id?: string
+          leave_type?: string
+          notes?: string | null
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaves_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaves_guard_id_fkey"
+            columns: ["guard_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_settings: {
         Row: {
           admin_id: string | null

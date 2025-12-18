@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign, Settings, Menu } from 'lucide-react';
+import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign, Settings, Menu, CalendarOff } from 'lucide-react';
 import logoImage from '@/assets/logo.png';
 import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
 import { Button } from '@/components/ui/button';
@@ -72,9 +72,9 @@ export function AppLayout({
     icon: Clock,
     roles: ['admin', 'super_admin']
   }, {
-    name: 'Configurações',
-    href: '/admin/configuracoes',
-    icon: Settings,
+    name: 'Folgas',
+    href: '/admin/folgas',
+    icon: CalendarOff,
     roles: ['admin', 'super_admin']
   }];
   const superAdminNavigation = [{
