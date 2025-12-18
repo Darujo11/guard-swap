@@ -11,6 +11,7 @@ import logoImage from '@/assets/logo.png';
 import camaraBackground from '@/assets/logo3.jpg';
 import logoCamara from '@/assets/logo-camara.png';
 import PWAInstallButton from '@/components/PWAInstallButton';
+import { APP_VERSION } from '@/lib/version';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -204,6 +205,13 @@ const Login = () => {
             </form>
           </CardContent>
         </Card>
+      </div>
+      
+      {/* Version Footer */}
+      <div className="absolute bottom-4 left-0 right-0 z-10 text-center">
+        <span className="text-xs text-muted-foreground/70">
+          Versão {APP_VERSION}
+        </span>
       </div>
     </div>
   );
