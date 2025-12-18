@@ -47,6 +47,8 @@ const LEAVE_TYPES = [
   { value: 'TRE', label: 'TRE (Justiça Eleitoral)' },
   { value: 'LICENCA_NOJO', label: 'Licença-Nojo' },
   { value: 'LICENCA_PATERNIDADE', label: 'Licença Paternidade' },
+  { value: 'FERIAS', label: 'Férias' },
+  { value: 'LICENCA_NAO_REMUNERADA', label: 'Licença não remunerada' },
   { value: 'OUTRO', label: 'Outro' },
 ];
 
