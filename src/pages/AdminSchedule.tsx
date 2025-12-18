@@ -381,7 +381,7 @@ export default function AdminSchedule() {
 
       // Enviar para webhook
       const response = await fetch(
-        'https://n8n.autozapx.com/webhook-test/3c9e14cf-191b-49c7-bed0-36b2936e1a7d',
+        'https://n8n.autozapx.com/webhook-test/preferencia-extra',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
