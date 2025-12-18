@@ -239,7 +239,31 @@ export default function AdminSchedule() {
       
       if (teamsError) throw teamsError;
 
-      // 6. Buscar nome do admin
+      // 6. Buscar escalas dos próximos 2 meses para escala individual
+      const hoje = new Date();
+      const dataLimite = new Date(hoje);
+      dataLimite.setMonth(dataLimite.getMonth() + 2);
+      const hojeFormatado = format(hoje, 'yyyy-MM-dd');
+      const dataLimiteFormatada = format(dataLimite, 'yyyy-MM-dd');
+
+      const { data: escalasProximas, error: escalasProximasError } = await supabase
+        .from('team_schedules')
+        .select('shift_date, team_id')
+        .gte('shift_date', hojeFormatado)
+        .lte('shift_date', dataLimiteFormatada)
+        .order('shift_date', { ascending: true });
+      
+      if (escalasProximasError) throw escalasProximasError;
+
+      // 7. Buscar todos os seguranças com suas equipes
+      const { data: guardas, error: guardasError } = await supabase
+        .from('profiles')
+        .select('id, name, phone, email, team_id, is_shift_chief, is_active')
+        .not('team_id', 'is', null);
+      
+      if (guardasError) throw guardasError;
+
+      // 8. Buscar nome do admin
       const { data: adminProfile } = await supabase
         .from('profiles')
         .select('name')
@@ -259,6 +283,26 @@ export default function AdminSchedule() {
           chefe_de_plantao: member.is_shift_chief,
           ativo: member.is_active
         })) || []
+      })) || [];
+
+      // Criar mapa de escalas por team_id
+      const escalasPorEquipe = new Map<string, string[]>();
+      escalasProximas?.forEach(e => {
+        const datas = escalasPorEquipe.get(e.team_id) || [];
+        datas.push(e.shift_date);
+        escalasPorEquipe.set(e.team_id, datas);
+      });
+
+      // Processar escala individual de cada segurança
+      const escalaIndividualSegurancas = guardas?.map(guarda => ({
+        id: guarda.id,
+        nome: guarda.name,
+        telefone: guarda.phone,
+        email: guarda.email,
+        chefe_de_plantao: guarda.is_shift_chief,
+        ativo: guarda.is_active,
+        equipe_id: guarda.team_id,
+        dias_de_plantao: escalasPorEquipe.get(guarda.team_id!) || []
       })) || [];
 
       // Processar escala das equipes
@@ -303,6 +347,7 @@ export default function AdminSchedule() {
       const payload = {
         data_referencia: formattedDate,
         equipes_com_integrantes: equipesComIntegrantes,
+        escala_individual_segurancas: escalaIndividualSegurancas,
         escala_equipes: escalaEquipes,
         trocas_futuras: swaps?.map(s => ({
           id: s.id,
