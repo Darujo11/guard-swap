@@ -160,6 +160,57 @@ export type Database = {
           },
         ]
       }
+      guard_notes: {
+        Row: {
+          admin_id: string | null
+          created_at: string
+          description: string
+          guard_id: string
+          id: string
+          note_date: string
+          note_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          admin_id?: string | null
+          created_at?: string
+          description: string
+          guard_id: string
+          id?: string
+          note_date?: string
+          note_type: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          admin_id?: string | null
+          created_at?: string
+          description?: string
+          guard_id?: string
+          id?: string
+          note_date?: string
+          note_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guard_notes_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guard_notes_guard_id_fkey"
+            columns: ["guard_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leaves: {
         Row: {
           admin_id: string | null
@@ -281,40 +332,67 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           admin_id: string | null
+          birth_date: string | null
+          cpf: string | null
           created_at: string
           email: string
+          emergency_contact: string | null
+          emergency_phone: string | null
+          full_name: string | null
+          hire_date: string | null
           id: string
           is_active: boolean | null
           is_shift_chief: boolean
           name: string
           phone: string | null
+          photo_url: string | null
+          rg: string | null
           team_id: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          address?: string | null
           admin_id?: string | null
+          birth_date?: string | null
+          cpf?: string | null
           created_at?: string
           email: string
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          full_name?: string | null
+          hire_date?: string | null
           id?: string
           is_active?: boolean | null
           is_shift_chief?: boolean
           name: string
           phone?: string | null
+          photo_url?: string | null
+          rg?: string | null
           team_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          address?: string | null
           admin_id?: string | null
+          birth_date?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          full_name?: string | null
+          hire_date?: string | null
           id?: string
           is_active?: boolean | null
           is_shift_chief?: boolean
           name?: string
           phone?: string | null
+          photo_url?: string | null
+          rg?: string | null
           team_id?: string | null
           updated_at?: string
           user_id?: string | null
