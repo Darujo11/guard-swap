@@ -17,6 +17,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { SwapRequest, Profile, Team } from '@/lib/types';
 import { SWAP_STATUS_CONFIG } from '@/lib/constants';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import logoImage from '@/assets/logo-camara.png';
 
 import { 
   Calendar,
@@ -34,7 +37,8 @@ import {
   ArrowUp,
   ArrowDown,
   X,
-  CalendarDays
+  CalendarDays,
+  FileText
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -630,6 +634,163 @@ const AdminSwaps = () => {
 
   const stats = getStats();
 
+  // Função para carregar logo como base64
+  const loadLogoAsBase64 = (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = reject;
+      img.src = logoImage;
+    });
+  };
+
+  // Gerar relatório PDF de trocas
+  const generateSwapsReportPDF = async () => {
+    try {
+      if (filteredAndSortedRequests.length === 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Sem dados',
+          description: 'Nenhuma solicitação encontrada com os filtros aplicados.',
+        });
+        return;
+      }
+
+      const doc = new jsPDF();
+      
+      // Carregar logo
+      try {
+        const logoBase64 = await loadLogoAsBase64();
+        doc.addImage(logoBase64, 'PNG', 14, 10, 25, 25);
+      } catch (logoError) {
+        console.warn('[AdminSwaps][GenerateReport] Erro ao carregar logo:', logoError);
+      }
+
+      // Título
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Relatório de Trocas de Plantão', 45, 20);
+
+      // Informações dos filtros aplicados
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      let filterInfo: string[] = [];
+      if (statusFilter !== 'all') {
+        const statusLabel = SWAP_STATUS_CONFIG[statusFilter as keyof typeof SWAP_STATUS_CONFIG]?.label || statusFilter;
+        filterInfo.push(`Status: ${statusLabel}`);
+      }
+      if (monthFilter !== 'all') {
+        const [year, m] = monthFilter.split('-');
+        const date = new Date(Number(year), Number(m) - 1, 1);
+        filterInfo.push(`Mês: ${format(date, 'MMMM yyyy', { locale: ptBR })}`);
+      }
+      if (teamFilter !== 'all') {
+        const team = teams.find(t => t.id === teamFilter);
+        filterInfo.push(`Equipe: ${team?.name || teamFilter}`);
+      }
+      if (dateFrom || dateTo) {
+        const fromStr = dateFrom ? format(dateFrom, 'dd/MM/yyyy', { locale: ptBR }) : '...';
+        const toStr = dateTo ? format(dateTo, 'dd/MM/yyyy', { locale: ptBR }) : '...';
+        filterInfo.push(`Período: ${fromStr} a ${toStr}`);
+      }
+      
+      doc.text(filterInfo.length > 0 ? filterInfo.join(' | ') : 'Todos os registros', 45, 28);
+      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 45, 34);
+
+      // Resumo
+      const filteredStats = {
+        total: filteredAndSortedRequests.length,
+        pending: filteredAndSortedRequests.filter(r => r.status === 'PENDING').length,
+        accepted: filteredAndSortedRequests.filter(r => r.status === 'ACCEPTED').length,
+        approved: filteredAndSortedRequests.filter(r => r.status === 'APPROVED').length,
+        rejected: filteredAndSortedRequests.filter(r => r.status === 'REJECTED').length,
+        cancelled: filteredAndSortedRequests.filter(r => r.status === 'CANCELLED').length,
+      };
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Resumo', 14, 48);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(
+        `Total: ${filteredStats.total} | Pendentes: ${filteredStats.pending} | Aceitas: ${filteredStats.accepted} | Aprovadas: ${filteredStats.approved} | Rejeitadas: ${filteredStats.rejected} | Canceladas: ${filteredStats.cancelled}`,
+        14, 54
+      );
+
+      // Tabela com autoTable
+      const tableData = filteredAndSortedRequests.map(req => [
+        req.requester?.name || '-',
+        req.requester?.team?.name || '-',
+        req.target?.name || '-',
+        req.target?.team?.name || '-',
+        `${format(parseDateOnly(req.requester_shift_date), 'dd/MM/yy', { locale: ptBR })} → ${format(parseDateOnly(req.target_shift_date), 'dd/MM/yy', { locale: ptBR })}`,
+        SWAP_STATUS_CONFIG[req.status as keyof typeof SWAP_STATUS_CONFIG]?.label || req.status,
+        format(new Date(req.created_at), 'dd/MM/yy', { locale: ptBR }),
+      ]);
+
+      autoTable(doc, {
+        startY: 60,
+        head: [['Solicitante', 'Equipe', 'Convidado', 'Equipe', 'Datas Troca', 'Status', 'Criado em']],
+        body: tableData,
+        styles: { fontSize: 7, cellPadding: 2 },
+        headStyles: { fillColor: [59, 130, 246], textColor: 255 },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
+        columnStyles: {
+          0: { cellWidth: 28 },
+          1: { cellWidth: 22 },
+          2: { cellWidth: 28 },
+          3: { cellWidth: 22 },
+          4: { cellWidth: 30 },
+          5: { cellWidth: 20 },
+          6: { cellWidth: 18 },
+        },
+        didDrawPage: (data) => {
+          // Rodapé com número da página
+          const pageCount = doc.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          doc.text(
+            `Página ${data.pageNumber} de ${pageCount}`,
+            doc.internal.pageSize.width - 30,
+            doc.internal.pageSize.height - 10
+          );
+        },
+      });
+
+      // Assinatura
+      const finalY = (doc as any).lastAutoTable?.finalY || 150;
+      if (finalY < doc.internal.pageSize.height - 60) {
+        doc.setFontSize(9);
+        doc.line(14, finalY + 30, 80, finalY + 30);
+        doc.text('Coordenador(a)', 14, finalY + 36);
+        doc.text(`Data: ____/____/________`, 100, finalY + 36);
+      }
+
+      // Salvar PDF
+      doc.save(`relatorio-trocas-${format(new Date(), 'yyyy-MM-dd-HHmm')}.pdf`);
+
+      toast({
+        title: 'Relatório gerado',
+        description: `PDF com ${filteredAndSortedRequests.length} solicitações gerado com sucesso.`,
+      });
+    } catch (error) {
+      console.error('[AdminSwaps][GenerateReport]', error);
+      toast({
+        title: 'Erro ao gerar relatório',
+        description: 'Não foi possível gerar o relatório PDF.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Agrupar solicitações pelos meses envolvidos (requester_shift_date e target_shift_date)
   const groupedByMonth = filteredAndSortedRequests.reduce((acc, request) => {
     const getMonthKey = (dateStr: string | null | undefined) => {
@@ -737,12 +898,23 @@ const AdminSwaps = () => {
                 </Badge>
               )}
             </div>
-            {activeFiltersCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-2 text-muted-foreground">
-                <X className="h-4 w-4" />
-                Limpar Filtros
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={generateSwapsReportPDF} 
+                size="sm"
+                className="gap-2"
+                disabled={filteredAndSortedRequests.length === 0}
+              >
+                <FileText className="h-4 w-4" />
+                Gerar Relatório
               </Button>
-            )}
+              {activeFiltersCount > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-2 text-muted-foreground">
+                  <X className="h-4 w-4" />
+                  Limpar Filtros
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
