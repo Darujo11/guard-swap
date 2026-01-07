@@ -54,11 +54,6 @@ export function AppLayout({
     icon: Shield,
     roles: ['admin', 'super_admin']
   }, {
-    name: 'Fichas',
-    href: '/admin/fichas',
-    icon: FileText,
-    roles: ['admin', 'super_admin']
-  }, {
     name: settings.swaps_label,
     href: '/admin/trocas',
     icon: Calendar,
@@ -77,6 +72,11 @@ export function AppLayout({
     name: 'Folgas',
     href: '/admin/folgas',
     icon: CalendarOff,
+    roles: ['admin', 'super_admin']
+  }, {
+    name: 'Fichas',
+    href: '/admin/fichas',
+    icon: FileText,
     roles: ['admin', 'super_admin']
   }];
   const superAdminNavigation = [{
