@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,10 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { SwapRequest, Profile } from '@/lib/types';
+import { SwapRequest, Profile, Team } from '@/lib/types';
 import { SWAP_STATUS_CONFIG } from '@/lib/constants';
 
 import { 
@@ -27,18 +29,34 @@ import {
   Users,
   AlertCircle,
   Trash2,
-  ArrowLeft
+  ArrowLeft,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  X,
+  CalendarDays
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 
+type SortBy = 'created_at' | 'requester_name' | 'target_name' | 'requester_shift_date';
+type SortOrder = 'asc' | 'desc';
+
 const AdminSwaps = () => {
   const { profile } = useAuth();
   const [swapRequests, setSwapRequests] = useState<SwapRequest[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [monthFilter, setMonthFilter] = useState<string>('all');
+  const [teamFilter, setTeamFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<SortBy>('created_at');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  
   const [selectedRequest, setSelectedRequest] = useState<SwapRequest | null>(null);
   const [isDecisionDialogOpen, setIsDecisionDialogOpen] = useState(false);
   const [decisionAction, setDecisionAction] = useState<'approve' | 'reject' | null>(null);
@@ -55,7 +73,22 @@ const AdminSwaps = () => {
 
   useEffect(() => {
     fetchSwapRequests();
+    fetchTeams();
   }, []);
+
+  const fetchTeams = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('teams')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setTeams((data || []) as Team[]);
+    } catch (error) {
+      console.error('[AdminSwaps][FetchTeams]', error);
+    }
+  };
 
   const fetchSwapRequests = async () => {
     try {
@@ -89,6 +122,100 @@ const AdminSwaps = () => {
       setLoading(false);
     }
   };
+
+  // Calcular meses disponíveis para filtro
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    swapRequests.forEach(request => {
+      const m1 = request.requester_shift_date?.substring(0, 7);
+      const m2 = request.target_shift_date?.substring(0, 7);
+      if (m1) months.add(m1);
+      if (m2) months.add(m2);
+    });
+    return Array.from(months).sort((a, b) => b.localeCompare(a));
+  }, [swapRequests]);
+
+  // Contagem de filtros ativos
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (searchTerm) count++;
+    if (statusFilter !== 'all') count++;
+    if (monthFilter !== 'all') count++;
+    if (teamFilter !== 'all') count++;
+    if (dateFrom || dateTo) count++;
+    if (sortBy !== 'created_at' || sortOrder !== 'desc') count++;
+    return count;
+  }, [searchTerm, statusFilter, monthFilter, teamFilter, dateFrom, dateTo, sortBy, sortOrder]);
+
+  // Limpar todos os filtros
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setMonthFilter('all');
+    setTeamFilter('all');
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    setSortBy('created_at');
+    setSortOrder('desc');
+  };
+
+  // Alternar ordem de ordenação
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+  };
+
+  // Filtrar e ordenar solicitações
+  const filteredAndSortedRequests = useMemo(() => {
+    let result = swapRequests.filter(request => {
+      // Filtro de busca por texto
+      const matchesSearch = !searchTerm || 
+        request.requester?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.target?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.reason.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Filtro por status
+      const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
+      
+      // Filtro por mês de referência (plantão)
+      const matchesMonth = monthFilter === 'all' || 
+        request.requester_shift_date?.startsWith(monthFilter) ||
+        request.target_shift_date?.startsWith(monthFilter);
+      
+      // Filtro por equipe
+      const matchesTeam = teamFilter === 'all' ||
+        request.requester?.team_id === teamFilter ||
+        request.target?.team_id === teamFilter;
+      
+      // Filtro por período de criação
+      const createdAt = new Date(request.created_at);
+      const matchesDateFrom = !dateFrom || createdAt >= dateFrom;
+      const matchesDateTo = !dateTo || createdAt <= new Date(dateTo.getTime() + 24 * 60 * 60 * 1000 - 1);
+      
+      return matchesSearch && matchesStatus && matchesMonth && matchesTeam && matchesDateFrom && matchesDateTo;
+    });
+
+    // Ordenação
+    result.sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case 'requester_name':
+          comparison = (a.requester?.name || '').localeCompare(b.requester?.name || '', 'pt-BR');
+          break;
+        case 'target_name':
+          comparison = (a.target?.name || '').localeCompare(b.target?.name || '', 'pt-BR');
+          break;
+        case 'requester_shift_date':
+          comparison = (a.requester_shift_date || '').localeCompare(b.requester_shift_date || '');
+          break;
+        case 'created_at':
+        default:
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return result;
+  }, [swapRequests, searchTerm, statusFilter, monthFilter, teamFilter, dateFrom, dateTo, sortBy, sortOrder]);
 
   const handleDecision = async () => {
     if (!selectedRequest || !decisionAction) return;
@@ -492,17 +619,6 @@ const AdminSwaps = () => {
     }
   };
 
-  const filteredRequests = swapRequests.filter(request => {
-    const matchesSearch = 
-      request.requester?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.target?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.reason.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
-
   const getStats = () => {
     return {
       pending: swapRequests.filter(r => r.status === 'PENDING').length,
@@ -515,7 +631,7 @@ const AdminSwaps = () => {
   const stats = getStats();
 
   // Agrupar solicitações pelos meses envolvidos (requester_shift_date e target_shift_date)
-  const groupedByMonth = filteredRequests.reduce((acc, request) => {
+  const groupedByMonth = filteredAndSortedRequests.reduce((acc, request) => {
     const getMonthKey = (dateStr: string | null | undefined) => {
       if (!dateStr) return null;
       const [y, m] = dateStr.split('-');
@@ -608,9 +724,29 @@ const AdminSwaps = () => {
         </Card>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex-1">
+      {/* Filters Section */}
+      <Card className="mb-6">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-base">Filtros e Ordenação</CardTitle>
+              {activeFiltersCount > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {activeFiltersCount} {activeFiltersCount === 1 ? 'filtro ativo' : 'filtros ativos'}
+                </Badge>
+              )}
+            </div>
+            {activeFiltersCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-2 text-muted-foreground">
+                <X className="h-4 w-4" />
+                Limpar Filtros
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Row 1: Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -620,21 +756,161 @@ const AdminSwaps = () => {
               className="pl-10"
             />
           </div>
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filtrar por status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="PENDING">Pendente</SelectItem>
-            <SelectItem value="ACCEPTED">Aceita</SelectItem>
-            <SelectItem value="APPROVED">Aprovada</SelectItem>
-            <SelectItem value="REJECTED">Rejeitada</SelectItem>
-            <SelectItem value="CANCELLED">Cancelada</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+
+          {/* Row 2: Status, Month, Team */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Status</Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="PENDING">Pendente</SelectItem>
+                  <SelectItem value="ACCEPTED">Aceita</SelectItem>
+                  <SelectItem value="APPROVED">Aprovada</SelectItem>
+                  <SelectItem value="REJECTED">Rejeitada</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Mês de Referência</Label>
+              <Select value={monthFilter} onValueChange={setMonthFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os meses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os meses</SelectItem>
+                  {availableMonths.map((month) => {
+                    const [year, m] = month.split('-');
+                    const date = new Date(Number(year), Number(m) - 1, 1);
+                    return (
+                      <SelectItem key={month} value={month}>
+                        {format(date, 'MMMM yyyy', { locale: ptBR })}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Equipe</Label>
+              <Select value={teamFilter} onValueChange={setTeamFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as equipes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as equipes</SelectItem>
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: team.color || '#3b82f6' }}
+                        />
+                        {team.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Row 3: Sort and Date Range */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Ordenar por</Label>
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created_at">Data de Criação</SelectItem>
+                  <SelectItem value="requester_name">Solicitante (A-Z)</SelectItem>
+                  <SelectItem value="target_name">Convidado (A-Z)</SelectItem>
+                  <SelectItem value="requester_shift_date">Data do Plantão</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Ordem</Label>
+              <Button
+                variant="outline"
+                onClick={toggleSortOrder}
+                className="w-full justify-between"
+              >
+                {sortOrder === 'desc' ? (
+                  <>
+                    <span>Decrescente</span>
+                    <ArrowDown className="h-4 w-4" />
+                  </>
+                ) : (
+                  <>
+                    <span>Crescente</span>
+                    <ArrowUp className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Criado a partir de</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    {dateFrom ? format(dateFrom, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dateFrom}
+                    onSelect={setDateFrom}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Criado até</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    {dateTo ? format(dateTo, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dateTo}
+                    onSelect={setDateTo}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          {/* Results count */}
+          <div className="pt-2 border-t">
+            <p className="text-sm text-muted-foreground">
+              Exibindo <span className="font-medium text-foreground">{filteredAndSortedRequests.length}</span> de{' '}
+              <span className="font-medium text-foreground">{swapRequests.length}</span> solicitações
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Swap Requests List */}
       <div className="space-y-6">
@@ -644,10 +920,15 @@ const AdminSwaps = () => {
               <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <CardTitle className="mb-2">Nenhuma solicitação encontrada</CardTitle>
               <CardDescription>
-                {searchTerm || statusFilter !== 'all'
+                {searchTerm || statusFilter !== 'all' || monthFilter !== 'all' || teamFilter !== 'all' || dateFrom || dateTo
                   ? 'Nenhuma solicitação corresponde aos critérios de busca.'
                   : 'Não há solicitações de troca no momento.'}
               </CardDescription>
+              {activeFiltersCount > 0 && (
+                <Button variant="outline" className="mt-4" onClick={clearFilters}>
+                  Limpar Filtros
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
