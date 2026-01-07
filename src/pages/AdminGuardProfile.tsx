@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,7 +39,9 @@ import {
   ThumbsUp,
   ThumbsDown,
   AlertCircle,
-  FileWarning
+  FileWarning,
+  Camera,
+  Loader2
 } from 'lucide-react';
 import {
   Table,
@@ -149,6 +151,101 @@ const AdminGuardProfile = () => {
     title: '',
     description: '',
   });
+
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !guard) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Erro',
+        description: 'Apenas imagens são permitidas.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: 'Erro',
+        description: 'A imagem deve ter no máximo 2MB.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${guard.id}-${Date.now()}.${fileExt}`;
+
+      if (guard.photo_url) {
+        const oldPath = guard.photo_url.split('/').pop();
+        if (oldPath) {
+          await supabase.storage.from('guard-photos').remove([oldPath]);
+        }
+      }
+
+      const { error: uploadError } = await supabase.storage
+        .from('guard-photos')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('guard-photos')
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ photo_url: publicUrl })
+        .eq('id', guard.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: 'Foto atualizada',
+        description: 'A foto foi salva com sucesso.',
+      });
+      fetchGuardProfile();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao enviar foto',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!guard?.photo_url) return;
+    if (!confirm('Tem certeza que deseja remover a foto?')) return;
+
+    try {
+      const fileName = guard.photo_url.split('/').pop();
+      if (fileName) {
+        await supabase.storage.from('guard-photos').remove([fileName]);
+      }
+
+      await supabase.from('profiles').update({ photo_url: null }).eq('id', guard.id);
+      
+      toast({ title: 'Foto removida' });
+      fetchGuardProfile();
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
 
   useEffect(() => {
     if (guardId && profile?.id) {
@@ -586,10 +683,51 @@ const AdminGuardProfile = () => {
               {/* Basic Info */}
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-primary">
-                      {guard.name.charAt(0).toUpperCase()}
-                    </span>
+                  <div className="relative group">
+                    {guard.photo_url ? (
+                      <img 
+                        src={guard.photo_url} 
+                        alt={guard.name}
+                        className="h-16 w-16 rounded-full object-cover border-2 border-primary/20"
+                      />
+                    ) : (
+                      <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-primary">
+                          {guard.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Overlay with buttons */}
+                    <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                      <button
+                        type="button"
+                        className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors disabled:opacity-50"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        title="Alterar foto"
+                      >
+                        {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                      </button>
+                      {guard.photo_url && (
+                        <button
+                          type="button"
+                          className="h-7 w-7 rounded-full bg-white/20 hover:bg-red-500/70 flex items-center justify-center text-white transition-colors"
+                          onClick={handleRemovePhoto}
+                          title="Remover foto"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg">{guard.name}</h3>
