@@ -49,11 +49,6 @@ export function AppLayout({
     icon: BarChart3,
     roles: ['admin', 'super_admin']
   }, {
-    name: settings.teams_label,
-    href: '/admin/equipes',
-    icon: Users,
-    roles: ['admin', 'super_admin']
-  }, {
     name: settings.guards_label,
     href: '/admin/segurancas',
     icon: Shield,
