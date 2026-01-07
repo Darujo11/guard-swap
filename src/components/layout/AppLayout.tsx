@@ -59,11 +59,6 @@ export function AppLayout({
     icon: Calendar,
     roles: ['admin', 'super_admin']
   }, {
-    name: settings.schedules_label,
-    href: '/admin/escalas',
-    icon: ClipboardList,
-    roles: ['admin', 'super_admin']
-  }, {
     name: settings.extras_label,
     href: '/admin/extras',
     icon: Clock,
