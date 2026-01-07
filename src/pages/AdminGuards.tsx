@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,8 @@ import {
   UserPlus,
   Mail,
   Phone,
-  Crown
+  Crown,
+  FileText
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -406,6 +408,15 @@ const AdminGuards = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            asChild
+                          >
+                            <Link to={`/admin/ficha/${guard.id}`}>
+                              <FileText className="h-4 w-4" />
+                            </Link>
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"

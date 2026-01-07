@@ -16,6 +16,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminTeams from "./pages/AdminTeams";
 import AdminSwaps from "./pages/AdminSwaps";
 import AdminGuards from "./pages/AdminGuards";
+import AdminGuardProfile from "./pages/AdminGuardProfile";
 import AdminSchedule from "./pages/AdminSchedule";
 import AdminExtras from "./pages/AdminExtras";
 import AdminLeaves from "./pages/AdminLeaves";
@@ -76,6 +77,14 @@ const App = () => (
             } 
           />
           <Route 
+            path="/admin/ficha/:guardId" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminGuardProfile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/admin/escalas" 
             element={
               <ProtectedRoute allowedRoles={['admin']}>
@@ -83,7 +92,7 @@ const App = () => (
               </ProtectedRoute>
             } 
           />
-          <Route 
+          <Route
             path="/admin/extras" 
             element={
               <ProtectedRoute allowedRoles={['admin']}>
