@@ -6,6 +6,7 @@ import * as z from "zod";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -282,8 +283,7 @@ export default function Profile() {
                     <FormItem>
                       <FormLabel>Nova Senha</FormLabel>
                       <FormControl>
-                        <Input
-                          type="password"
+                        <PasswordInput
                           placeholder="Digite sua nova senha"
                           {...field}
                         />
@@ -300,8 +300,7 @@ export default function Profile() {
                     <FormItem>
                       <FormLabel>Confirmar Nova Senha</FormLabel>
                       <FormControl>
-                        <Input
-                          type="password"
+                        <PasswordInput
                           placeholder="Confirme sua nova senha"
                           {...field}
                         />
