@@ -13,7 +13,7 @@ import TrialSignup from "./pages/TrialSignup";
 import CreateAdmin from "./pages/CreateAdmin";
 import CreateSuperAdmin from "./pages/CreateSuperAdmin";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminTeams from "./pages/AdminTeams";
+
 import AdminSwaps from "./pages/AdminSwaps";
 import AdminGuards from "./pages/AdminGuards";
 import AdminFichas from "./pages/AdminFichas";
@@ -50,14 +50,6 @@ const App = () => (
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminDashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin/equipes" 
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminTeams />
               </ProtectedRoute>
             } 
           />
