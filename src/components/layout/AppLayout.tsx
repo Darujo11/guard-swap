@@ -59,11 +59,6 @@ export function AppLayout({
     icon: Shield,
     roles: ['admin', 'super_admin']
   }, {
-    name: 'Fichas',
-    href: '/admin/segurancas',
-    icon: FileText,
-    roles: ['admin', 'super_admin']
-  }, {
     name: settings.swaps_label,
     href: '/admin/trocas',
     icon: Calendar,
