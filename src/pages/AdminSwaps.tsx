@@ -634,8 +634,8 @@ const AdminSwaps = () => {
 
   const stats = getStats();
 
-  // Função para carregar logo como base64
-  const loadLogoAsBase64 = (): Promise<string> => {
+  // Função para carregar logo como base64 com dimensões
+  const loadLogoAsBase64 = (): Promise<{ base64: string; width: number; height: number }> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'Anonymous';
@@ -645,7 +645,11 @@ const AdminSwaps = () => {
         canvas.height = img.height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/png'));
+        resolve({
+          base64: canvas.toDataURL('image/png'),
+          width: img.width,
+          height: img.height
+        });
       };
       img.onerror = reject;
       img.src = logoImage;
@@ -666,10 +670,13 @@ const AdminSwaps = () => {
 
       const doc = new jsPDF();
       
-      // Carregar logo
+      // Carregar logo com proporção correta
       try {
-        const logoBase64 = await loadLogoAsBase64();
-        doc.addImage(logoBase64, 'PNG', 14, 10, 25, 25);
+        const logoData = await loadLogoAsBase64();
+        const desiredWidth = 25;
+        const aspectRatio = logoData.height / logoData.width;
+        const calculatedHeight = desiredWidth * aspectRatio;
+        doc.addImage(logoData.base64, 'PNG', 14, 10, desiredWidth, calculatedHeight);
       } catch (logoError) {
         console.warn('[AdminSwaps][GenerateReport] Erro ao carregar logo:', logoError);
       }
