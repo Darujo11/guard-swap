@@ -744,13 +744,13 @@ const AdminSwaps = () => {
         headStyles: { fillColor: [59, 130, 246], textColor: 255 },
         alternateRowStyles: { fillColor: [245, 247, 250] },
         columnStyles: {
-          0: { cellWidth: 28 },
-          1: { cellWidth: 22 },
-          2: { cellWidth: 28 },
-          3: { cellWidth: 22 },
-          4: { cellWidth: 30 },
-          5: { cellWidth: 20 },
-          6: { cellWidth: 18 },
+          0: { cellWidth: 26 },
+          1: { cellWidth: 18 },
+          2: { cellWidth: 26 },
+          3: { cellWidth: 18 },
+          4: { cellWidth: 38 },
+          5: { cellWidth: 18 },
+          6: { cellWidth: 16 },
         },
         didDrawPage: (data) => {
           // Rodapé com número da página
