@@ -1,58 +1,71 @@
 
-## Plano: Remover Sistema de Atualização Automática
+## Plano: Atualizar Versão do App para 4.1.0
+
+### Resumo
+Atualizar a versão do aplicativo de **4.0.0** para **4.1.0** com a data de hoje (**2026-01-31**) em todos os arquivos de controle de versão.
+
+---
 
 ### Arquivos a Modificar
 
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `src/App.tsx` | MODIFICAR | Remover imports e uso dos componentes VersionChecker e PWAUpdateChecker |
-| `src/components/VersionChecker.tsx` | DELETAR | Remover arquivo completo |
-| `src/components/PWAUpdateChecker.tsx` | DELETAR | Remover arquivo completo |
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/lib/version.ts` | APP_VERSION: '4.0.0' → '4.1.0', BUILD_DATE: '2025-12-18' → '2026-01-31' |
+| `public/version.json` | version: '4.0.0' → '4.1.0', buildDate: '2025-12-18' → '2026-01-31' |
+| `index.html` | meta app-version: '4.0.0' → '4.1.0' |
 
 ---
 
-### Detalhes Técnicos
+### Detalhes das Alterações
 
-#### 1. Modificar `src/App.tsx`
+#### 1. `src/lib/version.ts` (linha 2-3)
 
-**Remover imports (linhas 8-9):**
-```tsx
-// REMOVER estas linhas:
-import { VersionChecker } from "@/components/VersionChecker";
-import { PWAUpdateChecker } from "@/components/PWAUpdateChecker";
+**Antes:**
+```ts
+export const APP_VERSION = '4.0.0';
+export const BUILD_DATE = '2025-12-18';
 ```
 
-**Remover uso dos componentes (linhas 36-37):**
-```tsx
-// REMOVER estas linhas dentro do App:
-<VersionChecker />
-<PWAUpdateChecker />
+**Depois:**
+```ts
+export const APP_VERSION = '4.1.0';
+export const BUILD_DATE = '2026-01-31';
 ```
 
-#### 2. Deletar `src/components/VersionChecker.tsx`
-- Remove verificação de versão a cada 5 minutos
-- Remove comparação com `version.json`
-- Remove reload automático quando detecta nova versão
+#### 2. `public/version.json` (linhas 2-3)
 
-#### 3. Deletar `src/components/PWAUpdateChecker.tsx`
-- Remove verificação de Service Worker a cada 5 minutos
-- Remove banner "Nova versão disponível"
-- Remove reload automático do PWA
+**Antes:**
+```json
+{
+  "version": "4.0.0",
+  "buildDate": "2025-12-18",
+  "forceUpdate": true
+}
+```
 
----
+**Depois:**
+```json
+{
+  "version": "4.1.0",
+  "buildDate": "2026-01-31",
+  "forceUpdate": true
+}
+```
 
-### Arquivos que Permanecem (sem alteração)
+#### 3. `index.html` (linha 15)
 
-Os seguintes arquivos podem continuar existindo pois não causam reload automático:
-- `src/lib/version.ts` - apenas armazena a versão (pode ser útil para debug)
-- `public/version.json` - arquivo estático de versão
+**Antes:**
+```html
+<meta name="app-version" content="4.0.0" />
+```
+
+**Depois:**
+```html
+<meta name="app-version" content="4.1.0" />
+```
 
 ---
 
 ### Resultado
 
-Após essas alterações:
-- O app não fará mais verificações periódicas de versão
-- Não haverá mais reloads automáticos
-- O banner "Nova versão disponível" não aparecerá mais
-- O PWA ainda funcionará normalmente, mas não forçará atualizações
+Após as alterações, a versão **4.1.0** será exibida no menu do aplicativo e registrada em todos os arquivos de controle de versão.
