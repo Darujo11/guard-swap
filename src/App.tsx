@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/guards/ProtectedRoute";
+import { useServiceWorker } from "@/hooks/useServiceWorker";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import TrialSignup from "./pages/TrialSignup";
@@ -28,12 +29,18 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function ServiceWorkerProvider({ children }: { children: React.ReactNode }) {
+  useServiceWorker();
+  return <>{children}</>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <HashRouter>
+      <ServiceWorkerProvider>
+        <Toaster />
+        <Sonner />
+        <HashRouter>
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/home" element={<Index />} />
@@ -149,6 +156,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
+      </ServiceWorkerProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
