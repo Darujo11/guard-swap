@@ -131,11 +131,12 @@ serve(async (req) => {
         status: 200,
       }
     )
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[create-super-admin] Error:', error)
+    const message = error instanceof Error ? error.message : 'An error occurred'
     return new Response(
       JSON.stringify({
-        error: error.message || 'An error occurred'
+        error: message
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

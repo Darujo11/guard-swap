@@ -132,27 +132,29 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
-    } catch (webhookError) {
+    } catch (webhookError: unknown) {
       // Se o webhook externo falhar, não falhar a requisição inteira
       // Apenas logar o erro e retornar sucesso parcial
-      console.warn("[SendSwapWebhook] Webhook externo falhou, mas operação continuará:", webhookError.message);
+      const webhookMessage = webhookError instanceof Error ? webhookError.message : 'Erro desconhecido';
+      console.warn("[SendSwapWebhook] Webhook externo falhou, mas operação continuará:", webhookMessage);
       
       return new Response(JSON.stringify({ 
         success: true, 
         message: "Operação concluída, mas webhook externo não está disponível",
-        webhook_error: webhookError.message,
+        webhook_error: webhookMessage,
         warning: "O webhook AutoZapX não está ativo ou a URL está incorreta. Verifique se o workflow está ativo no AutoZapX."
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200, // Retorna 200 mesmo se webhook falhar
       });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("[SendSwapWebhook] Erro crítico:", error);
+    const message = error instanceof Error ? error.message : 'Erro desconhecido';
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: message,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
