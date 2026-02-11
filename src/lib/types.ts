@@ -62,3 +62,14 @@ export interface DashboardStats {
   totalGuards: number;
   activeTeams: number;
 }
+
+export interface Evaluation {
+  id: string;
+  guard_id: string;
+  evaluator_id: string;
+  scores: Record<string, number>;
+  total_score: number;
+  created_at: string;
+  guard?: Profile;
+  evaluator?: Profile;
+}
