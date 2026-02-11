@@ -15,11 +15,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { SwapRequest } from '@/lib/types';
 
-import { 
-  Users, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Users,
+  Clock,
+  CheckCircle,
+  XCircle,
   Calendar,
   BarChart3,
   ArrowUpRight,
@@ -296,190 +296,193 @@ const AdminDashboard = () => {
       user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}
     >
       {/* Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Trocas Pendentes</CardTitle>
-            <Clock className="h-4 w-4 text-warning" />
+      <div className="flex flex-col gap-6">
+        {/* Stats Grid - Order 2 on mobile, Order 1 on desktop */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 order-2 md:order-1">
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Trocas Pendentes</CardTitle>
+              <Clock className="h-4 w-4 text-warning" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-warning">{stats.pendingSwaps}</div>
+              <p className="text-xs text-muted-foreground">Aguardando aprovação</p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Aprovadas</CardTitle>
+              <CheckCircle className="h-4 w-4 text-success" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-success">{stats.approvedSwaps}</div>
+              <p className="text-xs text-muted-foreground">Total aprovadas</p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Rejeitadas</CardTitle>
+              <XCircle className="h-4 w-4 text-danger" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-danger">{stats.rejectedSwaps}</div>
+              <p className="text-xs text-muted-foreground">Total rejeitadas</p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Seguranças</CardTitle>
+              <Users className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalGuards}</div>
+              <p className="text-xs text-muted-foreground">Cadastrados no sistema</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Swap Requests - Order 1 on mobile, Order 2 on desktop */}
+        <Card className="order-1 md:order-2">
+          <CardHeader>
+            <div className="flex flex-col gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Solicitações de Troca
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  Gerencie as solicitações de troca de plantão
+                </CardDescription>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" asChild>
+                  <Link to="/admin/equipes">
+                    <Users className="h-4 w-4" />
+                    Gerenciar Equipes
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" asChild>
+                  <Link to="/admin/trocas">
+                    <Filter className="h-4 w-4" />
+                    Gerenciar Trocas
+                  </Link>
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">{stats.pendingSwaps}</div>
-            <p className="text-xs text-muted-foreground">Aguardando aprovação</p>
+            {swapRequests.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>Nenhuma solicitação pendente</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {swapRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">{request.requester?.name}</span>
+                        {request.requester?.team && <TeamBadge team={request.requester.team} />}
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{request.target?.name}</span>
+                        {request.target?.team && <TeamBadge team={request.target.team} />}
+                      </div>
+
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <div>
+                          <strong>Troca:</strong> {formatDate(request.requester_shift_date)} → {formatDate(request.target_shift_date)}
+                        </div>
+                        {request.reason && (
+                          <div>
+                            <strong>Motivo:</strong> {request.reason}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground">Solicitado em {formatDate(request.created_at)} às {formatTime(request.created_at)}</span>
+                      </div>
+
+                      <div className="mt-2">
+                        <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Aceita por {request.target?.name} - Aguardando aprovação
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 mt-3 sm:mt-0">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => openDecisionDialog(request, 'APPROVED')}
+                        className="gap-2"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Aprovar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openDecisionDialog(request, 'REJECTED')}
+                        className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Rejeitar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setRequestToDelete(request);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                        className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Excluir
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aprovadas</CardTitle>
-            <CheckCircle className="h-4 w-4 text-success" />
+        {/* Schedule Calendar - Order 3 */}
+        <Card className="order-3">
+          <CardHeader>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
+                <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                  <Calendar className="h-5 w-5" />
+                  <span className="break-words">Escala de Plantões - Todas as Equipes</span>
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  Gerencie a escala completa de todas as equipes
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" asChild>
+                <Link to="/admin/escalas">
+                  <Calendar className="h-4 w-4" />
+                  Gerenciar Escala
+                </Link>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-success">{stats.approvedSwaps}</div>
-            <p className="text-xs text-muted-foreground">Total aprovadas</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rejeitadas</CardTitle>
-            <XCircle className="h-4 w-4 text-danger" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-danger">{stats.rejectedSwaps}</div>
-            <p className="text-xs text-muted-foreground">Total rejeitadas</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Seguranças</CardTitle>
-            <Users className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalGuards}</div>
-            <p className="text-xs text-muted-foreground">Cadastrados no sistema</p>
+            <TeamScheduleCalendar />
           </CardContent>
         </Card>
       </div>
-
-      {/* Swap Requests */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex flex-col gap-4">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Solicitações de Troca
-              </CardTitle>
-              <CardDescription className="mt-2">
-                Gerencie as solicitações de troca de plantão
-              </CardDescription>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" asChild>
-                <Link to="/admin/equipes">
-                  <Users className="h-4 w-4" />
-                  Gerenciar Equipes
-                </Link>
-              </Button>
-              <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" asChild>
-                <Link to="/admin/trocas">
-                  <Filter className="h-4 w-4" />
-                  Gerenciar Trocas
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {swapRequests.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>Nenhuma solicitação pendente</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {swapRequests.map((request) => (
-                <div
-                  key={request.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium">{request.requester?.name}</span>
-                      {request.requester?.team && <TeamBadge team={request.requester.team} />}
-                      <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{request.target?.name}</span>
-                      {request.target?.team && <TeamBadge team={request.target.team} />}
-                    </div>
-                    
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <div>
-                        <strong>Troca:</strong> {formatDate(request.requester_shift_date)} → {formatDate(request.target_shift_date)}
-                      </div>
-                      {request.reason && (
-                        <div>
-                          <strong>Motivo:</strong> {request.reason}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="text-muted-foreground">Solicitado em {formatDate(request.created_at)} às {formatTime(request.created_at)}</span>
-                    </div>
-                    
-                    <div className="mt-2">
-                      <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Aceita por {request.target?.name} - Aguardando aprovação
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 mt-3 sm:mt-0">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => openDecisionDialog(request, 'APPROVED')}
-                      className="gap-2"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      Aprovar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openDecisionDialog(request, 'REJECTED')}
-                      className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    >
-                      <XCircle className="h-4 w-4" />
-                      Rejeitar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setRequestToDelete(request);
-                        setIsDeleteDialogOpen(true);
-                      }}
-                      className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Excluir
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Schedule Calendar */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <Calendar className="h-5 w-5" />
-                <span className="break-words">Escala de Plantões - Todas as Equipes</span>
-              </CardTitle>
-              <CardDescription className="mt-2">
-                Gerencie a escala completa de todas as equipes
-              </CardDescription>
-            </div>
-            <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto" asChild>
-              <Link to="/admin/escalas">
-                <Calendar className="h-4 w-4" />
-                Gerenciar Escala
-              </Link>
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <TeamScheduleCalendar />
-        </CardContent>
-      </Card>
 
       {/* Decision Dialog */}
       <Dialog open={decisionDialog.open} onOpenChange={(open) => setDecisionDialog({ ...decisionDialog, open })}>
@@ -489,7 +492,7 @@ const AdminDashboard = () => {
               {decisionDialog.action === 'APPROVED' ? 'Aprovar Solicitação' : 'Rejeitar Solicitação'}
             </DialogTitle>
             <DialogDescription>
-              {decisionDialog.action === 'APPROVED' 
+              {decisionDialog.action === 'APPROVED'
                 ? 'Você está prestes a aprovar esta troca de plantão. Deseja adicionar uma observação?'
                 : 'Você está prestes a rejeitar esta troca de plantão. Por favor, informe o motivo.'}
             </DialogDescription>
@@ -501,7 +504,7 @@ const AdminDashboard = () => {
               </Label>
               <Textarea
                 id="reason"
-                placeholder={decisionDialog.action === 'APPROVED' 
+                placeholder={decisionDialog.action === 'APPROVED'
                   ? 'Adicione uma observação...'
                   : 'Explique o motivo da rejeição...'}
                 value={decisionReason}
