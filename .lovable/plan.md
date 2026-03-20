@@ -1,30 +1,40 @@
 
 
-## Plano: Personalizar mensagem WhatsApp com saudação dinâmica
+## Plano: Atualizar escala automaticamente após aprovação de troca
+
+### Problema
+Quando o admin aprova uma troca de plantão, a escala no calendário não reflete a troca. O solicitante e o alvo trocam de dia, mas o calendário continua mostrando as equipes originais.
+
+### Solução
+Após a aprovação da troca no `AdminSwaps.tsx`, trocar os `team_id` dos registros em `team_schedules` para as duas datas envolvidas.
+
+**Lógica:**
+1. Buscar o `team_id` do solicitante (via `profiles`) e do alvo
+2. No `team_schedules`, encontrar o registro da `requester_shift_date` e trocar o `team_id` para o time do alvo
+3. No `team_schedules`, encontrar o registro da `target_shift_date` e trocar o `team_id` para o time do solicitante
+
+Exemplo: Solicitante (Equipe Azul) tem plantão dia 30/03, Alvo (Equipe Vermelha) tem plantão dia 29/03.
+- Após aprovação: dia 29/03 → Equipe Azul, dia 30/03 → Equipe Vermelha (trocam)
 
 ### Alteração
 
-**Arquivo:** `supabase/functions/forgot-password/index.ts`
+**Arquivo:** `src/pages/AdminSwaps.tsx`
 
-Substituir a mensagem atual (linha 85) por uma versão personalizada com saudação baseada no horário (Bom dia / Boa tarde / Boa noite) e tom informal conforme solicitado.
+Após a linha que faz o `update` do status para `APPROVED` (linha ~252), adicionar lógica para:
 
-**Lógica de saudação:**
-- 6h–12h → "Bom dia"
-- 12h–18h → "Boa tarde"  
-- 18h–6h → "Boa noite"
+1. Buscar o `team_id` do requester e do target via `profiles`
+2. Atualizar `team_schedules` na `requester_shift_date`: trocar `team_id` para o time do target
+3. Atualizar `team_schedules` na `target_shift_date`: trocar `team_id` para o time do requester
 
-Usar fuso horário de Brasília (`America/Sao_Paulo`, UTC-3).
-
-**Nova mensagem:**
-```
-{saudação} meu amigo {nome}! 
-
-Sua nova senha é: *{senha}*
-
-Qualquer dúvida só me chamar por aqui. Recomendo alterar a senha no sistema. Tmj 💪
+```text
+Fluxo:
+  Admin aprova troca
+    → Update swap_requests status = APPROVED
+    → Busca team_id do requester e target
+    → Swap team_ids nas datas em team_schedules
+    → Webhook + audit log (já existente)
 ```
 
 ### Escopo
-- Apenas a edge function `forgot-password` será modificada (linhas ~83-86)
-- Adicionar cálculo de hora em Brasília antes do fetch
+- Apenas `src/pages/AdminSwaps.tsx` — adicionar ~30 linhas após a aprovação
 
