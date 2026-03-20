@@ -43,14 +43,13 @@ export const EvaluationList = ({ limit, showHeader = true, refreshTrigger = 0 }:
     const fetchEvaluations = async () => {
         if (!profile?.id) return;
         try {
-            let query = supabase
+            let query = (supabase as any)
                 .from('evaluations')
                 .select(`
                     *,
                     guard:profiles!evaluations_guard_id_fkey(name),
                     evaluator:profiles!evaluations_evaluator_id_fkey(name)
                 `)
-                // @ts-ignore
                 .order('created_at', { ascending: false });
 
             if (limit) {
