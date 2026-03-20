@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     }
 
     const whatsappResponse = await fetch(
-      "https://evolution.autozapx.com/manager/message/sendText/escala",
+      "https://evolution.autozapx.com/message/sendText/escala",
       {
         method: "POST",
         headers: {
@@ -89,12 +89,11 @@ Deno.serve(async (req) => {
 
     if (!whatsappResponse.ok) {
       const errBody = await whatsappResponse.text();
-      console.error("Evolution API error:", errBody);
-      // Password was already reset, so we inform the user but warn about WhatsApp
+      console.error("Evolution API error:", whatsappResponse.status, errBody);
       return new Response(
         JSON.stringify({
           success: true,
-          warning: "Senha resetada, mas houve erro ao enviar WhatsApp. Entre em contato com o administrador.",
+          warning: `Senha resetada, mas erro ao enviar WhatsApp (status ${whatsappResponse.status}). Entre em contato com o administrador.`,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
