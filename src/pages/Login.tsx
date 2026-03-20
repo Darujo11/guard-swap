@@ -20,6 +20,9 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotPhone, setForgotPhone] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
