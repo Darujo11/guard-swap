@@ -252,6 +252,26 @@ const AdminSwaps = () => {
 
       if (error) throw error;
 
+      // Atualizar escala de plantões após aprovação
+      if (decisionAction === 'approve') {
+        try {
+          await swapTeamSchedules(
+            selectedRequest.requester_id,
+            selectedRequest.target_id,
+            selectedRequest.requester_shift_date,
+            selectedRequest.target_shift_date,
+            adminProfile.id
+          );
+        } catch (scheduleError) {
+          console.error('[AdminSwaps] Erro ao atualizar escala:', scheduleError);
+          toast({
+            title: '⚠️ Troca aprovada, mas escala não atualizada',
+            description: 'A troca foi aprovada mas houve erro ao atualizar o calendário.',
+            variant: 'destructive',
+          });
+        }
+      }
+
       // Create audit log
       await supabase.from('audit_logs').insert({
         user_id: adminProfile.id,
