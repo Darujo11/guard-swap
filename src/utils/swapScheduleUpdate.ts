@@ -8,7 +8,8 @@ export async function swapTeamSchedules(
   requesterId: string,
   targetId: string,
   requesterShiftDate: string,
-  targetShiftDate: string
+  targetShiftDate: string,
+  adminId: string
 ) {
   // 1. Get team_ids for both guards
   const [{ data: requesterProfile }, { data: targetProfile }] = await Promise.all([
@@ -29,14 +30,16 @@ export async function swapTeamSchedules(
     .from('team_schedules')
     .update({ team_id: targetTeamId })
     .eq('shift_date', requesterShiftDate)
-    .eq('team_id', requesterTeamId);
+    .eq('team_id', requesterTeamId)
+    .eq('admin_id', adminId);
 
   // 3. Update target_shift_date: was target's team → now requester's team
   const { error: err2 } = await supabase
     .from('team_schedules')
     .update({ team_id: requesterTeamId })
     .eq('shift_date', targetShiftDate)
-    .eq('team_id', targetTeamId);
+    .eq('team_id', targetTeamId)
+    .eq('admin_id', adminId);
 
   if (err1 || err2) {
     console.error('[swapTeamSchedules] Error updating schedules:', err1, err2);

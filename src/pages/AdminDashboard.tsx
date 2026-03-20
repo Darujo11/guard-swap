@@ -161,7 +161,8 @@ const AdminDashboard = () => {
             decisionDialog.request.requester_id,
             decisionDialog.request.target_id,
             decisionDialog.request.requester_shift_date,
-            decisionDialog.request.target_shift_date
+            decisionDialog.request.target_shift_date,
+            profile.id
           );
         } catch (scheduleError) {
           console.error('[AdminDashboard] Erro ao atualizar escala:', scheduleError);
