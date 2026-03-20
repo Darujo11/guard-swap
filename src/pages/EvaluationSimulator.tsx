@@ -207,8 +207,7 @@ const EvaluationSimulator = () => {
                 });
                 setRefreshTrigger(prev => prev + 1);
             } else {
-                // @ts-ignore
-                const { error } = await supabase
+                const { error } = await (supabase as any)
                     .from('evaluations')
                     .insert({
                         guard_id: selectedGuardId,

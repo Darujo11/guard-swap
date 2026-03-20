@@ -86,8 +86,7 @@ export const EvaluationList = ({ limit, showHeader = true, refreshTrigger = 0 }:
         if (!window.confirm("Tem certeza que deseja excluir esta avaliação?")) return;
 
         try {
-            // @ts-ignore
-            const { error } = await supabase
+            const { error } = await (supabase as any)
                 .from('evaluations')
                 .delete()
                 .eq('id', id);
