@@ -38,6 +38,3 @@ verify_jwt = false
 
 [functions.update-auth-email]
 verify_jwt = false
-
-[functions.apply-approved-swaps]
-verify_jwt = false
