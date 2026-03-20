@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { SwapRequest, Profile, Team } from '@/lib/types';
 import { SWAP_STATUS_CONFIG } from '@/lib/constants';
+import { swapTeamSchedules } from '@/utils/swapScheduleUpdate';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import logoImage from '@/assets/logo-camara.png';
