@@ -13,6 +13,7 @@ import camaraBackground from '@/assets/logo3.jpg';
 import logoCamara from '@/assets/logo-camara.png';
 import PWAInstallButton from '@/components/PWAInstallButton';
 import { APP_VERSION } from '@/lib/version';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 const Login = () => {
   const [email, setEmail] = useState('');
