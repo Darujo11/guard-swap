@@ -95,8 +95,7 @@ const EvaluationSimulator = () => {
     const fetchEvaluation = async (evaluationId: string) => {
         setLoadingEvaluation(true);
         try {
-            // @ts-ignore
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from('evaluations')
                 .select(`*, guard:profiles!evaluations_guard_id_fkey(*), evaluator:profiles!evaluations_evaluator_id_fkey(*)`)
                 .eq('id', evaluationId)
@@ -105,9 +104,8 @@ const EvaluationSimulator = () => {
             if (error) throw error;
             if (data) {
                 setSelectedGuardId(data.guard_id);
-                // Ensure scores have number keys
                 const loadedScores: Record<number, number> = {};
-                Object.entries(data.scores).forEach(([k, v]) => {
+                Object.entries(data.scores).forEach(([k, v]: [string, any]) => {
                     loadedScores[Number(k)] = Number(v);
                 });
                 setScores(loadedScores);
