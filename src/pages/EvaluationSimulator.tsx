@@ -190,8 +190,7 @@ const EvaluationSimulator = () => {
             const totalScore = calculateTotalScore();
 
             if (id) {
-                // @ts-ignore
-                const { error } = await supabase
+                const { error } = await (supabase as any)
                     .from('evaluations')
                     .update({
                         guard_id: selectedGuardId,
