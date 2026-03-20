@@ -72,6 +72,11 @@ Deno.serve(async (req) => {
       throw new Error("Token da instância não configurado");
     }
 
+    // Saudação dinâmica baseada no horário de Brasília
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+    const hour = now.getHours();
+    const saudacao = hour >= 6 && hour < 12 ? "Bom dia" : hour >= 12 && hour < 18 ? "Boa tarde" : "Boa noite";
+
     const whatsappResponse = await fetch(
       "https://evolution.autozapx.com/message/sendText/escala",
       {
@@ -82,7 +87,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           number: phoneWithCountry,
-          text: `🔐 *Escala Smart - Recuperação de Senha*\n\nOlá, ${profile.name}!\n\nSua nova senha é: *${newPassword}*\n\nUse essa senha para fazer login no sistema. Recomendamos que você a memorize.\n\n_Mensagem automática, não responda._`,
+          text: `${saudacao} meu amigo ${profile.name}!\n\nSua nova senha é: *${newPassword}*\n\nQualquer dúvida só me chamar por aqui. Recomendo alterar a senha no sistema. Tmj 💪`,
         }),
       }
     );
