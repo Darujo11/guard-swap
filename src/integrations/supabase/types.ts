@@ -103,6 +103,48 @@ export type Database = {
           },
         ]
       }
+      evaluations: {
+        Row: {
+          created_at: string
+          evaluator_id: string
+          guard_id: string
+          id: string
+          scores: Json
+          total_score: number
+        }
+        Insert: {
+          created_at?: string
+          evaluator_id: string
+          guard_id: string
+          id?: string
+          scores?: Json
+          total_score?: number
+        }
+        Update: {
+          created_at?: string
+          evaluator_id?: string
+          guard_id?: string
+          id?: string
+          scores?: Json
+          total_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluations_guard_id_fkey"
+            columns: ["guard_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       extras: {
         Row: {
           admin_id: string | null
@@ -210,6 +252,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      keep_alive: {
+        Row: {
+          id: number
+          last_ping: string | null
+        }
+        Insert: {
+          id?: number
+          last_ping?: string | null
+        }
+        Update: {
+          id?: number
+          last_ping?: string | null
+        }
+        Relationships: []
       }
       leaves: {
         Row: {

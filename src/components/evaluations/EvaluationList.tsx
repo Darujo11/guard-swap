@@ -43,14 +43,13 @@ export const EvaluationList = ({ limit, showHeader = true, refreshTrigger = 0 }:
     const fetchEvaluations = async () => {
         if (!profile?.id) return;
         try {
-            let query = supabase
+            let query = (supabase as any)
                 .from('evaluations')
                 .select(`
                     *,
                     guard:profiles!evaluations_guard_id_fkey(name),
                     evaluator:profiles!evaluations_evaluator_id_fkey(name)
                 `)
-                // @ts-ignore
                 .order('created_at', { ascending: false });
 
             if (limit) {
@@ -87,8 +86,7 @@ export const EvaluationList = ({ limit, showHeader = true, refreshTrigger = 0 }:
         if (!window.confirm("Tem certeza que deseja excluir esta avaliação?")) return;
 
         try {
-            // @ts-ignore
-            const { error } = await supabase
+            const { error } = await (supabase as any)
                 .from('evaluations')
                 .delete()
                 .eq('id', id);

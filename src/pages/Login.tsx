@@ -13,12 +13,16 @@ import camaraBackground from '@/assets/logo3.jpg';
 import logoCamara from '@/assets/logo-camara.png';
 import PWAInstallButton from '@/components/PWAInstallButton';
 import { APP_VERSION } from '@/lib/version';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotPhone, setForgotPhone] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -202,10 +206,83 @@ const Login = () => {
                   'Entrar'
                 )}
               </Button>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setForgotOpen(true)}
+                  className="text-sm text-primary hover:underline underline-offset-2"
+                >
+                  Esqueceu a senha?
+                </button>
+              </div>
             </form>
           </CardContent>
         </Card>
       </div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Recuperar Senha</DialogTitle>
+            <DialogDescription>
+              Digite seu número de WhatsApp cadastrado. Uma nova senha será enviada para o seu WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="forgot-phone">Número do WhatsApp</Label>
+              <Input
+                id="forgot-phone"
+                type="text"
+                placeholder="Ex: 22999491428"
+                value={forgotPhone}
+                onChange={(e) => setForgotPhone(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Use apenas números, sem espaços ou caracteres especiais.
+              </p>
+            </div>
+            <Button
+              className="w-full"
+              disabled={forgotLoading || !forgotPhone.trim()}
+              onClick={async () => {
+                setForgotLoading(true);
+                try {
+                  const { data, error } = await supabase.functions.invoke('forgot-password', {
+                    body: { phone: forgotPhone.trim() },
+                  });
+                  if (error) throw error;
+                  if (data?.error) throw new Error(data.error);
+                  toast({
+                    title: 'Senha enviada!',
+                    description: data?.warning || 'Verifique seu WhatsApp para a nova senha.',
+                  });
+                  setForgotOpen(false);
+                  setForgotPhone('');
+                } catch (err: any) {
+                  toast({
+                    title: 'Erro',
+                    description: err.message || 'Não foi possível recuperar a senha.',
+                    variant: 'destructive',
+                  });
+                } finally {
+                  setForgotLoading(false);
+                }
+              }}
+            >
+              {forgotLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                'Enviar nova senha'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       {/* Footer with Version and Credits */}
       <div className="absolute bottom-4 left-0 right-0 z-10 text-center space-y-1">
