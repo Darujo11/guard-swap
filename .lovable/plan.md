@@ -1,73 +1,38 @@
 
+Objetivo: corrigir o erro no envio da senha por WhatsApp no fluxo “Esqueceu a senha”.
 
-## Plano: Sistema "Esqueceu a Senha" via WhatsApp + Correção de Build Errors
+1) Diagnóstico confirmado
+- O código atual em `supabase/functions/forgot-password/index.ts` ainda chama:
+  `https://evolution.autozapx.com/manager/message/sendText/escala`
+- Os logs da função confirmam erro 404:
+  `Cannot POST /manager/message/sendText/escala`
+- Causa raiz: endpoint com `/manager` está incorreto para envio de mensagem.
 
-### Resumo
-Criar um fluxo de recuperação de senha na tela de login: o usuário informa o número de WhatsApp, o sistema gera uma senha aleatória de 6 dígitos, reseta a senha no Supabase Auth e envia a nova senha por WhatsApp via Evolution API.
+2) Correção no backend (edge function)
+- Arquivo: `supabase/functions/forgot-password/index.ts`
+- Alterar apenas a URL de envio para:
+  `https://evolution.autozapx.com/message/sendText/escala`
+- Manter:
+  - header `apikey: tokeninstancia`
+  - body com `number` e `text`
+  - lógica atual de reset de senha e resposta JSON
 
-Além disso, corrigir os erros de build existentes nos arquivos de avaliações.
+3) Ajuste de robustez da resposta (pequeno hardening)
+- Melhorar mensagem de erro retornada quando a Evolution responder erro (exibir status + corpo de erro da API).
+- Evitar mensagem genérica no front para facilitar suporte quando houver problema de token/instância.
 
----
+4) Validação técnica após correção
+- Testar a função diretamente com `supabase--curl_edge_functions` usando um telefone existente em `profiles`.
+- Confirmar em logs que não há mais `Cannot POST /manager/...`.
+- Confirmar retorno `success: true` sem `warning`.
 
-### Arquivos a Criar/Modificar
+5) Teste funcional fim a fim
+- Na tela de login:
+  - clicar em “Esqueceu a senha?”
+  - informar WhatsApp cadastrado
+  - validar recebimento da senha no WhatsApp
+  - fazer login com a nova senha
 
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `supabase/functions/forgot-password/index.ts` | CRIAR | Edge function que gera senha, reseta e envia via WhatsApp |
-| `supabase/config.toml` | MODIFICAR | Adicionar configuração da nova function |
-| `src/pages/Login.tsx` | MODIFICAR | Adicionar link "Esqueceu a senha?" e dialog |
-| `src/components/evaluations/EvaluationList.tsx` | MODIFICAR | Corrigir erros TS com casting |
-| `src/pages/EvaluationSimulator.tsx` | MODIFICAR | Corrigir erros TS com casting |
-
----
-
-### Detalhes Técnicos
-
-#### 1. Edge Function `forgot-password`
-
-Fluxo:
-1. Recebe `{ phone: "22999491428" }` (sem autenticação - `verify_jwt = false`)
-2. Normaliza o número para formato brasileiro
-3. Busca na tabela `profiles` pelo campo `phone` para encontrar o `user_id`
-4. Gera senha aleatória de 6 dígitos
-5. Usa `supabaseAdmin.auth.admin.updateUserById()` para resetar a senha
-6. Envia mensagem WhatsApp via Evolution API:
-   - URL: `https://evolution.autozapx.com/manager/message/sendText/escala`
-   - Header: `apikey: {tokeninstancia}` (do secret do Supabase)
-   - Body: `{ number: "5522999491428", text: "Sua nova senha: 123456" }`
-
-```text
-[Login Page]
-   |
-   |-- Clica "Esqueceu a senha?"
-   |-- Dialog: digita número WhatsApp
-   |-- Chama edge function forgot-password
-   |
-   [Edge Function]
-   |-- Busca profile por phone
-   |-- Gera 6 dígitos aleatórios
-   |-- Reseta senha no Auth
-   |-- Envia WhatsApp via Evolution API
-   |-- Retorna sucesso
-```
-
-#### 2. Login.tsx - UI
-
-- Adicionar link "Esqueceu a senha?" abaixo do botão de login
-- Ao clicar, abre um Dialog pedindo o número de WhatsApp
-- Botão "Enviar nova senha" chama `supabase.functions.invoke('forgot-password', { body: { phone } })`
-- Exibe toast de sucesso/erro
-
-#### 3. Correção dos Build Errors
-
-Os arquivos `EvaluationList.tsx` e `EvaluationSimulator.tsx` têm erros TS porque a tabela `evaluations` não está nos types gerados. Solução: adicionar `@ts-ignore` nos pontos que ainda não têm e usar casting `as any` onde necessário.
-
----
-
-### Segurança
-
-- A function não requer JWT (`verify_jwt = false`) pois é usada por usuários não autenticados
-- Rate limiting natural: o usuário precisa ter um número cadastrado no sistema
-- A senha é enviada apenas para o WhatsApp cadastrado do próprio usuário
-- O secret `tokeninstancia` já está configurado no Supabase
-
+Escopo de arquivos
+- `supabase/functions/forgot-password/index.ts` (alteração principal)
+- `src/pages/Login.tsx` só será alterado se precisar melhorar mensagem exibida ao usuário (opcional).
