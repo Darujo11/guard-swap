@@ -171,6 +171,7 @@ const AdminGuards = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingGuard, setEditingGuard] = useState<Profile | null>(null);
+  const [selectedGuardForSchedule, setSelectedGuardForSchedule] = useState<Profile | null>(null);
   const [guardForm, setGuardForm] = useState({
     name: '',
     email: '',
