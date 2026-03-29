@@ -802,7 +802,7 @@ const GuardDashboard = () => {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleCancelTreLeave(leave.id)}
+                        onClick={() => openCancelDialog(leave.id)}
                       >
                         Cancelar
                       </Button>
