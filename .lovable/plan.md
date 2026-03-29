@@ -1,25 +1,46 @@
 
 
-## Plano: Adicionar botão "Ver Escala" nas ações de cada segurança
+## Plano: Botão de download PDF na escala do segurança
 
-### Alteração
+### O que será feito
 
-**Arquivo:** `src/pages/AdminGuards.tsx`
+Adicionar um botão "Baixar PDF" no header do `GuardPersonalCalendar`. Ao clicar, gera um PDF com:
+- Nome do segurança, equipe e mês de referência
+- Tabela com todos os dias de plantão do mês
+- Coluna indicando se o dia foi trocado, com quem e de qual equipe original
 
-1. Adicionar estado para controlar o dialog de escala (`selectedGuardForSchedule`) e um `Dialog` que renderiza o `GuardPersonalCalendar`.
+### Alterações
 
-2. Na coluna "Ações" da tabela de seguranças cadastrados (linha ~808), adicionar um botão com ícone de calendário (`CalendarIcon`) antes do botão de ficha. Ao clicar, abre um Dialog com o `GuardPersonalCalendar` do segurança selecionado.
+#### 1. `src/utils/pdfGenerator.ts` — Nova função `generateSchedulePDF`
 
-3. Importar `GuardPersonalCalendar` e o ícone `Calendar` do lucide-react.
+Adicionar função que recebe:
+- `guardName`, `teamName`, `monthLabel`
+- `workingDays: Map<string, EffectiveDay>`
 
-### Detalhes técnicos
+Gera PDF com:
+- Header: "Escala de [nome] — [mês/ano]"
+- Equipe: [nome da equipe]
+- Tabela via `autoTable`: colunas `Data`, `Equipe`, `Observação`
+  - Data formatada dd/MM/yyyy
+  - Equipe: nome da equipe do dia
+  - Observação: se `isSwapped`, texto "Troca com [originalOwnerName] (Equipe [originalTeamName])", senão vazio
+- Footer com página e sistema
 
-- Novo estado: `const [selectedGuardForSchedule, setSelectedGuardForSchedule] = useState<Profile | null>(null)`
-- O `GuardPersonalCalendar` recebe `guardId`, `teamId`, `teamColor` e `teamName` — todos disponíveis no objeto `guard` da tabela.
-- Dialog controlado por `selectedGuardForSchedule !== null`.
+#### 2. `src/components/schedule/GuardPersonalCalendar.tsx` — Botão de download
+
+- Adicionar prop opcional `guardName?: string` para exibir no PDF
+- Importar `Download` do lucide-react e a nova função `generateSchedulePDF`
+- Adicionar botão no header (ao lado dos controles de mês)
+- Ao clicar, chama `generateSchedulePDF` passando os dados do `workingDays` atual
+
+#### 3. `src/pages/AdminGuards.tsx` — Passar `guardName` ao `GuardPersonalCalendar`
+
+Passar o nome do segurança selecionado como prop para o calendário no dialog.
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/AdminGuards.tsx` | Adicionar estado, dialog e botão de calendário na coluna de ações |
+| `src/utils/pdfGenerator.ts` | Nova função `generateSchedulePDF` |
+| `src/components/schedule/GuardPersonalCalendar.tsx` | Adicionar botão download + prop `guardName` |
+| `src/pages/AdminGuards.tsx` | Passar `guardName` ao componente |
 
