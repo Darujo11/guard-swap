@@ -187,7 +187,20 @@ const GuardDashboard = () => {
         notes: 'Solicitado pelo segurança',
       });
       if (error) throw error;
-      toast({ title: 'Folga TRE solicitada', description: `Folga registrada para ${format(new Date(treSelectedDate + 'T00:00:00'), 'dd/MM/yyyy')}.` });
+
+      // Fire-and-forget: notify admin via WhatsApp
+      const formattedDate = format(new Date(treSelectedDate + 'T00:00:00'), 'dd/MM/yyyy');
+      const remainingDays = treQuota - treUsed - 1;
+      supabase.functions.invoke('notify-tre-leave', {
+        body: {
+          guard_name: currentUser.name,
+          admin_id: currentUser.admin_id,
+          leave_date: formattedDate,
+          remaining_days: remainingDays,
+        },
+      }).catch((err) => console.warn('[GuardDashboard] Falha ao notificar admin:', err));
+
+      toast({ title: 'Folga TRE solicitada', description: `Folga registrada para ${formattedDate}.` });
       setIsTreDialogOpen(false);
       setTreSelectedDate(null);
       fetchTreQuota();
