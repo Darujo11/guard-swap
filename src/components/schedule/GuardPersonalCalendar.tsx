@@ -175,16 +175,18 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
             </Button>
           </div>
         </div>
-        {/* Legenda */}
+        {/* Legenda dinâmica */}
         <div className="flex flex-wrap gap-3 mt-2 text-xs">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: teamColor }} />
-            <span className="text-muted-foreground">{teamName} (seus plantões)</span>
-          </div>
+          {legendTeams.map(team => (
+            <div key={team.name} className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: team.color }} />
+              <span className="text-muted-foreground">{team.name}</span>
+            </div>
+          ))}
           {swappedCount > 0 && (
             <div className="flex items-center gap-1.5">
               <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
-              <span className="text-muted-foreground">Dia recebido por troca ({swappedCount})</span>
+              <span className="text-muted-foreground">Troca ({swappedCount})</span>
             </div>
           )}
           <div className="flex items-center gap-1.5">
