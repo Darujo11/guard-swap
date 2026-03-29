@@ -110,6 +110,12 @@ const GuardDashboard = () => {
     }
   }, [currentUser, detailedMonth, detailedAllMonths]);
 
+  useEffect(() => {
+    if (currentUser) {
+      fetchTreQuota();
+    }
+  }, [currentUser]);
+
   const fetchCurrentUser = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
