@@ -144,10 +144,14 @@ export const generateSchedulePDF = (
             2: { cellWidth: 'auto', fontSize: 8 },
         },
         didParseCell: (data: any) => {
-            // Highlight EXTRA rows with golden background
-            if (data.section === 'body' && data.row.raw && data.row.raw[1] === 'EXTRA') {
-                data.cell.styles.fillColor = [184, 134, 11];
-                data.cell.styles.textColor = [255, 255, 255];
+            if (data.section === 'body' && data.row.raw) {
+                if (data.row.raw[1] === 'FOLGA TRE') {
+                    data.cell.styles.fillColor = [220, 38, 38];
+                    data.cell.styles.textColor = [255, 255, 255];
+                } else if (data.row.raw[1] === 'EXTRA') {
+                    data.cell.styles.fillColor = [184, 134, 11];
+                    data.cell.styles.textColor = [255, 255, 255];
+                }
             }
         },
     });
