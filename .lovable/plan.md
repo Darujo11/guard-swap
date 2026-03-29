@@ -1,46 +1,43 @@
 
 
-## Plano: Botão de download PDF na escala do segurança
+## Plano: Mostrar dias de Extra no calendário e no PDF
 
 ### O que será feito
 
-Adicionar um botão "Baixar PDF" no header do `GuardPersonalCalendar`. Ao clicar, gera um PDF com:
-- Nome do segurança, equipe e mês de referência
-- Tabela com todos os dias de plantão do mês
-- Coluna indicando se o dia foi trocado, com quem e de qual equipe original
+1. Buscar os registros de `extras` do segurança no mês atual
+2. Exibir no calendário os dias de extra com cor dourada e texto "Extra"
+3. No PDF, incluir os dias de extra com a justificação na coluna "Observação"
 
 ### Alterações
 
-#### 1. `src/utils/pdfGenerator.ts` — Nova função `generateSchedulePDF`
+#### 1. `src/components/schedule/GuardPersonalCalendar.tsx`
 
-Adicionar função que recebe:
-- `guardName`, `teamName`, `monthLabel`
-- `workingDays: Map<string, EffectiveDay>`
+- Adicionar estado `extras` para armazenar os registros de extras do mês
+- No `fetchData`, buscar extras do segurança: `supabase.from('extras').select('*').eq('guard_id', guardId).gte('extra_date', monthStart).lte('extra_date', monthEnd)`
+- Criar um `Map<string, { justification: string; percentage_type: number }>` com os extras por data (`extra_date`)
+- Na renderização do calendário, para dias que existem no mapa de extras (mesmo que não sejam dia de plantão):
+  - Cor de fundo dourada (`#B8860B` ou similar)
+  - Texto "Extra" dentro da célula
+- Na legenda, adicionar item dourado "Extra" se houver extras no mês
+- Ao gerar PDF, passar os extras junto com os `workingDays`
 
-Gera PDF com:
-- Header: "Escala de [nome] — [mês/ano]"
-- Equipe: [nome da equipe]
-- Tabela via `autoTable`: colunas `Data`, `Equipe`, `Observação`
-  - Data formatada dd/MM/yyyy
-  - Equipe: nome da equipe do dia
-  - Observação: se `isSwapped`, texto "Troca com [originalOwnerName] (Equipe [originalTeamName])", senão vazio
-- Footer com página e sistema
+#### 2. `src/utils/pdfGenerator.ts`
 
-#### 2. `src/components/schedule/GuardPersonalCalendar.tsx` — Botão de download
+- Atualizar a assinatura de `generateSchedulePDF` para aceitar um parâmetro opcional `extras: Map<string, { justification: string; percentage_type: number }>`
+- Após os dias de plantão na tabela, adicionar linhas para cada dia de extra (com cor ou indicação "EXTRA" na coluna Equipe)
+- Na coluna Observação: mostrar a justificação do extra (ex: "Extra 100% — Cobertura de falta")
+- Ordenar todas as linhas por data (plantão + extras juntos)
 
-- Adicionar prop opcional `guardName?: string` para exibir no PDF
-- Importar `Download` do lucide-react e a nova função `generateSchedulePDF`
-- Adicionar botão no header (ao lado dos controles de mês)
-- Ao clicar, chama `generateSchedulePDF` passando os dados do `workingDays` atual
+#### 3. Renderização no calendário
 
-#### 3. `src/pages/AdminGuards.tsx` — Passar `guardName` ao `GuardPersonalCalendar`
-
-Passar o nome do segurança selecionado como prop para o calendário no dialog.
+Para cada dia do calendário, verificar:
+1. Se é dia de plantão (workingDays) → renderizar como antes
+2. Se é dia de extra (extrasMap) → renderizar com fundo dourado + "Extra"
+3. Se é ambos → renderizar com plantão normal + indicador de extra (estrela ou badge)
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/utils/pdfGenerator.ts` | Nova função `generateSchedulePDF` |
-| `src/components/schedule/GuardPersonalCalendar.tsx` | Adicionar botão download + prop `guardName` |
-| `src/pages/AdminGuards.tsx` | Passar `guardName` ao componente |
+| `src/components/schedule/GuardPersonalCalendar.tsx` | Buscar extras, renderizar dias dourados, passar extras ao PDF |
+| `src/utils/pdfGenerator.ts` | Aceitar extras e incluir no PDF com justificação |
 
