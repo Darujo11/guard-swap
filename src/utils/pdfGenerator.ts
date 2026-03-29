@@ -107,9 +107,13 @@ export const generateSchedulePDF = (
         const workDay = workingDays.get(dateStr);
         const extra = extrasMap?.get(dateStr);
 
-        const teamCol = workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
+        const isTre = treDates?.has(dateStr) ?? false;
+        const teamCol = isTre ? 'FOLGA TRE' : workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
         
         const observations: string[] = [];
+        if (isTre) {
+            observations.push('Folga TRE');
+        }
         if (workDay?.isSwapped) {
             const swapDatesPart = workDay.originalDate
                 ? (() => {
