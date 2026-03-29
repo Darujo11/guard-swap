@@ -765,7 +765,7 @@ const GuardDashboard = () => {
                         field("Tipo", "Folga TRE");
                         field("Data", format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy'));
                         field("Status", leave.status === 'APPROVED' ? 'Aprovada' : leave.status === 'REJECTED' ? 'Rejeitada' : 'Pendente');
-                        field("Data Solicitação", format(new Date(), 'dd/MM/yyyy'));
+                        field("Registro", leave.created_at ? format(new Date(leave.created_at), 'dd/MM/yyyy HH:mm') : '-');
 
                         y += 20;
                         doc.setDrawColor(0);
