@@ -195,6 +195,10 @@ const AdminGuards = () => {
   const [memberForm, setMemberForm] = useState({ name: '', phone: '' });
   const [memberTransfers, setMemberTransfers] = useState<Record<string, string>>({});
   const [generatingAllPDF, setGeneratingAllPDF] = useState(false);
+  const [pdfMonth, setPdfMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   
   const { toast } = useToast();
 
