@@ -850,7 +850,23 @@ const AdminGuards = () => {
           </CardContent>
         </Card>
 
-        {/* Teams Section */}
+        {/* Dialog de Escala do Segurança */}
+        <Dialog open={selectedGuardForSchedule !== null} onOpenChange={(open) => { if (!open) setSelectedGuardForSchedule(null); }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Escala de {selectedGuardForSchedule?.name}</DialogTitle>
+            </DialogHeader>
+            {selectedGuardForSchedule && (
+              <GuardPersonalCalendar
+                guardId={selectedGuardForSchedule.id}
+                teamId={selectedGuardForSchedule.team_id || null}
+                teamColor={selectedGuardForSchedule.team?.color || '#6B7280'}
+                teamName={selectedGuardForSchedule.team?.name || 'Sem equipe'}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
