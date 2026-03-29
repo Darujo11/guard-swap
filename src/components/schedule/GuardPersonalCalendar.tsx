@@ -15,13 +15,7 @@ interface GuardPersonalCalendarProps {
   teamName: string;
 }
 
-interface WorkingDay {
-  date: string;
-  teamColor: string;
-  teamName: string;
-  isSwapped: boolean;
-  originalTeamColor?: string;
-}
+interface WorkingDay extends EffectiveDay {}
 
 export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: GuardPersonalCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
