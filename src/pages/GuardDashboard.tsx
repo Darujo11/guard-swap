@@ -691,7 +691,40 @@ const GuardDashboard = () => {
         />
       )}
 
-      {/* Ranking de Extras Unificado com Filtros */}
+      {/* Folgas TRE Solicitadas */}
+      {treLeaves.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Scale className="h-5 w-5" />
+              Folgas TRE Solicitadas
+            </CardTitle>
+            <CardDescription>
+              Saldo: {treQuota - treUsed} de {treQuota} dia(s) restante(s)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {treLeaves
+                .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+                .map((leave) => (
+                <div key={leave.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
+                  <span className="text-sm font-medium">
+                    {format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}
+                  </span>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleCancelTreLeave(leave.id)}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
