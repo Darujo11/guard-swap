@@ -72,7 +72,8 @@ export const generateSchedulePDF = (
     teamName: string,
     monthLabel: string,
     workingDays: Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string; originalDate?: string }>,
-    extrasMap?: Map<string, { justification: string; percentage_type: number }>
+    extrasMap?: Map<string, { justification: string; percentage_type: number }>,
+    treDates?: Set<string>
 ) => {
     const doc = new jsPDF('l');
     const pageWidth = doc.internal.pageSize.width;
