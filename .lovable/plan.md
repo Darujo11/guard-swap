@@ -1,21 +1,27 @@
 
 
-## Plano: Mover botões "Solicitar Troca" e "Ver Escala Completa" para acima de "Minha Escala"
+## Plano: Mover "Registros Detalhados de Extras" para logo abaixo de "Minha Escala" com ranking acumulado por padrão
 
 ### Alteração
 
 **Arquivo:** `src/pages/GuardDashboard.tsx`
 
-Mover o bloco de Quick Actions (linhas 509-540) e o Full Schedule Dialog (linhas 542-553) para **antes** do `GuardPersonalCalendar` (linha 500).
+1. **Mover o bloco "Registros Detalhados de Extras"** (linhas 867-1049) para logo após o `GuardPersonalCalendar` (linha 553), antes do bloco de Swap Requests (linha 555).
 
-Ordem final:
+2. **Alterar valor padrão de `detailedAllMonths`** de `false` para `true` (linha 68), para que já abra mostrando o acumulado de todos os meses.
+
+### Ordem final do layout:
 1. Botões (Solicitar Troca + Ver Escala Completa)
 2. Dialog da Escala Completa
 3. Calendário Pessoal ("Minha Escala")
-4. Resto (SwapList, Extras, etc.)
+4. **Registros Detalhados de Extras** (acumulado por padrão)
+5. Swap Requests
+6. Meus Extras
+7. Relatório Mensal
+8. Ranking de Extras
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/GuardDashboard.tsx` | Reordenar blocos JSX (linhas 500-553) |
+| `src/pages/GuardDashboard.tsx` | Mover bloco JSX + mudar default de `detailedAllMonths` para `true` |
 
