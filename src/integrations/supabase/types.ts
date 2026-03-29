@@ -699,6 +699,15 @@ export type Database = {
       is_admin_active: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       suspend_expired_admins: { Args: never; Returns: undefined }
+      swap_team_schedules: {
+        Args: {
+          _requester_id: string
+          _requester_shift_date: string
+          _target_id: string
+          _target_shift_date: string
+        }
+        Returns: undefined
+      }
       user_belongs_to_admin_org: {
         Args: { _admin_user_id: string; _target_user_id: string }
         Returns: boolean
