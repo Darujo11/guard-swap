@@ -9,6 +9,7 @@ export interface EffectiveDay {
   originalTeamColor?: string;
   originalTeamName?: string;
   originalOwnerName?: string;
+  originalDate?: string;
 }
 
 /**
@@ -72,6 +73,7 @@ export function computeEffectiveSchedule(
         originalTeamColor: otherTeam?.color || guardTeamColor,
         originalTeamName: otherTeam?.name,
         originalOwnerName: swap.target?.name,
+        originalDate: swap.requester_shift_date,
       });
     } else if (isTarget) {
       days.delete(swap.target_shift_date);
@@ -86,6 +88,7 @@ export function computeEffectiveSchedule(
         originalTeamColor: otherTeam?.color || guardTeamColor,
         originalTeamName: otherTeam?.name,
         originalOwnerName: swap.requester?.name,
+        originalDate: swap.target_shift_date,
       });
     }
   });
