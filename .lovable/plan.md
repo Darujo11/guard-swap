@@ -1,40 +1,60 @@
 
 
-## Plano: Atualizar escala automaticamente após aprovação de troca
+## Plano: Calendário Pessoal do Segurança com Reflexo de Trocas
 
 ### Problema
-Quando o admin aprova uma troca de plantão, a escala no calendário não reflete a troca. O solicitante e o alvo trocam de dia, mas o calendário continua mostrando as equipes originais.
+Atualmente o calendário mostra apenas a escala por equipe. Quando um segurança troca de plantão, não existe uma visão pessoal que mostre os dias que ele realmente vai trabalhar (incluindo dias recebidos de trocas e excluindo dias cedidos).
 
 ### Solução
-Após a aprovação da troca no `AdminSwaps.tsx`, trocar os `team_id` dos registros em `team_schedules` para as duas datas envolvidas.
+Criar um componente `GuardPersonalCalendar` que calcula dinamicamente os dias de trabalho do segurança combinando:
+1. Dias da escala da sua equipe (`team_schedules`)
+2. **Menos** os dias que ele cedeu em trocas aprovadas
+3. **Mais** os dias que ele recebeu em trocas aprovadas
 
-**Lógica:**
-1. Buscar o `team_id` do solicitante (via `profiles`) e do alvo
-2. No `team_schedules`, encontrar o registro da `requester_shift_date` e trocar o `team_id` para o time do alvo
-3. No `team_schedules`, encontrar o registro da `target_shift_date` e trocar o `team_id` para o time do solicitante
+Cada dia recebido via troca mostra a cor da equipe do segurança que cedeu (ex: se Fabio da Equipe A recebe o dia 30 do Reginaldo da Equipe D, o dia 30 aparece com cor Azul/Equipe A no calendário do Fabio, e o dia 03 aparece Vermelho/Equipe D no calendário do Reginaldo).
 
-Exemplo: Solicitante (Equipe Azul) tem plantão dia 30/03, Alvo (Equipe Vermelha) tem plantão dia 29/03.
-- Após aprovação: dia 29/03 → Equipe Azul, dia 30/03 → Equipe Vermelha (trocam)
+### Não precisa de mudanças no banco de dados
+Tudo é calculado a partir de dados existentes: `team_schedules`, `swap_requests` (status APPROVED) e `profiles`/`teams`.
 
-### Alteração
+### Alterações
 
-**Arquivo:** `src/pages/AdminSwaps.tsx`
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `src/components/schedule/GuardPersonalCalendar.tsx` | CRIAR | Calendário pessoal do segurança |
+| `src/pages/GuardDashboard.tsx` | MODIFICAR | Adicionar o calendário pessoal na dashboard do segurança |
 
-Após a linha que faz o `update` do status para `APPROVED` (linha ~252), adicionar lógica para:
+### Componente `GuardPersonalCalendar`
 
-1. Buscar o `team_id` do requester e do target via `profiles`
-2. Atualizar `team_schedules` na `requester_shift_date`: trocar `team_id` para o time do target
-3. Atualizar `team_schedules` na `target_shift_date`: trocar `team_id` para o time do requester
+**Props:** `guardId`, `teamId`, `teamColor`, `teamName`
 
+**Lógica de cálculo:**
 ```text
-Fluxo:
-  Admin aprova troca
-    → Update swap_requests status = APPROVED
-    → Busca team_id do requester e target
-    → Swap team_ids nas datas em team_schedules
-    → Webhook + audit log (já existente)
+1. Buscar team_schedules do mês (onde team_id = meu team_id)
+   → Esses são meus dias BASE de trabalho
+
+2. Buscar swap_requests APPROVED onde eu sou requester ou target
+
+3. Para cada swap aprovada:
+   - Se sou o requester:
+     → Remover requester_shift_date dos meus dias
+     → Adicionar target_shift_date (com a cor da equipe do target)
+   - Se sou o target:
+     → Remover target_shift_date dos meus dias
+     → Adicionar requester_shift_date (com a cor da equipe do requester)
+
+4. Renderizar calendário mensal com:
+   - Dias normais: cor da minha equipe
+   - Dias recebidos por troca: cor da equipe original (do outro segurança)
+   - Indicador visual (ícone ↔) nos dias que vieram de troca
 ```
 
-### Escopo
-- Apenas `src/pages/AdminSwaps.tsx` — adicionar ~30 linhas após a aprovação
+**Visual:**
+- Calendário mensal com navegação por mês
+- Dias de trabalho coloridos com a cor da equipe
+- Dias recebidos por troca com badge/ícone indicando que foi troca
+- Legenda mostrando equipe do segurança e dias de troca
+
+### GuardDashboard
+- Adicionar `GuardPersonalCalendar` logo no topo da dashboard, antes dos botões de ação
+- Passa os dados do `currentUser` (id, team_id, team color/name)
 
