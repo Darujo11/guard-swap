@@ -715,16 +715,30 @@ const GuardDashboard = () => {
                 .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
                 .map((leave) => (
                 <div key={leave.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
-                  <span className="text-sm font-medium">
-                    {format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}
-                  </span>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleCancelTreLeave(leave.id)}
-                  >
-                    Cancelar
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium">
+                      {format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      leave.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                      leave.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {leave.status === 'APPROVED' ? 'Aprovada' : leave.status === 'REJECTED' ? 'Rejeitada' : 'Pendente'}
+                    </span>
+                    {leave.protocol && (
+                      <span className="text-xs text-muted-foreground">{leave.protocol}</span>
+                    )}
+                  </div>
+                  {leave.status === 'PENDING' && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleCancelTreLeave(leave.id)}
+                    >
+                      Cancelar
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
