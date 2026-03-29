@@ -1,24 +1,26 @@
 
 
-## Plano: Garantir envio de WhatsApp ao segurança na aprovação/rejeição da folga TRE
+## Plano: Confirmação com digitação "TRE" para cancelar folga
 
-### Situação atual
+### O que será feito
 
-O código já está completo:
-- A edge function `notify-tre-leave-guard` já existe com a lógica correta de envio via Evolution API
-- O `AdminDashboard.tsx` já chama essa function após aprovar/rejeitar (linha 171)
-- A mensagem já inclui saudação dinâmica, nome do segurança, data e nome do coordenador
+Ao clicar em "Cancelar", abrir um dialog pedindo que o segurança digite "TRE" para confirmar. Após a exclusão, exibir um toast com a mensagem "Informe ao Coordenador que cancelou a troca."
 
-### Problema
+### Alterações
 
-A edge function pode não estar deployed no Supabase, retornando 404 quando chamada.
+#### `src/pages/GuardDashboard.tsx`
 
-### Solução
-
-Fazer um pequeno ajuste no arquivo da edge function (adicionar um log com timestamp) para forçar o redeploy automático. Nenhuma outra alteração é necessária.
+- Adicionar estados: `cancelDialogOpen`, `cancelLeaveId`, `cancelConfirmText`
+- Substituir o `onClick` direto do botão "Cancelar" por abertura do dialog
+- Adicionar um `AlertDialog` com:
+  - Título: "Confirmar cancelamento"
+  - Input de texto onde o usuário deve digitar "TRE"
+  - Botão "Confirmar" habilitado apenas quando o texto for exatamente "TRE"
+- No `handleCancelTreLeave`: após exclusão bem-sucedida, exibir toast com mensagem "Informe ao Coordenador que cancelou a troca."
+- Fechar dialog e limpar estados após confirmar
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `supabase/functions/notify-tre-leave-guard/index.ts` | Adicionar log para forçar redeploy |
+| `src/pages/GuardDashboard.tsx` | Dialog de confirmação com input "TRE" + toast informativo |
 
