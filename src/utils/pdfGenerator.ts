@@ -110,10 +110,11 @@ export const generateSchedulePDF = (
             const swapDatesPart = workDay.originalDate
                 ? (() => {
                     const [oy, om, od] = workDay.originalDate.split('-');
-                    return ` — dias ${od}/${om} ↔ ${d}/${m}`;
+                    return ` ${od}/${om} ↔ ${d}/${m}`;
                 })()
                 : '';
-            observations.push(`Troca com ${workDay.originalOwnerName || 'N/A'} (${workDay.originalTeamName || 'N/A'})${swapDatesPart}`);
+            const teamLetter = workDay.originalTeamName ? workDay.originalTeamName.replace(/^Equipe\s*/i, '') : 'N/A';
+            observations.push(`↔ ${workDay.originalOwnerName || 'N/A'} (${teamLetter})${swapDatesPart}`);
         }
         if (extra) {
             observations.push(`Extra ${extra.percentage_type}% — ${extra.justification}`);
