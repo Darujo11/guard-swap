@@ -60,7 +60,7 @@ const GuardDashboard = () => {
   const [allGuardsExtras, setAllGuardsExtras] = useState<OrgExtra[]>([]);
   const [guards, setGuards] = useState<any[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
-  const [rankingAllMonths, setRankingAllMonths] = useState<boolean>(false);
+  const [rankingAllMonths, setRankingAllMonths] = useState<boolean>(true);
   const [rankingPercentageFilter, setRankingPercentageFilter] = useState<'all' | '50' | '100'>('all');
   const [rankingMonth, setRankingMonth] = useState(startOfMonth(new Date()));
   
@@ -552,6 +552,318 @@ const GuardDashboard = () => {
         />
       )}
 
+      {/* Ranking de Extras Unificado com Filtros */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Ranking de Extras
+          </CardTitle>
+          <CardDescription>
+            Ranking de extras na organização
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Filtros do Ranking */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Período</Label>
+              <Select 
+                value={rankingAllMonths ? "all" : "specific"} 
+                onValueChange={(value) => setRankingAllMonths(value === "all")}
+              >
+                <SelectTrigger className="h-[50px]">
+                  <SelectValue placeholder="Selecione o período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="specific">Mês Específico</SelectItem>
+                  <SelectItem value="all">Todos os Meses (Acumulado)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {!rankingAllMonths && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Mês</Label>
+                <div className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-background h-[50px]">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRankingMonth(subMonths(rankingMonth, 1))}
+                    className="h-8 w-8"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="text-center flex-1">
+                    <p className="text-sm font-semibold capitalize">
+                      {format(rankingMonth, "MMMM yyyy", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRankingMonth(addMonths(rankingMonth, 1))}
+                    className="h-8 w-8"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Tipo de Extra</Label>
+              <Select 
+                value={rankingPercentageFilter} 
+                onValueChange={(value: 'all' | '50' | '100') => setRankingPercentageFilter(value)}
+              >
+                <SelectTrigger className="h-[50px]">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="50">Apenas 50%</SelectItem>
+                  <SelectItem value="100">Apenas 100%</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {loadingRanking ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Carregando ranking...</p>
+            </div>
+          ) : rankingFiltered.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum dado disponível para os filtros selecionados
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[80px]">Posição</TableHead>
+                    <TableHead>Segurança</TableHead>
+                    <TableHead className="text-right">Total de Extras</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(() => {
+                    // Obter valores únicos de total, ordenados decrescente
+                    const uniqueTotals = [...new Set(rankingFiltered.map(g => g.total))].sort((a, b) => b - a);
+                    return rankingFiltered.map((guard) => {
+                    const isCurrentUser = guard.id === currentUser?.id;
+                    // Calcular posição baseada em valores únicos
+                    const position = uniqueTotals.indexOf(guard.total) + 1;
+                    const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : '';
+                    const isExpanded = expandedGuards.has(guard.id);
+                    const guardExtras = getGuardExtrasDetails(guard.id);
+                    
+                    return (
+                      <Collapsible key={guard.id} open={isExpanded} onOpenChange={() => toggleGuardExpanded(guard.id)} asChild>
+                        <>
+                          <CollapsibleTrigger asChild>
+                            <TableRow 
+                              className={`cursor-pointer hover:bg-muted/50 ${isCurrentUser ? 'bg-accent/50 font-medium' : ''}`}
+                            >
+                              <TableCell>
+                                <span className="flex items-center gap-2">
+                                  {medal && <span className="text-xl">{medal}</span>}
+                                  #{position}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                                  {guard.name}
+                                  {isCurrentUser && (
+                                    <span className="ml-2 text-xs text-primary">(Você)</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {guard.total}h
+                              </TableCell>
+                            </TableRow>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent asChild>
+                            <TableRow className="bg-muted/30 hover:bg-muted/30">
+                              <TableCell colSpan={3} className="p-0">
+                                <div className="p-4 border-t">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="text-xs">Data</TableHead>
+                                        <TableHead className="text-xs">Horas</TableHead>
+                                        <TableHead className="text-xs">Tipo</TableHead>
+                                        <TableHead className="text-xs">Fundamentação</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {guardExtras.map((extra) => (
+                                        <TableRow key={extra.id}>
+                                          <TableCell className="text-sm">{formatDate(extra.extra_date)}</TableCell>
+                                          <TableCell className="text-sm font-semibold">{extra.quantity}h</TableCell>
+                                          <TableCell>
+                                            <span className={`px-2 py-1 rounded text-xs font-medium ${extra.percentage_type === 50 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                                              {extra.percentage_type}%
+                                            </span>
+                                          </TableCell>
+                                          <TableCell className="text-sm max-w-xs truncate">{extra.justification}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          </CollapsibleContent>
+                        </>
+                      </Collapsible>
+                    );
+                  })})()}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Swap Requests */}
+      <div className="mb-6">
+        <GuardSwapList key={refreshSwapList} currentUser={currentUser} />
+      </div>
+
+      {/* My Extras */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Award className="h-5 w-5" />
+            Meus Extras
+          </CardTitle>
+          <CardDescription>
+            Visualize seus extras concedidos por mês
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setExtrasMonth(startOfMonth(subMonths(extrasMonth, 1)))}
+              className="h-8 w-8"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-center flex-1">
+              <p className="text-lg font-semibold capitalize">
+                {format(extrasMonth, "MMMM yyyy", { locale: ptBR })}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setExtrasMonth(startOfMonth(addMonths(extrasMonth, 1)))}
+              className="h-8 w-8"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="p-4 bg-muted rounded-lg">
+            <p className="text-sm text-muted-foreground">Total de Extras no Mês</p>
+            <p className="text-3xl font-bold">{totalExtras}</p>
+          </div>
+
+          {loadingExtras ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Carregando extras...</p>
+            </div>
+          ) : extras.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum extra concedido neste mês
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {extras.map((extra) => (
+                <div key={extra.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium">{formatDate(extra.extra_date)}</p>
+                    <p className="text-sm text-muted-foreground">{extra.justification}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-semibold">{extra.quantity} horas</p>
+                    <span className={`text-xs px-2 py-0.5 rounded ${extra.percentage_type === 50 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                      {extra.percentage_type}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Relatório Mensal */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Relatório Mensal
+          </CardTitle>
+          <CardDescription>
+            Gere um PDF com seus extras
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Navegação por mês */}
+          <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setExtrasMonth(startOfMonth(subMonths(extrasMonth, 1)))}
+              className="h-8 w-8"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-center flex-1">
+              <p className="text-lg font-semibold capitalize">
+                {format(extrasMonth, "MMMM yyyy", { locale: ptBR })}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setExtrasMonth(startOfMonth(addMonths(extrasMonth, 1)))}
+              className="h-8 w-8"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              onClick={generateMyExtrasPDF}
+              disabled={extras.length === 0}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Gerar PDF do Mês
+            </Button>
+            <Button 
+              onClick={generateCompleteExtrasPDF}
+              variant="outline"
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Gerar PDF Completo
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Registros Detalhados de Extras - Todos os Seguranças */}
       <Card className="mb-6">
         <CardHeader>
@@ -729,318 +1041,6 @@ const GuardDashboard = () => {
                       </TableRow>
                     );
                   })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Swap Requests */}
-      <div className="mb-6">
-        <GuardSwapList key={refreshSwapList} currentUser={currentUser} />
-      </div>
-
-      {/* My Extras */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Award className="h-5 w-5" />
-            Meus Extras
-          </CardTitle>
-          <CardDescription>
-            Visualize seus extras concedidos por mês
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setExtrasMonth(startOfMonth(subMonths(extrasMonth, 1)))}
-              className="h-8 w-8"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="text-center flex-1">
-              <p className="text-lg font-semibold capitalize">
-                {format(extrasMonth, "MMMM yyyy", { locale: ptBR })}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setExtrasMonth(startOfMonth(addMonths(extrasMonth, 1)))}
-              className="h-8 w-8"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="p-4 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground">Total de Extras no Mês</p>
-            <p className="text-3xl font-bold">{totalExtras}</p>
-          </div>
-
-          {loadingExtras ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Carregando extras...</p>
-            </div>
-          ) : extras.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhum extra concedido neste mês
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {extras.map((extra) => (
-                <div key={extra.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium">{formatDate(extra.extra_date)}</p>
-                    <p className="text-sm text-muted-foreground">{extra.justification}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-semibold">{extra.quantity} horas</p>
-                    <span className={`text-xs px-2 py-0.5 rounded ${extra.percentage_type === 50 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
-                      {extra.percentage_type}%
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Relatório Mensal */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Relatório Mensal
-          </CardTitle>
-          <CardDescription>
-            Gere um PDF com seus extras
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Navegação por mês */}
-          <div className="flex items-center justify-between gap-2 p-4 border rounded-lg bg-background">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setExtrasMonth(startOfMonth(subMonths(extrasMonth, 1)))}
-              className="h-8 w-8"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="text-center flex-1">
-              <p className="text-lg font-semibold capitalize">
-                {format(extrasMonth, "MMMM yyyy", { locale: ptBR })}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setExtrasMonth(startOfMonth(addMonths(extrasMonth, 1)))}
-              className="h-8 w-8"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              onClick={generateMyExtrasPDF}
-              disabled={extras.length === 0}
-              className="gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              Gerar PDF do Mês
-            </Button>
-            <Button 
-              onClick={generateCompleteExtrasPDF}
-              variant="outline"
-              className="gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              Gerar PDF Completo
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Ranking de Extras Unificado com Filtros */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Ranking de Extras
-          </CardTitle>
-          <CardDescription>
-            Ranking de extras na organização
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Filtros do Ranking */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Período</Label>
-              <Select 
-                value={rankingAllMonths ? "all" : "specific"} 
-                onValueChange={(value) => setRankingAllMonths(value === "all")}
-              >
-                <SelectTrigger className="h-[50px]">
-                  <SelectValue placeholder="Selecione o período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="specific">Mês Específico</SelectItem>
-                  <SelectItem value="all">Todos os Meses (Acumulado)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {!rankingAllMonths && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Mês</Label>
-                <div className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-background h-[50px]">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setRankingMonth(subMonths(rankingMonth, 1))}
-                    className="h-8 w-8"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <div className="text-center flex-1">
-                    <p className="text-sm font-semibold capitalize">
-                      {format(rankingMonth, "MMMM yyyy", { locale: ptBR })}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setRankingMonth(addMonths(rankingMonth, 1))}
-                    className="h-8 w-8"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Tipo de Extra</Label>
-              <Select 
-                value={rankingPercentageFilter} 
-                onValueChange={(value: 'all' | '50' | '100') => setRankingPercentageFilter(value)}
-              >
-                <SelectTrigger className="h-[50px]">
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="50">Apenas 50%</SelectItem>
-                  <SelectItem value="100">Apenas 100%</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {loadingRanking ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Carregando ranking...</p>
-            </div>
-          ) : rankingFiltered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhum dado disponível para os filtros selecionados
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[80px]">Posição</TableHead>
-                    <TableHead>Segurança</TableHead>
-                    <TableHead className="text-right">Total de Extras</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(() => {
-                    // Obter valores únicos de total, ordenados decrescente
-                    const uniqueTotals = [...new Set(rankingFiltered.map(g => g.total))].sort((a, b) => b - a);
-                    return rankingFiltered.map((guard) => {
-                    const isCurrentUser = guard.id === currentUser?.id;
-                    // Calcular posição baseada em valores únicos
-                    const position = uniqueTotals.indexOf(guard.total) + 1;
-                    const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : '';
-                    const isExpanded = expandedGuards.has(guard.id);
-                    const guardExtras = getGuardExtrasDetails(guard.id);
-                    
-                    return (
-                      <Collapsible key={guard.id} open={isExpanded} onOpenChange={() => toggleGuardExpanded(guard.id)} asChild>
-                        <>
-                          <CollapsibleTrigger asChild>
-                            <TableRow 
-                              className={`cursor-pointer hover:bg-muted/50 ${isCurrentUser ? 'bg-accent/50 font-medium' : ''}`}
-                            >
-                              <TableCell>
-                                <span className="flex items-center gap-2">
-                                  {medal && <span className="text-xl">{medal}</span>}
-                                  #{position}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                                  {guard.name}
-                                  {isCurrentUser && (
-                                    <span className="ml-2 text-xs text-primary">(Você)</span>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right font-semibold">
-                                {guard.total}h
-                              </TableCell>
-                            </TableRow>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent asChild>
-                            <TableRow className="bg-muted/30 hover:bg-muted/30">
-                              <TableCell colSpan={3} className="p-0">
-                                <div className="p-4 border-t">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead className="text-xs">Data</TableHead>
-                                        <TableHead className="text-xs">Horas</TableHead>
-                                        <TableHead className="text-xs">Tipo</TableHead>
-                                        <TableHead className="text-xs">Fundamentação</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {guardExtras.map((extra) => (
-                                        <TableRow key={extra.id}>
-                                          <TableCell className="text-sm">{formatDate(extra.extra_date)}</TableCell>
-                                          <TableCell className="text-sm font-semibold">{extra.quantity}h</TableCell>
-                                          <TableCell>
-                                            <span className={`px-2 py-1 rounded text-xs font-medium ${extra.percentage_type === 50 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
-                                              {extra.percentage_type}%
-                                            </span>
-                                          </TableCell>
-                                          <TableCell className="text-sm max-w-xs truncate">{extra.justification}</TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          </CollapsibleContent>
-                        </>
-                      </Collapsible>
-                    );
-                  })})()}
                 </TableBody>
               </Table>
             </div>
