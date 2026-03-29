@@ -222,7 +222,7 @@ const AdminDashboard = () => {
     doc.save(`folga-tre-${leave.protocol || leave.id}.pdf`);
   };
 
-
+  const openDecisionDialog = (request: SwapRequest, action: 'APPROVED' | 'REJECTED') => {
     setDecisionDialog({ open: true, request, action });
     setDecisionReason('');
   };
