@@ -80,6 +80,12 @@ export default function AdminLeaves() {
   // Filter state
   const [filterGuard, setFilterGuard] = useState<string>('all');
 
+  // TRE Quota state
+  const [treGuard, setTreGuard] = useState<string>('');
+  const [treDays, setTreDays] = useState<number>(0);
+  const [treQuotas, setTreQuotas] = useState<Array<{ guard_id: string; total_days: number }>>([]);
+  const [treSaving, setTreSaving] = useState(false);
+
   // Report state
   const [reportAllMonths, setReportAllMonths] = useState(false);
   const [reportMonth, setReportMonth] = useState<Date>(new Date());
