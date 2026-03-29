@@ -1,42 +1,29 @@
 
 
-## Plano: Cancelar solicitação de folga TRE
+## Plano: Corrigir erro RLS ao solicitar folga TRE
 
-### O que será feito
+### Problema
+O erro `new row violates row-level security policy for table "leaves"` ocorre porque não existe uma policy de INSERT para guards na tabela `leaves`. Apenas admins e super_admins podem inserir.
 
-Após solicitar uma folga TRE, exibir abaixo de "Minha Escala" uma lista das folgas TRE pendentes do segurança com botão para cancelar (excluir). Também adicionar uma policy RLS para permitir que guards deletem suas próprias folgas TRE.
+### Alteração
 
-### Alterações
-
-#### 1. Migração SQL — Policy de DELETE para guards na tabela `leaves`
+**Migração SQL** — Adicionar policy de INSERT para guards na tabela `leaves` (apenas TRE):
 
 ```sql
-CREATE POLICY "Guards can delete their own TRE leaves"
-  ON public.leaves FOR DELETE TO authenticated
-  USING (
+CREATE POLICY "Guards can insert their own TRE leaves"
+  ON public.leaves FOR INSERT TO authenticated
+  WITH CHECK (
     has_role(auth.uid(), 'guard'::app_role)
     AND guard_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
     AND leave_type = 'TRE'
   );
 ```
 
-#### 2. `src/pages/GuardDashboard.tsx`
-
-- Buscar as folgas TRE do segurança (já temos os dados em `fetchTreQuota`, basta guardar os registros completos num novo estado `treLeaves`)
-- Adicionar função `handleCancelTreLeave(leaveId)` que faz `supabase.from('leaves').delete().eq('id', leaveId)` e atualiza o saldo
-- Abaixo do `GuardPersonalCalendar`, se houver folgas TRE, exibir um card "Folgas TRE Solicitadas" com:
-  - Lista dos dias solicitados (formatado dd/MM/yyyy)
-  - Botão "Cancelar" (ícone X ou Trash) em cada linha
-  - Confirmação via toast ou dialog simples antes de excluir
-
-### Ordem no layout
-1. Minha Escala (calendário)
-2. **Folgas TRE Solicitadas** (novo card, só aparece se houver folgas TRE)
-3. Ranking de Extras (existente)
+Além disso, verificar no `GuardDashboard.tsx` se o campo `admin_id` está sendo preenchido no insert, pois a tabela `leaves` possui esse campo.
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| Migração SQL | Policy de DELETE para guards em `leaves` (apenas TRE) |
-| `src/pages/GuardDashboard.tsx` | Estado `treLeaves`, card com lista e botão cancelar |
+| Migração SQL | Nova policy INSERT para guards em `leaves` (apenas TRE) |
+| `src/pages/GuardDashboard.tsx` | Garantir que `admin_id` é passado no insert |
 
