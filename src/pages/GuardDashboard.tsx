@@ -32,7 +32,8 @@ import {
   Award,
   FileText,
   BarChart3,
-  Scale
+  Scale,
+  Download
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
