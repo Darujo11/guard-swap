@@ -478,8 +478,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
                   }}
                   modifiers={{
                     userTeam: (date) => {
-                      const schedule = getTeamForDate(date);
-                      return schedule?.team_id === currentUser.team_id;
+                      return isRequesterDate(date);
                     }
                   }}
                   modifiersStyles={{
