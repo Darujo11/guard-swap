@@ -3,21 +3,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronLeft, ChevronRight, ArrowRightLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRightLeft, Calendar as CalendarIcon, Download } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { computeEffectiveSchedule, EffectiveDay } from '@/utils/effectiveSchedule';
+import { generateSchedulePDF } from '@/utils/pdfGenerator';
 
 interface GuardPersonalCalendarProps {
   guardId: string;
   teamId: string | null;
   teamColor: string;
   teamName: string;
+  guardName?: string;
 }
 
 interface WorkingDay extends EffectiveDay {}
 
-export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: GuardPersonalCalendarProps) {
+export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, guardName }: GuardPersonalCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [teamSchedules, setTeamSchedules] = useState<any[]>([]);
   const [swapRequests, setSwapRequests] = useState<any[]>([]);
@@ -141,6 +143,18 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
             </span>
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}>
               <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              title="Baixar PDF"
+              onClick={() => {
+                const monthLabel = format(currentMonth, 'MMMM yyyy', { locale: ptBR });
+                generateSchedulePDF(guardName || 'Segurança', teamName, monthLabel, workingDays);
+              }}
+            >
+              <Download className="h-4 w-4" />
             </Button>
           </div>
         </div>
