@@ -1,54 +1,36 @@
 
 
-## Plano: Gerenciar quantidade de folgas TRE por segurança
+## Plano: Botão "Solicitar Folga TRE" no dashboard do segurança
 
 ### O que será feito
 
-Adicionar uma seção na página de Folgas onde o admin pode selecionar um segurança e definir quantas folgas TRE ele tem direito. Também mostrar quantas já foram usadas e o saldo restante.
+Adicionar um botão "Solicitar Folga TRE" ao lado de "Ver Escala Completa" no dashboard do segurança. O botão só aparece se o segurança tiver saldo de folgas TRE (quota > 0). Ao clicar, abre um dialog com o calendário pessoal em modo de seleção — o segurança clica no dia desejado e aparece um botão "Solicitar" para confirmar. A solicitação cria um registro na tabela `leaves` com `leave_type = 'TRE'`.
 
 ### Alterações
 
-#### 1. Nova tabela `guard_tre_quotas` (migração)
+#### 1. `src/pages/GuardDashboard.tsx`
 
-```sql
-CREATE TABLE public.guard_tre_quotas (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  guard_id uuid NOT NULL,
-  admin_id uuid,
-  total_days integer NOT NULL DEFAULT 0,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (guard_id)
-);
+- Buscar a quota TRE do segurança (`guard_tre_quotas`) e as folgas TRE já usadas (`leaves` com `leave_type = 'TRE'`)
+- Calcular saldo. Se saldo > 0, exibir botão "Solicitar Folga TRE" ao lado dos outros botões
+- Ao clicar, abrir um dialog com o `GuardPersonalCalendar` em modo seleção (nova prop `selectionMode`)
+- Quando o segurança selecionar um dia, exibir botão "Solicitar Folga" com o dia selecionado
+- Ao confirmar, inserir na tabela `leaves` (`guard_id`, `start_date`, `end_date` = mesmo dia, `leave_type = 'TRE'`, `admin_id`)
+- Mostrar toast de sucesso e atualizar saldo
 
-ALTER TABLE public.guard_tre_quotas ENABLE ROW LEVEL SECURITY;
+#### 2. `src/components/schedule/GuardPersonalCalendar.tsx`
 
-CREATE POLICY "Admins can manage their org quotas"
-  ON public.guard_tre_quotas FOR ALL TO authenticated
-  USING (has_role(auth.uid(), 'admin') AND admin_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()))
-  WITH CHECK (has_role(auth.uid(), 'admin') AND admin_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()));
+- Adicionar props opcionais: `selectionMode?: boolean`, `selectedDate?: string | null`, `onDateSelect?: (date: string) => void`
+- Quando `selectionMode = true`, ao clicar num dia do calendário, chamar `onDateSelect` com a data clicada e destacar o dia selecionado com um ring/borda especial
 
-CREATE POLICY "Super admins can manage all quotas"
-  ON public.guard_tre_quotas FOR ALL TO public
-  USING (has_role(auth.uid(), 'super_admin'))
-  WITH CHECK (has_role(auth.uid(), 'super_admin'));
-```
-
-#### 2. `src/pages/AdminLeaves.tsx` — Nova seção "Folgas TRE"
-
-- Adicionar card "Folgas TRE" com:
-  - Select para escolher segurança
-  - Input numérico para definir quantas folgas TRE tem
-  - Botão salvar (upsert na tabela `guard_tre_quotas`)
-- Tabela mostrando todos os seguranças com:
-  - Nome | Total TRE | Usadas | Saldo
-  - "Usadas" = contagem de leaves com `leave_type = 'TRE'` daquele segurança (soma dos dias)
-  - "Saldo" = Total - Usadas
-  - Cor verde se saldo > 0, vermelha se saldo <= 0
+### Fluxo do usuário
+1. Segurança vê botão "Solicitar Folga TRE (Saldo: X)" se tiver quota
+2. Clica → abre dialog com calendário
+3. Clica no dia desejado → dia fica destacado + botão "Solicitar Folga" aparece
+4. Confirma → registro criado, saldo atualizado, dialog fecha
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| Migração SQL | Criar tabela `guard_tre_quotas` com RLS |
-| `src/pages/AdminLeaves.tsx` | Adicionar seção de gestão de cotas TRE |
+| `src/pages/GuardDashboard.tsx` | Buscar quota TRE, botão condicional, dialog com calendário selecionável, inserção na tabela leaves |
+| `src/components/schedule/GuardPersonalCalendar.tsx` | Props de seleção, clique nos dias, destaque do dia selecionado |
 
