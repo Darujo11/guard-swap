@@ -129,11 +129,11 @@ export const generateSchedulePDF = (
         body: tableData,
         theme: 'grid',
         headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-        styles: { fontSize: 10, cellPadding: 3 },
+        styles: { fontSize: 9, cellPadding: 3 },
         columnStyles: {
-            0: { cellWidth: 30, halign: 'center' },
-            1: { cellWidth: 40 },
-            2: { cellWidth: 'auto' },
+            0: { cellWidth: 28, halign: 'center' },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 'auto', fontSize: 8 },
         },
         didParseCell: (data: any) => {
             // Highlight EXTRA rows with golden background
