@@ -157,15 +157,15 @@ const GuardDashboard = () => {
           .maybeSingle(),
         supabase
           .from('leaves')
-          .select('id, start_date, end_date')
+          .select('id, start_date, end_date, status, protocol')
           .eq('guard_id', currentUser.id)
           .eq('leave_type', 'TRE'),
       ]);
       const total = quotaRes.data?.total_days || 0;
       setTreQuota(total);
-      const leaves = leavesRes.data || [];
-      setTreLeaves(leaves.map(l => ({ id: l.id, start_date: l.start_date })));
-      const used = leaves.reduce((sum, l) => {
+      const leaves = (leavesRes.data || []).filter((l: any) => l.status !== 'REJECTED');
+      setTreLeaves(leaves.map((l: any) => ({ id: l.id, start_date: l.start_date, status: l.status || 'PENDING', protocol: l.protocol || null })));
+      const used = leaves.filter((l: any) => l.status !== 'REJECTED').reduce((sum: number, l: any) => {
         const start = new Date(l.start_date);
         const end = new Date(l.end_date);
         const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
