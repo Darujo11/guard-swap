@@ -1,31 +1,27 @@
 
 
-## Plano: Botão de download PDF por folga registrada
+## Plano: Botão de download PDF na lista de folgas TRE do segurança
 
 ### O que será feito
 
-Adicionar um botão de download PDF em cada linha da tabela "Folgas Registradas", ao lado dos botões de editar e excluir. O PDF conterá os dados completos da folga: protocolo, nome do segurança, tipo de folga, período, dias, observações, data de registro e status.
+Adicionar um botão de download (ícone `Download`) em cada linha da lista "Folgas TRE Solicitadas" no dashboard do segurança. O PDF gerado terá os dados da folga: protocolo, nome do segurança, data, status e rodapé institucional.
 
 ### Alterações
 
-#### 1. `src/pages/AdminLeaves.tsx`
+#### `src/pages/GuardDashboard.tsx`
 
 - Importar `Download` do lucide-react
-- Criar função `generateLeavePDF(leave: Leave)` que gera um PDF com:
-  - Título: "Comprovante de Folga"
-  - Protocolo (se existir, senão gerar um baseado no ID)
-  - Nome do segurança
-  - Tipo de folga (label legível)
-  - Data inicial e final
-  - Quantidade de dias
-  - Observações
-  - Data de registro
-  - Status (PENDING/APPROVED/REJECTED traduzido)
-  - Rodapé com "Gerado pelo Sistema Guard Swap" e linha de assinatura do coordenador
-- Adicionar botão `Download` na coluna de ações de cada linha (ao lado de Editar e Excluir)
+- Criar função `generateTreLeavePDF(leave)` que gera um PDF com:
+  - Título: "Comprovante de Folga TRE"
+  - Protocolo (ou fallback baseado no ID)
+  - Nome do segurança (`currentUser.name`)
+  - Data da folga
+  - Status traduzido
+  - Rodapé: "Gerado pelo Sistema Guard Swap" + linha de assinatura do coordenador
+- Adicionar botão com ícone `Download` ao lado do botão "Cancelar" em cada linha da lista de folgas TRE
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/AdminLeaves.tsx` | Função `generateLeavePDF` + botão de download por linha |
+| `src/pages/GuardDashboard.tsx` | Função `generateTreLeavePDF` + botão download por linha |
 
