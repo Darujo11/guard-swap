@@ -731,15 +731,68 @@ const GuardDashboard = () => {
                       <span className="text-xs text-muted-foreground">{leave.protocol}</span>
                     )}
                   </div>
-                  {leave.status !== 'REJECTED' && (
+                  <div className="flex items-center gap-2">
                     <Button
-                      variant="destructive"
+                      variant="outline"
                       size="sm"
-                      onClick={() => handleCancelTreLeave(leave.id)}
+                      onClick={() => {
+                        const doc = new jsPDF();
+                        const pageWidth = doc.internal.pageSize.width;
+                        const protocol = leave.protocol || `TRE-${leave.id.slice(0, 8).toUpperCase()}`;
+
+                        doc.setFontSize(18);
+                        doc.setFont("helvetica", "bold");
+                        doc.text("Comprovante de Folga TRE", pageWidth / 2, 25, { align: "center" });
+
+                        doc.setDrawColor(41, 128, 185);
+                        doc.setLineWidth(0.5);
+                        doc.line(20, 30, pageWidth - 20, 30);
+
+                        let y = 45;
+                        const lh = 10;
+                        doc.setFontSize(12);
+
+                        const field = (label: string, value: string) => {
+                          doc.setFont("helvetica", "bold");
+                          doc.text(`${label}:`, 20, y);
+                          doc.setFont("helvetica", "normal");
+                          doc.text(value, 70, y);
+                          y += lh;
+                        };
+
+                        field("Protocolo", protocol);
+                        field("Segurança", currentUser?.name || 'N/A');
+                        field("Tipo", "Folga TRE");
+                        field("Data", format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy'));
+                        field("Status", leave.status === 'APPROVED' ? 'Aprovada' : leave.status === 'REJECTED' ? 'Rejeitada' : 'Pendente');
+                        field("Registro", format(new Date(leave.created_at), 'dd/MM/yyyy HH:mm'));
+
+                        y += 20;
+                        doc.setDrawColor(0);
+                        doc.line(20, y, pageWidth / 2 + 20, y);
+                        y += 6;
+                        doc.setFontSize(10);
+                        doc.text("Assinatura do Coordenador", 20, y);
+
+                        doc.setFontSize(9);
+                        doc.text("Gerado pelo Sistema Guard Swap", pageWidth / 2, doc.internal.pageSize.height - 10, { align: "center" });
+
+                        doc.save(`folga_tre_${protocol}.pdf`);
+                      }}
+                      title="Baixar PDF"
                     >
-                      Cancelar
+                      <Download className="h-4 w-4" />
                     </Button>
-                  )}
+                    {leave.status !== 'REJECTED' && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleCancelTreLeave(leave.id)}
+                      >
+                        Cancelar
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
