@@ -19,6 +19,7 @@ interface WorkingDay {
   teamColor: string;
   teamName: string;
   isSwapped: boolean;
+  originalTeamColor?: string;
 }
 
 export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: GuardPersonalCalendarProps) {
@@ -100,26 +101,26 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
         days.delete(swap.requester_shift_date);
         const targetDate = new Date(`${swap.target_shift_date}T00:00:00`);
         if (targetDate >= monthStart && targetDate <= monthEnd) {
-          // Usar cor/nome da equipe do TARGET (outro segurança)
           const otherTeam = allTeams.find(t => t.id === swap.target?.team_id);
           days.set(swap.target_shift_date, {
             date: swap.target_shift_date,
-            teamColor: otherTeam?.color || teamColor,
-            teamName: otherTeam?.name || teamName,
+            teamColor: teamColor,
+            teamName: teamName,
             isSwapped: true,
+            originalTeamColor: otherTeam?.color || teamColor,
           });
         }
       } else if (isTarget) {
         days.delete(swap.target_shift_date);
         const requesterDate = new Date(`${swap.requester_shift_date}T00:00:00`);
         if (requesterDate >= monthStart && requesterDate <= monthEnd) {
-          // Usar cor/nome da equipe do REQUESTER (outro segurança)
           const otherTeam = allTeams.find(t => t.id === swap.requester?.team_id);
           days.set(swap.requester_shift_date, {
             date: swap.requester_shift_date,
-            teamColor: otherTeam?.color || teamColor,
-            teamName: otherTeam?.name || teamName,
+            teamColor: teamColor,
+            teamName: teamName,
             isSwapped: true,
+            originalTeamColor: otherTeam?.color || teamColor,
           });
         }
       }
@@ -223,7 +224,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
                     ${today ? 'ring-2 ring-primary ring-offset-1' : ''}
                     ${workDay ? 'text-white font-semibold' : 'text-foreground'}
                   `}
-                  style={workDay ? { backgroundColor: workDay.teamColor } : undefined}
+                  style={workDay ? (workDay.isSwapped && workDay.originalTeamColor ? { background: `linear-gradient(135deg, ${workDay.teamColor} 90%, ${workDay.originalTeamColor} 10%)` } : { backgroundColor: workDay.teamColor }) : undefined}
                   title={workDay ? `${workDay.teamName}${workDay.isSwapped ? ' (troca)' : ''}` : undefined}
                 >
                   <span className="text-sm">{format(day, 'd')}</span>
