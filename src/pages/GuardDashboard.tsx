@@ -31,7 +31,8 @@ import {
   ChevronsUpDown,
   Award,
   FileText,
-  BarChart3
+  BarChart3,
+  Scale
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
