@@ -48,12 +48,6 @@ export function AppLayout({
     icon: BarChart3,
     roles: ['admin', 'super_admin']
   }, {
-    name: 'Avaliação Simulador',
-    href: '/simulador-avaliacao',
-    icon: ClipboardCheck,
-    roles: ['admin', 'super_admin']
-
-  }, {
     name: settings.guards_label,
     href: '/admin/segurancas',
     icon: Shield,
