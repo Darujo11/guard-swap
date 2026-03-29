@@ -1,86 +1,77 @@
 
+## Plano de revisão completa da lógica de troca (sem quebrar o sistema)
 
-## Plano: Corrigir atualização de escala após aprovação de troca
+### Diagnóstico confirmado (com base no código + banco)
+1. A troca aprovada do caso Fabio (03/04/2026 ↔ 30/04/2026) existe em `swap_requests` com `status='APPROVED'`.
+2. Porém, em `team_schedules`, o dia **30/04/2026** ainda está com a equipe original (não virou “do Fabio” na prática).
+3. No `GuardSwapForm`, a seleção de datas ainda depende de `schedule.team_id === currentUser.team_id` (lógica por equipe fixa), então dias recebidos por troca podem não ficar selecionáveis.
 
-### Diagnóstico
+---
 
-O problema é que a função `swapTeamSchedules` roda no client-side como o admin logado, mas a política RLS de UPDATE na tabela `team_schedules` exige que `admin_id` do registro corresponda ao perfil do admin. Como os registros frequentemente têm `admin_id = NULL`, o UPDATE silenciosamente não encontra nenhuma linha e a troca nunca é efetivada na escala.
+### Objetivo
+Garantir para **todos os seguranças** que, após aprovação:
+- o dia recebido passe a contar como “dia dele” para nova troca;
+- esse dia apareça no calendário pessoal e no formulário de solicitação;
+- a lógica seja robusta mesmo quando houver trocas antigas que não sincronizaram corretamente.
 
-Por isso, mesmo após a aprovação, o dia 30 continua com o `team_id` original e não aparece como disponível para o Fabio no formulário de troca.
+---
 
-### Solução
+### Implementação proposta
 
-Criar uma função `SECURITY DEFINER` no banco que faz o swap dos `team_id` em `team_schedules`, contornando as limitações de RLS.
+#### 1) Criar uma fonte única de “escala efetiva por segurança”
+**Novo utilitário compartilhado** (ex.: `src/utils/effectiveSchedule.ts`):
+- Entrada: escalas base (`team_schedules`), trocas aprovadas (`swap_requests`) e `guardId`.
+- Saída: conjunto/mapa de dias efetivamente pertencentes ao segurança naquele período.
+- Regra:
+  - começa com os dias da escala base da equipe;
+  - para cada troca aprovada envolvendo o segurança:
+    - remove o dia que ele cedeu;
+    - adiciona o dia que ele recebeu.
+- Esse cálculo é idempotente e funciona para histórico (inclusive onde sincronização antiga falhou).
 
-**1. Migration SQL** — criar função `swap_team_schedules`:
+#### 2) Corrigir `GuardSwapForm` para usar escala efetiva (não equipe fixa)
+**Arquivo:** `src/components/guards/GuardSwapForm.tsx`
+- Substituir `isDateInteractable` por duas regras separadas:
+  - calendário “Data do Seu Plantão”: só dias da **escala efetiva do solicitante**;
+  - calendário “Data do Plantão que Você Quer Assumir”: só dias da **escala efetiva do alvo selecionado**.
+- Buscar trocas aprovadas relevantes para `currentUser` e para `selectedTarget`.
+- Manter as validações existentes (datas futuras, diferentes etc.).
+- Resultado: se Fabio recebeu 30/04, esse dia fica disponível para ele abrir nova troca.
 
-```sql
-CREATE OR REPLACE FUNCTION public.swap_team_schedules(
-  _requester_id uuid,
-  _target_id uuid,
-  _requester_shift_date date,
-  _target_shift_date date
-)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  _requester_team_id uuid;
-  _target_team_id uuid;
-BEGIN
-  SELECT team_id INTO _requester_team_id FROM profiles WHERE id = _requester_id;
-  SELECT team_id INTO _target_team_id FROM profiles WHERE id = _target_id;
+#### 3) Unificar com o calendário pessoal para evitar divergência
+**Arquivo:** `src/components/schedule/GuardPersonalCalendar.tsx`
+- Passar a usar o mesmo utilitário da etapa 1.
+- Evita cenário de “aparece no calendário pessoal, mas não aparece no formulário” (ou vice-versa).
 
-  IF _requester_team_id IS NULL OR _target_team_id IS NULL THEN
-    RAISE EXCEPTION 'team_id not found for one or both guards';
-  END IF;
+#### 4) Endurecer sincronização no backend (sem quebrar fluxo atual)
+**Migration SQL:** ajustar `public.swap_team_schedules`
+- Trocar lógica baseada em `profiles.team_id` por leitura da escala real do dia (`team_schedules` do próprio dia).
+- Validar que os `UPDATE`s realmente afetaram linhas; se não afetar, lançar erro explícito.
+- Mantém compatibilidade com chamadas atuais via `supabase.rpc('swap_team_schedules', ...)`.
 
-  UPDATE team_schedules
-    SET team_id = _target_team_id
-    WHERE shift_date = _requester_shift_date AND team_id = _requester_team_id;
+#### 5) Garantir consistência nas duas telas de aprovação
+**Arquivos:** `src/pages/AdminSwaps.tsx` e `src/pages/AdminDashboard.tsx`
+- Manter chamada do `swapTeamSchedules` após aprovação.
+- Se RPC falhar, manter aviso visível e log estruturado.
+- Como fallback, o formulário do guarda continuará correto via escala efetiva (etapas 1–3).
 
-  UPDATE team_schedules
-    SET team_id = _requester_team_id
-    WHERE shift_date = _target_shift_date AND team_id = _target_team_id;
-END;
-$$;
-```
+---
 
-**2. `src/utils/swapScheduleUpdate.ts`** — substituir queries diretas por chamada RPC:
+### Validação (obrigatória)
+1. Aprovar troca Fabio 03/04 ↔ 30/04.
+2. Entrar como Fabio em “Solicitar Troca de Plantão”.
+3. Confirmar que 30/04 aparece em “Data do Seu Plantão”.
+4. Criar nova solicitação usando 30/04.
+5. Repetir com outro segurança para validar “para todos”.
+6. Verificar que calendário pessoal e formulário mostram os mesmos dias.
 
-```typescript
-export async function swapTeamSchedules(
-  requesterId: string,
-  targetId: string,
-  requesterShiftDate: string,
-  targetShiftDate: string
-) {
-  const { error } = await supabase.rpc('swap_team_schedules', {
-    _requester_id: requesterId,
-    _target_id: targetId,
-    _requester_shift_date: requesterShiftDate,
-    _target_shift_date: targetShiftDate,
-  });
+---
 
-  if (error) {
-    console.error('[swapTeamSchedules] RPC error:', error);
-    throw new Error('Erro ao atualizar a escala de plantões');
-  }
-}
-```
-
-### Resultado
-
-- O swap efetivamente atualiza os `team_id` na tabela `team_schedules` (sem depender de `admin_id`)
-- Após aprovação, o dia trocado aparece com o `team_id` correto
-- O segurança vê o dia no calendário pessoal e pode selecioná-lo para uma nova troca no formulário
-- Nenhuma alteração necessária no `GuardSwapForm` — a lógica de `isDateInteractable` já verifica `schedule.team_id === currentUser.team_id`
-
-### Escopo
-| Arquivo | Alteração |
-|---------|-----------|
-| Migration SQL | Criar função `swap_team_schedules` |
-| `src/utils/swapScheduleUpdate.ts` | Usar `supabase.rpc()` em vez de queries diretas |
-
+### Escopo de arquivos
+- Novo: `src/utils/effectiveSchedule.ts` (ou nome equivalente)
+- Alterar:
+  - `src/components/guards/GuardSwapForm.tsx`
+  - `src/components/schedule/GuardPersonalCalendar.tsx`
+  - `src/pages/AdminSwaps.tsx` (ajustes de robustez/feedback)
+  - `src/pages/AdminDashboard.tsx` (ajustes de robustez/feedback)
+  - `supabase/migrations/*_improve_swap_team_schedules.sql`
