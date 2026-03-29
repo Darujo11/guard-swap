@@ -1,27 +1,24 @@
 
 
-## Plano: Botão de download PDF na lista de folgas TRE do segurança
+## Plano: Garantir envio de WhatsApp ao segurança na aprovação/rejeição da folga TRE
 
-### O que será feito
+### Situação atual
 
-Adicionar um botão de download (ícone `Download`) em cada linha da lista "Folgas TRE Solicitadas" no dashboard do segurança. O PDF gerado terá os dados da folga: protocolo, nome do segurança, data, status e rodapé institucional.
+O código já está completo:
+- A edge function `notify-tre-leave-guard` já existe com a lógica correta de envio via Evolution API
+- O `AdminDashboard.tsx` já chama essa function após aprovar/rejeitar (linha 171)
+- A mensagem já inclui saudação dinâmica, nome do segurança, data e nome do coordenador
 
-### Alterações
+### Problema
 
-#### `src/pages/GuardDashboard.tsx`
+A edge function pode não estar deployed no Supabase, retornando 404 quando chamada.
 
-- Importar `Download` do lucide-react
-- Criar função `generateTreLeavePDF(leave)` que gera um PDF com:
-  - Título: "Comprovante de Folga TRE"
-  - Protocolo (ou fallback baseado no ID)
-  - Nome do segurança (`currentUser.name`)
-  - Data da folga
-  - Status traduzido
-  - Rodapé: "Gerado pelo Sistema Guard Swap" + linha de assinatura do coordenador
-- Adicionar botão com ícone `Download` ao lado do botão "Cancelar" em cada linha da lista de folgas TRE
+### Solução
+
+Fazer um pequeno ajuste no arquivo da edge function (adicionar um log com timestamp) para forçar o redeploy automático. Nenhuma outra alteração é necessária.
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/GuardDashboard.tsx` | Função `generateTreLeavePDF` + botão download por linha |
+| `supabase/functions/notify-tre-leave-guard/index.ts` | Adicionar log para forçar redeploy |
 
