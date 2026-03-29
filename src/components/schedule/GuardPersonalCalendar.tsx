@@ -24,6 +24,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
   const [teamSchedules, setTeamSchedules] = useState<any[]>([]);
   const [swapRequests, setSwapRequests] = useState<any[]>([]);
   const [allTeams, setAllTeams] = useState<any[]>([]);
+  const [extras, setExtras] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
       const monthStart = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const monthEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
 
-      const [schedulesRes, swapsRes, teamsRes] = await Promise.all([
+      const [schedulesRes, swapsRes, teamsRes, extrasRes] = await Promise.all([
         // Buscar escalas do meu time neste mês
         supabase
           .from('team_schedules')
@@ -58,6 +59,13 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
           .or(`requester_id.eq.${guardId},target_id.eq.${guardId}`),
         // Buscar todas as equipes para pegar cores
         supabase.from('teams').select('id, name, color'),
+        // Buscar extras do segurança neste mês
+        supabase
+          .from('extras')
+          .select('*')
+          .eq('guard_id', guardId)
+          .gte('extra_date', monthStart)
+          .lte('extra_date', monthEnd),
       ]);
 
       if (schedulesRes.error) throw schedulesRes.error;
@@ -66,6 +74,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
       setTeamSchedules(schedulesRes.data || []);
       setSwapRequests(swapsRes.data || []);
       setAllTeams(teamsRes.data || []);
+      setExtras(extrasRes.data || []);
     } catch (error) {
       console.error('[GuardPersonalCalendar] Error fetching data:', error);
     } finally {
@@ -98,6 +107,14 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
 
     return filtered;
   }, [teamSchedules, swapRequests, allTeams, guardId, teamId, teamColor, teamName, currentMonth]);
+
+  const extrasMap = useMemo(() => {
+    const map = new Map<string, { justification: string; percentage_type: number }>();
+    extras.forEach((e: any) => {
+      map.set(e.extra_date, { justification: e.justification, percentage_type: e.percentage_type });
+    });
+    return map;
+  }, [extras]);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
@@ -151,7 +168,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               title="Baixar PDF"
               onClick={() => {
                 const monthLabel = format(currentMonth, 'MMMM yyyy', { locale: ptBR });
-                generateSchedulePDF(guardName || 'Segurança', teamName, monthLabel, workingDays);
+                generateSchedulePDF(guardName || 'Segurança', teamName, monthLabel, workingDays, extrasMap);
               }}
             >
               <Download className="h-4 w-4" />
@@ -170,6 +187,12 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
             <div className="flex items-center gap-1.5">
               <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">Troca ({swappedCount})</span>
+            </div>
+          )}
+          {extrasMap.size > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#B8860B' }} />
+              <span className="text-muted-foreground">Extra ({extrasMap.size})</span>
             </div>
           )}
           <div className="flex items-center gap-1.5">
@@ -197,6 +220,8 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               const inMonth = isSameMonth(day, currentMonth);
               const today = isToday(day);
 
+              const extraDay = extrasMap.get(dateStr);
+
                return (
                 <div
                   key={dateStr}
@@ -204,13 +229,31 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                     relative flex flex-col items-center justify-center h-16 rounded-md text-xs transition-colors
                     ${!inMonth ? 'opacity-30' : ''}
                     ${today ? 'ring-2 ring-primary ring-offset-1' : ''}
-                    ${workDay ? 'text-white font-semibold' : 'text-foreground'}
+                    ${workDay || extraDay ? 'text-white font-semibold' : 'text-foreground'}
                   `}
-                  style={workDay ? (workDay.isSwapped && workDay.originalTeamColor ? { background: `linear-gradient(135deg, ${workDay.teamColor} 90%, ${workDay.originalTeamColor} 10%)` } : { backgroundColor: workDay.teamColor }) : undefined}
-                  title={workDay ? `${workDay.teamName}${workDay.isSwapped ? ` (troca com ${workDay.originalOwnerName || ''})` : ''}` : undefined}
+                  style={
+                    workDay && extraDay
+                      ? { background: `linear-gradient(135deg, ${workDay.teamColor} 70%, #B8860B 30%)` }
+                      : workDay
+                        ? (workDay.isSwapped && workDay.originalTeamColor ? { background: `linear-gradient(135deg, ${workDay.teamColor} 90%, ${workDay.originalTeamColor} 10%)` } : { backgroundColor: workDay.teamColor })
+                        : extraDay
+                          ? { backgroundColor: '#B8860B' }
+                          : undefined
+                  }
+                  title={
+                    workDay && extraDay
+                      ? `${workDay.teamName} + Extra ${extraDay.percentage_type}%`
+                      : workDay
+                        ? `${workDay.teamName}${workDay.isSwapped ? ` (troca com ${workDay.originalOwnerName || ''})` : ''}`
+                        : extraDay
+                          ? `Extra ${extraDay.percentage_type}% — ${extraDay.justification}`
+                          : undefined
+                  }
                 >
                   <span className="text-sm">{format(day, 'd')}</span>
-                  {workDay && workDay.isSwapped ? (
+                  {extraDay && !workDay ? (
+                    <span className="text-[8px] leading-tight text-white/90 font-bold">Extra</span>
+                  ) : workDay && workDay.isSwapped ? (
                     <>
                       <span className="text-[9px] leading-tight text-white/90 font-bold">
                         {workDay.originalTeamName ? workDay.originalTeamName.replace(/^Equipe\s*/i, '').charAt(0) : workDay.teamName.charAt(0)}
@@ -228,6 +271,9 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                   ) : null}
                   {workDay?.isSwapped && (
                     <ArrowRightLeft className="absolute top-0.5 right-0.5 h-2.5 w-2.5 text-white/80" />
+                  )}
+                  {extraDay && workDay && (
+                    <span className="absolute bottom-0.5 right-0.5 text-[7px] text-yellow-200 font-bold">E</span>
                   )}
                 </div>
               );

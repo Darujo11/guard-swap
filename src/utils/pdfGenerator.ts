@@ -71,7 +71,8 @@ export const generateSchedulePDF = (
     guardName: string,
     teamName: string,
     monthLabel: string,
-    workingDays: Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string }>
+    workingDays: Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string }>,
+    extrasMap?: Map<string, { justification: string; percentage_type: number }>
 ) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
@@ -87,13 +88,32 @@ export const generateSchedulePDF = (
 
     const sortedDays = Array.from(workingDays.entries()).sort(([a], [b]) => a.localeCompare(b));
 
-    const tableData = sortedDays.map(([dateStr, day]) => {
+    // Build combined table data: plantão days + extra-only days
+    const allDates = new Set<string>();
+    sortedDays.forEach(([dateStr]) => allDates.add(dateStr));
+    if (extrasMap) {
+        extrasMap.forEach((_, dateStr) => allDates.add(dateStr));
+    }
+
+    const sortedAllDates = Array.from(allDates).sort();
+
+    const tableData = sortedAllDates.map(dateStr => {
         const [y, m, d] = dateStr.split('-');
         const formattedDate = `${d}/${m}/${y}`;
-        const observation = day.isSwapped
-            ? `Troca com ${day.originalOwnerName || 'N/A'} (${day.originalTeamName || 'N/A'})`
-            : '';
-        return [formattedDate, day.teamName, observation];
+        const workDay = workingDays.get(dateStr);
+        const extra = extrasMap?.get(dateStr);
+
+        const teamCol = workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
+        
+        const observations: string[] = [];
+        if (workDay?.isSwapped) {
+            observations.push(`Troca com ${workDay.originalOwnerName || 'N/A'} (${workDay.originalTeamName || 'N/A'})`);
+        }
+        if (extra) {
+            observations.push(`Extra ${extra.percentage_type}% — ${extra.justification}`);
+        }
+
+        return [formattedDate, teamCol, observations.join(' | ')];
     });
 
     autoTable(doc, {
@@ -107,6 +127,13 @@ export const generateSchedulePDF = (
             0: { cellWidth: 30, halign: 'center' },
             1: { cellWidth: 40 },
             2: { cellWidth: 'auto' },
+        },
+        didParseCell: (data: any) => {
+            // Highlight EXTRA rows with golden background
+            if (data.section === 'body' && data.row.raw && data.row.raw[1] === 'EXTRA') {
+                data.cell.styles.fillColor = [184, 134, 11];
+                data.cell.styles.textColor = [255, 255, 255];
+            }
         },
     });
 
