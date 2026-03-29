@@ -108,6 +108,14 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
     return filtered;
   }, [teamSchedules, swapRequests, allTeams, guardId, teamId, teamColor, teamName, currentMonth]);
 
+  const extrasMap = useMemo(() => {
+    const map = new Map<string, { justification: string; percentage_type: number }>();
+    extras.forEach((e: any) => {
+      map.set(e.extra_date, { justification: e.justification, percentage_type: e.percentage_type });
+    });
+    return map;
+  }, [extras]);
+
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
