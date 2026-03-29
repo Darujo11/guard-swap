@@ -30,8 +30,8 @@ export function computeEffectiveSchedule(
     target_id: string;
     requester_shift_date: string;
     target_shift_date: string;
-    requester?: { team_id?: string | null } | null;
-    target?: { team_id?: string | null } | null;
+    requester?: { team_id?: string | null; name?: string } | null;
+    target?: { team_id?: string | null; name?: string } | null;
   }[],
   guardId: string,
   guardTeamId: string,
