@@ -1,17 +1,25 @@
 
 
-## Plano: Remover "Avaliação Simulador" do menu de navegação admin
+## Plano: Adicionar botão "Ver Escala" nas ações de cada segurança
 
 ### Alteração
 
-**Arquivo:** `src/components/layout/AppLayout.tsx`
+**Arquivo:** `src/pages/AdminGuards.tsx`
 
-Remover o item de navegação "Avaliação Simulador" do array `navigation` (linhas 50-55).
+1. Adicionar estado para controlar o dialog de escala (`selectedGuardForSchedule`) e um `Dialog` que renderiza o `GuardPersonalCalendar`.
 
-As rotas em `App.tsx` e as páginas `EvaluationSimulator.tsx` / `EvaluationHistory.tsx` permanecem — apenas o link no menu lateral será removido.
+2. Na coluna "Ações" da tabela de seguranças cadastrados (linha ~808), adicionar um botão com ícone de calendário (`CalendarIcon`) antes do botão de ficha. Ao clicar, abre um Dialog com o `GuardPersonalCalendar` do segurança selecionado.
+
+3. Importar `GuardPersonalCalendar` e o ícone `Calendar` do lucide-react.
+
+### Detalhes técnicos
+
+- Novo estado: `const [selectedGuardForSchedule, setSelectedGuardForSchedule] = useState<Profile | null>(null)`
+- O `GuardPersonalCalendar` recebe `guardId`, `teamId`, `teamColor` e `teamName` — todos disponíveis no objeto `guard` da tabela.
+- Dialog controlado por `selectedGuardForSchedule !== null`.
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/layout/AppLayout.tsx` | Remover item `Avaliação Simulador` do array `navigation` |
+| `src/pages/AdminGuards.tsx` | Adicionar estado, dialog e botão de calendário na coluna de ações |
 
