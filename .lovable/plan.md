@@ -1,17 +1,31 @@
 
 
-## Plano: Permitir apagar folga TRE mesmo após aprovada
+## Plano: Incluir folgas TRE no PDF da escala
 
-### Alteração
+### O que será feito
 
-**Arquivo:** `src/pages/GuardDashboard.tsx`
+Quando o segurança exportar o PDF da escala, os dias com folga TRE aprovada aparecerão com fundo vermelho e observação "Folga TRE".
 
-Remover a condição `leave.status === 'PENDING'` que restringe o botão "Cancelar" apenas a folgas pendentes. O botão aparecerá para folgas com qualquer status (PENDING ou APPROVED), permitindo que o segurança cancele/desfaça a folga a qualquer momento.
+### Alterações
 
-Linha ~733: trocar `{leave.status === 'PENDING' && (` por `{leave.status !== 'REJECTED' && (` — assim o botão aparece para pendentes e aprovadas, mas não para rejeitadas.
+#### 1. `src/components/schedule/GuardPersonalCalendar.tsx`
+
+Passar `treApprovedDates` como novo parâmetro ao chamar `generateSchedulePDF`:
+
+```ts
+generateSchedulePDF(guardName || 'Segurança', teamName, monthLabel, workingDays, extrasMap, treApprovedDates);
+```
+
+#### 2. `src/utils/pdfGenerator.ts`
+
+- Adicionar parâmetro `treDates?: Set<string>` na assinatura de `generateSchedulePDF`
+- Incluir datas TRE no `allDates` (para aparecerem mesmo que não sejam dia de plantão)
+- Para dias com TRE: coluna Equipe = "FOLGA TRE", observação = "Folga TRE"
+- No `didParseCell`: linhas com "FOLGA TRE" recebem fundo vermelho (`[220, 38, 38]`) e texto branco
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/GuardDashboard.tsx` | Mostrar botão Cancelar para folgas PENDING e APPROVED |
+| `src/components/schedule/GuardPersonalCalendar.tsx` | Passar `treApprovedDates` ao `generateSchedulePDF` |
+| `src/utils/pdfGenerator.ts` | Novo parâmetro `treDates`, renderizar linhas TRE em vermelho |
 
