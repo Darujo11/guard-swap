@@ -404,6 +404,63 @@ export default function AdminLeaves() {
 
   const capitalizeFirst = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 
+  const generateLeavePDF = (leave: Leave) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    // Title
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("Comprovante de Folga", pageWidth / 2, 25, { align: "center" });
+
+    // Separator line
+    doc.setLineWidth(0.5);
+    doc.line(14, 30, pageWidth - 14, 30);
+
+    let yPos = 45;
+    const lineHeight = 10;
+
+    const addField = (label: string, value: string) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(`${label}:`, 14, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.text(value, 70, yPos);
+      yPos += lineHeight;
+    };
+
+    const protocol = (leave as any).protocol || `FLG-${leave.id.slice(0, 8).toUpperCase()}`;
+    addField("Protocolo", protocol);
+    addField(settings.guard_label, leave.guard?.name || "Desconhecido");
+    addField("Tipo de Folga", getLeaveTypeLabel(leave.leave_type, leave.custom_type));
+    addField("Data Inicial", format(new Date(`${leave.start_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR }));
+    addField("Data Final", format(new Date(`${leave.end_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR }));
+    addField("Total de Dias", calculateDays(leave.start_date, leave.end_date).toString());
+    addField("Observações", leave.notes || "Nenhuma");
+
+    const statusMap: Record<string, string> = {
+      PENDING: "Pendente",
+      APPROVED: "Aprovada",
+      REJECTED: "Rejeitada",
+    };
+    addField("Status", statusMap[(leave as any).status] || (leave as any).status || "—");
+    addField("Data de Registro", format(new Date(leave.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }));
+
+    // Signature section
+    const signatureY = Math.max(yPos + 40, doc.internal.pageSize.height - 50);
+    doc.setLineWidth(0.5);
+    doc.line(14, signatureY, 100, signatureY);
+    doc.setFontSize(10);
+    doc.text("Coordenador(a)", 14, signatureY + 6);
+    doc.text("Data: ____/____/________", 120, signatureY);
+
+    // Footer
+    doc.setFontSize(8);
+    doc.text("Gerado pelo Sistema Guard Swap", pageWidth / 2, doc.internal.pageSize.height - 10, { align: "center" });
+
+    doc.save(`folga_${protocol}.pdf`);
+  };
+
   const generatePDF = () => {
     const reportLeaves = getReportFilteredLeaves();
 
