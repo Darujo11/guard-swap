@@ -251,14 +251,16 @@ const AdminGuards = () => {
 
         const workingDays = new Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string; originalDate?: string }>();
         effectiveDays.forEach((day, dateStr) => {
-          workingDays.set(dateStr, {
-            teamName: day.teamName,
-            teamColor: day.teamColor,
-            isSwapped: day.isSwapped,
-            originalTeamName: day.originalTeamName,
-            originalOwnerName: day.originalOwnerName,
-            originalDate: day.originalDate,
-          });
+          if (dateStr >= startOfMonth && dateStr <= endStr) {
+            workingDays.set(dateStr, {
+              teamName: day.teamName,
+              teamColor: day.teamColor,
+              isSwapped: day.isSwapped,
+              originalTeamName: day.originalTeamName,
+              originalOwnerName: day.originalOwnerName,
+              originalDate: day.originalDate,
+            });
+          }
         });
 
         const guardExtras = extras.filter(e => e.guard_id === guard.id);
