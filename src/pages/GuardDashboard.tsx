@@ -89,6 +89,9 @@ const GuardDashboard = () => {
   const [isTreDialogOpen, setIsTreDialogOpen] = useState(false);
   const [treSelectedDate, setTreSelectedDate] = useState<string | null>(null);
   const [submittingTre, setSubmittingTre] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelLeaveId, setCancelLeaveId] = useState<string | null>(null);
+  const [cancelConfirmText, setCancelConfirmText] = useState('');
   
   const { toast } = useToast();
 
