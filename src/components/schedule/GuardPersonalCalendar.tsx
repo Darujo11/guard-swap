@@ -15,11 +15,14 @@ interface GuardPersonalCalendarProps {
   teamColor: string;
   teamName: string;
   guardName?: string;
+  selectionMode?: boolean;
+  selectedDate?: string | null;
+  onDateSelect?: (date: string) => void;
 }
 
 interface WorkingDay extends EffectiveDay {}
 
-export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, guardName }: GuardPersonalCalendarProps) {
+export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, guardName, selectionMode, selectedDate, onDateSelect }: GuardPersonalCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [teamSchedules, setTeamSchedules] = useState<any[]>([]);
   const [swapRequests, setSwapRequests] = useState<any[]>([]);
@@ -225,10 +228,13 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                return (
                 <div
                   key={dateStr}
+                  onClick={() => selectionMode && inMonth && onDateSelect?.(dateStr)}
                   className={`
                     relative flex flex-col items-center justify-center h-16 rounded-md text-xs transition-colors
                     ${!inMonth ? 'opacity-30' : ''}
                     ${today ? 'ring-2 ring-primary ring-offset-1' : ''}
+                    ${selectionMode && selectedDate === dateStr ? 'ring-2 ring-yellow-400 ring-offset-2' : ''}
+                    ${selectionMode && inMonth ? 'cursor-pointer hover:opacity-80' : ''}
                     ${workDay || extraDay ? 'text-white font-semibold' : 'text-foreground'}
                   `}
                   style={

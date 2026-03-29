@@ -31,7 +31,8 @@ import {
   ChevronsUpDown,
   Award,
   FileText,
-  BarChart3
+  BarChart3,
+  Scale
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -77,6 +78,13 @@ const GuardDashboard = () => {
   
   // Estado para expansão do ranking
   const [expandedGuards, setExpandedGuards] = useState<Set<string>>(new Set());
+
+  // Estados para folga TRE
+  const [treQuota, setTreQuota] = useState<number>(0);
+  const [treUsed, setTreUsed] = useState<number>(0);
+  const [isTreDialogOpen, setIsTreDialogOpen] = useState(false);
+  const [treSelectedDate, setTreSelectedDate] = useState<string | null>(null);
+  const [submittingTre, setSubmittingTre] = useState(false);
   
   const { toast } = useToast();
 
@@ -101,6 +109,12 @@ const GuardDashboard = () => {
       fetchDetailedExtras();
     }
   }, [currentUser, detailedMonth, detailedAllMonths]);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchTreQuota();
+    }
+  }, [currentUser]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -128,6 +142,60 @@ const GuardDashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTreQuota = async () => {
+    if (!currentUser) return;
+    try {
+      const [quotaRes, leavesRes] = await Promise.all([
+        supabase
+          .from('guard_tre_quotas')
+          .select('total_days')
+          .eq('guard_id', currentUser.id)
+          .maybeSingle(),
+        supabase
+          .from('leaves')
+          .select('start_date, end_date')
+          .eq('guard_id', currentUser.id)
+          .eq('leave_type', 'TRE'),
+      ]);
+      const total = quotaRes.data?.total_days || 0;
+      setTreQuota(total);
+      const used = (leavesRes.data || []).reduce((sum, l) => {
+        const start = new Date(l.start_date);
+        const end = new Date(l.end_date);
+        const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        return sum + days;
+      }, 0);
+      setTreUsed(used);
+    } catch (error) {
+      console.error('[GuardDashboard][FetchTreQuota]', error);
+    }
+  };
+
+  const handleSubmitTreLeave = async () => {
+    if (!currentUser || !treSelectedDate) return;
+    setSubmittingTre(true);
+    try {
+      const { error } = await supabase.from('leaves').insert({
+        guard_id: currentUser.id,
+        admin_id: currentUser.admin_id,
+        start_date: treSelectedDate,
+        end_date: treSelectedDate,
+        leave_type: 'TRE',
+        notes: 'Solicitado pelo segurança',
+      });
+      if (error) throw error;
+      toast({ title: 'Folga TRE solicitada', description: `Folga registrada para ${format(new Date(treSelectedDate + 'T00:00:00'), 'dd/MM/yyyy')}.` });
+      setIsTreDialogOpen(false);
+      setTreSelectedDate(null);
+      fetchTreQuota();
+    } catch (error) {
+      console.error('[GuardDashboard][SubmitTreLeave]', error);
+      toast({ title: 'Erro', description: 'Não foi possível registrar a folga.', variant: 'destructive' });
+    } finally {
+      setSubmittingTre(false);
     }
   };
 
@@ -527,7 +595,50 @@ const GuardDashboard = () => {
           <Eye className="h-4 w-4" />
           Ver Escala Completa
         </Button>
+        {treQuota > 0 && (treQuota - treUsed) > 0 && (
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            onClick={() => { setTreSelectedDate(null); setIsTreDialogOpen(true); }}
+          >
+            <Scale className="h-4 w-4" />
+            Solicitar Folga TRE (Saldo: {treQuota - treUsed})
+          </Button>
+        )}
       </div>
+
+      {/* Dialog Folga TRE */}
+      <Dialog open={isTreDialogOpen} onOpenChange={(open) => { setIsTreDialogOpen(open); if (!open) setTreSelectedDate(null); }}>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Solicitar Folga TRE</DialogTitle>
+            <DialogDescription>
+              Selecione o dia que deseja folgar. Saldo disponível: {treQuota - treUsed} dia(s).
+            </DialogDescription>
+          </DialogHeader>
+          {currentUser.team_id && (
+            <GuardPersonalCalendar
+              guardId={currentUser.id}
+              teamId={currentUser.team_id}
+              teamColor={currentUser.team?.color || '#3b82f6'}
+              teamName={currentUser.team?.name || 'Minha Equipe'}
+              selectionMode
+              selectedDate={treSelectedDate}
+              onDateSelect={(date) => setTreSelectedDate(date)}
+            />
+          )}
+          {treSelectedDate && (
+            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <span className="text-sm">
+                Dia selecionado: <strong>{format(new Date(treSelectedDate + 'T00:00:00'), 'dd/MM/yyyy')}</strong>
+              </span>
+              <Button onClick={handleSubmitTreLeave} disabled={submittingTre}>
+                {submittingTre ? 'Enviando...' : 'Solicitar Folga'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Full Schedule Dialog */}
       <Dialog open={isFullScheduleOpen} onOpenChange={setIsFullScheduleOpen}>
