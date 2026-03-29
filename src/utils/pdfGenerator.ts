@@ -259,7 +259,6 @@ export const generateAllGuardsSchedulePDF = (
 
     doc.save(`escala_completa_segurancas_${monthLabel.replace(/\s+/g, '_')}.pdf`);
 };
-};
 
 export const generateEvaluationsSummaryPDF = (evaluations: Evaluation[]) => {
     const doc = new jsPDF();
