@@ -65,7 +65,7 @@ const GuardDashboard = () => {
   const [rankingMonth, setRankingMonth] = useState(startOfMonth(new Date()));
   
   // Estados independentes para Registros Detalhados
-  const [detailedAllMonths, setDetailedAllMonths] = useState<boolean>(false);
+  const [detailedAllMonths, setDetailedAllMonths] = useState<boolean>(true);
   const [detailedPercentageFilter, setDetailedPercentageFilter] = useState<'all' | '50' | '100'>('all');
   const [detailedMonth, setDetailedMonth] = useState(startOfMonth(new Date()));
   const [detailedExtras, setDetailedExtras] = useState<OrgExtra[]>([]);
@@ -552,6 +552,190 @@ const GuardDashboard = () => {
         />
       )}
 
+      {/* Registros Detalhados de Extras - Todos os Seguranças */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Award className="h-5 w-5" />
+            Registros Detalhados de Extras
+          </CardTitle>
+          <CardDescription>
+            Todos os extras da organização
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Filtros independentes */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Período</Label>
+              <Select 
+                value={detailedAllMonths ? "all" : "specific"} 
+                onValueChange={(value) => setDetailedAllMonths(value === "all")}
+              >
+                <SelectTrigger className="h-[50px]">
+                  <SelectValue placeholder="Selecione o período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="specific">Mês Específico</SelectItem>
+                  <SelectItem value="all">Todos os Meses (Acumulado)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {!detailedAllMonths && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Mês</Label>
+                <div className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-background h-[50px]">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDetailedMonth(subMonths(detailedMonth, 1))}
+                    className="h-8 w-8"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="text-center flex-1">
+                    <p className="text-sm font-semibold capitalize">
+                      {format(detailedMonth, "MMMM yyyy", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDetailedMonth(addMonths(detailedMonth, 1))}
+                    className="h-8 w-8"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Tipo de Extra</Label>
+              <Select 
+                value={detailedPercentageFilter} 
+                onValueChange={(value: 'all' | '50' | '100') => setDetailedPercentageFilter(value)}
+              >
+                <SelectTrigger className="h-[50px]">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="50">Apenas 50%</SelectItem>
+                  <SelectItem value="100">Apenas 100%</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {loadingDetailed ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Carregando registros...</p>
+            </div>
+          ) : detailedExtrasFiltered.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum registro de extra para os filtros selecionados
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('extra_date')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Data
+                        {sortColumn === 'extra_date' ? (
+                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('guardName')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Segurança
+                        {sortColumn === 'guardName' ? (
+                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('quantity')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Horas
+                        {sortColumn === 'quantity' ? (
+                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('percentage_type')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Tipo
+                        {sortColumn === 'percentage_type' ? (
+                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead>Fundamentação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {detailedExtrasFiltered.map((extra) => {
+                    const isCurrentUser = extra.guard_id === currentUser?.id;
+                    return (
+                      <TableRow 
+                        key={extra.id}
+                        className={isCurrentUser ? 'bg-accent/50' : ''}
+                      >
+                        <TableCell className="font-medium">
+                          {formatDate(extra.extra_date)}
+                        </TableCell>
+                        <TableCell>
+                          {extra.guardName}
+                          {isCurrentUser && (
+                            <span className="ml-2 text-xs text-primary">(Você)</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-semibold">{extra.quantity}h</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${extra.percentage_type === 50 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                            {extra.percentage_type}%
+                          </span>
+                        </TableCell>
+                        <TableCell className="max-w-md truncate">
+                          {extra.justification}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Swap Requests */}
       <div className="mb-6">
         <GuardSwapList key={refreshSwapList} currentUser={currentUser} />
@@ -857,190 +1041,6 @@ const GuardDashboard = () => {
                       </Collapsible>
                     );
                   })})()}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Registros Detalhados de Extras - Todos os Seguranças */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Award className="h-5 w-5" />
-            Registros Detalhados de Extras
-          </CardTitle>
-          <CardDescription>
-            Todos os extras da organização
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Filtros independentes */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Período</Label>
-              <Select 
-                value={detailedAllMonths ? "all" : "specific"} 
-                onValueChange={(value) => setDetailedAllMonths(value === "all")}
-              >
-                <SelectTrigger className="h-[50px]">
-                  <SelectValue placeholder="Selecione o período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="specific">Mês Específico</SelectItem>
-                  <SelectItem value="all">Todos os Meses (Acumulado)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {!detailedAllMonths && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Mês</Label>
-                <div className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-background h-[50px]">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDetailedMonth(subMonths(detailedMonth, 1))}
-                    className="h-8 w-8"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <div className="text-center flex-1">
-                    <p className="text-sm font-semibold capitalize">
-                      {format(detailedMonth, "MMMM yyyy", { locale: ptBR })}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDetailedMonth(addMonths(detailedMonth, 1))}
-                    className="h-8 w-8"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Tipo de Extra</Label>
-              <Select 
-                value={detailedPercentageFilter} 
-                onValueChange={(value: 'all' | '50' | '100') => setDetailedPercentageFilter(value)}
-              >
-                <SelectTrigger className="h-[50px]">
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="50">Apenas 50%</SelectItem>
-                  <SelectItem value="100">Apenas 100%</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {loadingDetailed ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Carregando registros...</p>
-            </div>
-          ) : detailedExtrasFiltered.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhum registro de extra para os filtros selecionados
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead 
-                      className="cursor-pointer hover:bg-muted/50 select-none"
-                      onClick={() => handleSort('extra_date')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Data
-                        {sortColumn === 'extra_date' ? (
-                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
-                        )}
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer hover:bg-muted/50 select-none"
-                      onClick={() => handleSort('guardName')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Segurança
-                        {sortColumn === 'guardName' ? (
-                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
-                        )}
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer hover:bg-muted/50 select-none"
-                      onClick={() => handleSort('quantity')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Horas
-                        {sortColumn === 'quantity' ? (
-                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
-                        )}
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer hover:bg-muted/50 select-none"
-                      onClick={() => handleSort('percentage_type')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Tipo
-                        {sortColumn === 'percentage_type' ? (
-                          sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
-                        )}
-                      </div>
-                    </TableHead>
-                    <TableHead>Fundamentação</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {detailedExtrasFiltered.map((extra) => {
-                    const isCurrentUser = extra.guard_id === currentUser?.id;
-                    return (
-                      <TableRow 
-                        key={extra.id}
-                        className={isCurrentUser ? 'bg-accent/50' : ''}
-                      >
-                        <TableCell className="font-medium">
-                          {formatDate(extra.extra_date)}
-                        </TableCell>
-                        <TableCell>
-                          {extra.guardName}
-                          {isCurrentUser && (
-                            <span className="ml-2 text-xs text-primary">(Você)</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-semibold">{extra.quantity}h</span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${extra.percentage_type === 50 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
-                            {extra.percentage_type}%
-                          </span>
-                        </TableCell>
-                        <TableCell className="max-w-md truncate">
-                          {extra.justification}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
                 </TableBody>
               </Table>
             </div>
