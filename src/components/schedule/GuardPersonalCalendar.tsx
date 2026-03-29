@@ -140,6 +140,19 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
     return Array.from(workingDays.values()).filter(d => d.isSwapped).length;
   }, [workingDays]);
 
+  // Legenda dinâmica: todas as equipes que aparecem no calendário
+  const legendTeams = useMemo(() => {
+    const teamsMap = new Map<string, { color: string; name: string }>();
+    // Sempre incluir a equipe do segurança
+    teamsMap.set(teamName, { color: teamColor, name: teamName });
+    workingDays.forEach(day => {
+      if (!teamsMap.has(day.teamName)) {
+        teamsMap.set(day.teamName, { color: day.teamColor, name: day.teamName });
+      }
+    });
+    return Array.from(teamsMap.values());
+  }, [workingDays, teamColor, teamName]);
+
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   return (
