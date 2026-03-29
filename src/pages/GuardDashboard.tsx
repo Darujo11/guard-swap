@@ -82,6 +82,7 @@ const GuardDashboard = () => {
   // Estados para folga TRE
   const [treQuota, setTreQuota] = useState<number>(0);
   const [treUsed, setTreUsed] = useState<number>(0);
+  const [treLeaves, setTreLeaves] = useState<{ id: string; start_date: string }[]>([]);
   const [isTreDialogOpen, setIsTreDialogOpen] = useState(false);
   const [treSelectedDate, setTreSelectedDate] = useState<string | null>(null);
   const [submittingTre, setSubmittingTre] = useState(false);
