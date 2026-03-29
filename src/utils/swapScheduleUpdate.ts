@@ -36,8 +36,7 @@ export async function swapTeamSchedules(
     .from('team_schedules')
     .update({ team_id: requesterTeamId })
     .eq('shift_date', targetShiftDate)
-    .eq('team_id', targetTeamId)
-    .eq('admin_id', adminId);
+    .eq('team_id', targetTeamId);
 
   if (err1 || err2) {
     console.error('[swapTeamSchedules] Error updating schedules:', err1, err2);
