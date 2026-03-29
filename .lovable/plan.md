@@ -1,20 +1,54 @@
 
 
-## Plano: Reduzir tamanho do texto na coluna Observação do PDF
+## Plano: Gerenciar quantidade de folgas TRE por segurança
 
-### Problema
-O texto da observação (ex: "Troca com Philipe (Equipe B) — dias 15/02 ↔ 06/02") está muito grande e cortando na página.
+### O que será feito
 
-### Alteração
+Adicionar uma seção na página de Folgas onde o admin pode selecionar um segurança e definir quantas folgas TRE ele tem direito. Também mostrar quantas já foram usadas e o saldo restante.
 
-**Arquivo:** `src/utils/pdfGenerator.ts`
+### Alterações
 
-1. Reduzir `fontSize` da coluna Observação para `8` (ao invés de `10` global)
-2. Usar `jsPDF` em modo paisagem (`'l'`) para dar mais espaço horizontal
-3. Abreviar o texto: trocar "Troca com" por "↔", e "(Equipe X)" por apenas a letra — ex: `"↔ Philipe (B) — 15/02 ↔ 06/02"`
+#### 1. Nova tabela `guard_tre_quotas` (migração)
+
+```sql
+CREATE TABLE public.guard_tre_quotas (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  guard_id uuid NOT NULL,
+  admin_id uuid,
+  total_days integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (guard_id)
+);
+
+ALTER TABLE public.guard_tre_quotas ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins can manage their org quotas"
+  ON public.guard_tre_quotas FOR ALL TO authenticated
+  USING (has_role(auth.uid(), 'admin') AND admin_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()))
+  WITH CHECK (has_role(auth.uid(), 'admin') AND admin_id IN (SELECT id FROM profiles WHERE user_id = auth.uid()));
+
+CREATE POLICY "Super admins can manage all quotas"
+  ON public.guard_tre_quotas FOR ALL TO public
+  USING (has_role(auth.uid(), 'super_admin'))
+  WITH CHECK (has_role(auth.uid(), 'super_admin'));
+```
+
+#### 2. `src/pages/AdminLeaves.tsx` — Nova seção "Folgas TRE"
+
+- Adicionar card "Folgas TRE" com:
+  - Select para escolher segurança
+  - Input numérico para definir quantas folgas TRE tem
+  - Botão salvar (upsert na tabela `guard_tre_quotas`)
+- Tabela mostrando todos os seguranças com:
+  - Nome | Total TRE | Usadas | Saldo
+  - "Usadas" = contagem de leaves com `leave_type = 'TRE'` daquele segurança (soma dos dias)
+  - "Saldo" = Total - Usadas
+  - Cor verde se saldo > 0, vermelha se saldo <= 0
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/utils/pdfGenerator.ts` | Reduzir fontSize da observação, abreviar texto, usar landscape |
+| Migração SQL | Criar tabela `guard_tre_quotas` com RLS |
+| `src/pages/AdminLeaves.tsx` | Adicionar seção de gestão de cotas TRE |
 
