@@ -97,32 +97,28 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
       const isTarget = swap.target_id === guardId;
 
       if (isRequester) {
-        // Remover o dia que eu cedi (requester_shift_date)
         days.delete(swap.requester_shift_date);
-
-        // Adicionar o dia que eu recebi (target_shift_date) se estiver no mês
         const targetDate = new Date(`${swap.target_shift_date}T00:00:00`);
         if (targetDate >= monthStart && targetDate <= monthEnd) {
-          const myTeam = allTeams.find(t => t.id === teamId);
+          // Usar cor/nome da equipe do TARGET (outro segurança)
+          const otherTeam = allTeams.find(t => t.id === swap.target?.team_id);
           days.set(swap.target_shift_date, {
             date: swap.target_shift_date,
-            teamColor: myTeam?.color || teamColor,
-            teamName: myTeam?.name || teamName,
+            teamColor: otherTeam?.color || teamColor,
+            teamName: otherTeam?.name || teamName,
             isSwapped: true,
           });
         }
       } else if (isTarget) {
-        // Remover o dia que eu cedi (target_shift_date)
         days.delete(swap.target_shift_date);
-
-        // Adicionar o dia que eu recebi (requester_shift_date) se estiver no mês
         const requesterDate = new Date(`${swap.requester_shift_date}T00:00:00`);
         if (requesterDate >= monthStart && requesterDate <= monthEnd) {
-          const myTeam = allTeams.find(t => t.id === teamId);
+          // Usar cor/nome da equipe do REQUESTER (outro segurança)
+          const otherTeam = allTeams.find(t => t.id === swap.requester?.team_id);
           days.set(swap.requester_shift_date, {
             date: swap.requester_shift_date,
-            teamColor: myTeam?.color || teamColor,
-            teamName: myTeam?.name || teamName,
+            teamColor: otherTeam?.color || teamColor,
+            teamName: otherTeam?.name || teamName,
             isSwapped: true,
           });
         }
@@ -143,6 +139,19 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
   const swappedCount = useMemo(() => {
     return Array.from(workingDays.values()).filter(d => d.isSwapped).length;
   }, [workingDays]);
+
+  // Legenda dinâmica: todas as equipes que aparecem no calendário
+  const legendTeams = useMemo(() => {
+    const teamsMap = new Map<string, { color: string; name: string }>();
+    // Sempre incluir a equipe do segurança
+    teamsMap.set(teamName, { color: teamColor, name: teamName });
+    workingDays.forEach(day => {
+      if (!teamsMap.has(day.teamName)) {
+        teamsMap.set(day.teamName, { color: day.teamColor, name: day.teamName });
+      }
+    });
+    return Array.from(teamsMap.values());
+  }, [workingDays, teamColor, teamName]);
 
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -166,16 +175,18 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
             </Button>
           </div>
         </div>
-        {/* Legenda */}
+        {/* Legenda dinâmica */}
         <div className="flex flex-wrap gap-3 mt-2 text-xs">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: teamColor }} />
-            <span className="text-muted-foreground">{teamName} (seus plantões)</span>
-          </div>
+          {legendTeams.map(team => (
+            <div key={team.name} className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: team.color }} />
+              <span className="text-muted-foreground">{team.name}</span>
+            </div>
+          ))}
           {swappedCount > 0 && (
             <div className="flex items-center gap-1.5">
               <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
-              <span className="text-muted-foreground">Dia recebido por troca ({swappedCount})</span>
+              <span className="text-muted-foreground">Troca ({swappedCount})</span>
             </div>
           )}
           <div className="flex items-center gap-1.5">
@@ -203,18 +214,24 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
               const inMonth = isSameMonth(day, currentMonth);
               const today = isToday(day);
 
-              return (
+               return (
                 <div
                   key={dateStr}
                   className={`
-                    relative flex flex-col items-center justify-center h-10 rounded-md text-sm transition-colors
+                    relative flex flex-col items-center justify-center h-12 rounded-md text-xs transition-colors
                     ${!inMonth ? 'opacity-30' : ''}
                     ${today ? 'ring-2 ring-primary ring-offset-1' : ''}
                     ${workDay ? 'text-white font-semibold' : 'text-foreground'}
                   `}
                   style={workDay ? { backgroundColor: workDay.teamColor } : undefined}
+                  title={workDay ? `${workDay.teamName}${workDay.isSwapped ? ' (troca)' : ''}` : undefined}
                 >
-                  <span>{format(day, 'd')}</span>
+                  <span className="text-sm">{format(day, 'd')}</span>
+                  {workDay && (
+                    <span className="text-[8px] leading-tight text-white/80 truncate max-w-full px-0.5">
+                      {workDay.teamName}
+                    </span>
+                  )}
                   {workDay?.isSwapped && (
                     <ArrowRightLeft className="absolute top-0.5 right-0.5 h-2.5 w-2.5 text-white/80" />
                   )}
