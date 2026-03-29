@@ -165,7 +165,7 @@ const GuardDashboard = () => {
       const total = quotaRes.data?.total_days || 0;
       setTreQuota(total);
       const leaves = (leavesRes.data || []).filter((l: any) => l.status !== 'REJECTED');
-      setTreLeaves(leaves.map((l: any) => ({ id: l.id, start_date: l.start_date, status: l.status || 'PENDING', protocol: l.protocol || null })));
+      setTreLeaves(leaves.map((l: any) => ({ id: l.id, start_date: l.start_date, status: l.status || 'PENDING', protocol: l.protocol || null, created_at: l.created_at || '' })));
       const used = leaves.filter((l: any) => l.status !== 'REJECTED').reduce((sum: number, l: any) => {
         const start = new Date(l.start_date);
         const end = new Date(l.end_date);
