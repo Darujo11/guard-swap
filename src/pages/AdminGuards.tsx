@@ -27,8 +27,12 @@ import {
   FileText,
   Users,
   GripVertical,
-  Calendar
+  Calendar,
+  Download,
+  Loader2
 } from 'lucide-react';
+import { generateAllGuardsSchedulePDF } from '@/utils/pdfGenerator';
+import { computeEffectiveSchedule } from '@/utils/effectiveSchedule';
 import { GuardPersonalCalendar } from '@/components/schedule/GuardPersonalCalendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
