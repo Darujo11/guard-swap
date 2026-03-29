@@ -193,6 +193,10 @@ const GuardDashboard = () => {
     if (!currentUser || !treSelectedDate) return;
     setSubmittingTre(true);
     try {
+      // Generate protocol
+      const now = new Date();
+      const protocol = `TRE-${format(now, 'yyyyMMdd')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
       const { error } = await supabase.from('leaves').insert({
         guard_id: currentUser.id,
         admin_id: currentUser.admin_id,
@@ -200,6 +204,8 @@ const GuardDashboard = () => {
         end_date: treSelectedDate,
         leave_type: 'TRE',
         notes: 'Solicitado pelo segurança',
+        status: 'PENDING',
+        protocol,
       });
       if (error) throw error;
 
@@ -215,7 +221,7 @@ const GuardDashboard = () => {
         },
       }).catch((err) => console.warn('[GuardDashboard] Falha ao notificar admin:', err));
 
-      toast({ title: 'Folga TRE solicitada', description: `Folga registrada para ${formattedDate}.` });
+      toast({ title: 'Folga TRE solicitada', description: `Solicitação enviada para aprovação. Protocolo: ${protocol}` });
       setIsTreDialogOpen(false);
       setTreSelectedDate(null);
       fetchTreQuota();
