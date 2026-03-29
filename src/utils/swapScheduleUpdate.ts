@@ -8,8 +8,7 @@ export async function swapTeamSchedules(
   requesterId: string,
   targetId: string,
   requesterShiftDate: string,
-  targetShiftDate: string,
-  adminId: string
+  targetShiftDate: string
 ) {
   // 1. Get team_ids for both guards
   const [{ data: requesterProfile }, { data: targetProfile }] = await Promise.all([
