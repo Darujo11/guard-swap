@@ -74,7 +74,7 @@ export const generateSchedulePDF = (
     workingDays: Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string; originalDate?: string }>,
     extrasMap?: Map<string, { justification: string; percentage_type: number }>
 ) => {
-    const doc = new jsPDF();
+    const doc = new jsPDF('l');
     const pageWidth = doc.internal.pageSize.width;
 
     doc.setFontSize(16);
@@ -110,10 +110,11 @@ export const generateSchedulePDF = (
             const swapDatesPart = workDay.originalDate
                 ? (() => {
                     const [oy, om, od] = workDay.originalDate.split('-');
-                    return ` — dias ${od}/${om} ↔ ${d}/${m}`;
+                    return ` ${od}/${om} ↔ ${d}/${m}`;
                 })()
                 : '';
-            observations.push(`Troca com ${workDay.originalOwnerName || 'N/A'} (${workDay.originalTeamName || 'N/A'})${swapDatesPart}`);
+            const teamLetter = workDay.originalTeamName ? workDay.originalTeamName.replace(/^Equipe\s*/i, '') : 'N/A';
+            observations.push(`↔ ${workDay.originalOwnerName || 'N/A'} (${teamLetter})${swapDatesPart}`);
         }
         if (extra) {
             observations.push(`Extra ${extra.percentage_type}% — ${extra.justification}`);
@@ -128,11 +129,11 @@ export const generateSchedulePDF = (
         body: tableData,
         theme: 'grid',
         headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-        styles: { fontSize: 10, cellPadding: 3 },
+        styles: { fontSize: 9, cellPadding: 3 },
         columnStyles: {
-            0: { cellWidth: 30, halign: 'center' },
-            1: { cellWidth: 40 },
-            2: { cellWidth: 'auto' },
+            0: { cellWidth: 28, halign: 'center' },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 'auto', fontSize: 8 },
         },
         didParseCell: (data: any) => {
             // Highlight EXTRA rows with golden background
