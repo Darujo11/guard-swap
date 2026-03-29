@@ -187,20 +187,31 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
                 <div
                   key={dateStr}
                   className={`
-                    relative flex flex-col items-center justify-center h-12 rounded-md text-xs transition-colors
+                    relative flex flex-col items-center justify-center h-16 rounded-md text-xs transition-colors
                     ${!inMonth ? 'opacity-30' : ''}
                     ${today ? 'ring-2 ring-primary ring-offset-1' : ''}
                     ${workDay ? 'text-white font-semibold' : 'text-foreground'}
                   `}
                   style={workDay ? (workDay.isSwapped && workDay.originalTeamColor ? { background: `linear-gradient(135deg, ${workDay.teamColor} 90%, ${workDay.originalTeamColor} 10%)` } : { backgroundColor: workDay.teamColor }) : undefined}
-                  title={workDay ? `${workDay.teamName}${workDay.isSwapped ? ' (troca)' : ''}` : undefined}
+                  title={workDay ? `${workDay.teamName}${workDay.isSwapped ? ` (troca com ${workDay.originalOwnerName || ''})` : ''}` : undefined}
                 >
                   <span className="text-sm">{format(day, 'd')}</span>
-                  {workDay && (
+                  {workDay && workDay.isSwapped ? (
+                    <>
+                      <span className="text-[9px] leading-tight text-white/90 font-bold">
+                        {workDay.originalTeamName ? workDay.originalTeamName.replace(/^Equipe\s*/i, '').charAt(0) : workDay.teamName.charAt(0)}
+                      </span>
+                      {workDay.originalOwnerName && (
+                        <span className="text-[7px] leading-tight text-white/70 truncate max-w-full px-0.5">
+                          {workDay.originalOwnerName.split(' ')[0]}
+                        </span>
+                      )}
+                    </>
+                  ) : workDay ? (
                     <span className="text-[8px] leading-tight text-white/80 truncate max-w-full px-0.5">
                       {workDay.teamName}
                     </span>
-                  )}
+                  ) : null}
                   {workDay?.isSwapped && (
                     <ArrowRightLeft className="absolute top-0.5 right-0.5 h-2.5 w-2.5 text-white/80" />
                   )}

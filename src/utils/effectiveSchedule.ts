@@ -7,6 +7,8 @@ export interface EffectiveDay {
   teamName: string;
   isSwapped: boolean;
   originalTeamColor?: string;
+  originalTeamName?: string;
+  originalOwnerName?: string;
 }
 
 /**
@@ -28,8 +30,8 @@ export function computeEffectiveSchedule(
     target_id: string;
     requester_shift_date: string;
     target_shift_date: string;
-    requester?: { team_id?: string | null } | null;
-    target?: { team_id?: string | null } | null;
+    requester?: { team_id?: string | null; name?: string } | null;
+    target?: { team_id?: string | null; name?: string } | null;
   }[],
   guardId: string,
   guardTeamId: string,
@@ -58,7 +60,6 @@ export function computeEffectiveSchedule(
     const isTarget = swap.target_id === guardId;
 
     if (isRequester) {
-      // Cedeu o dia requester_shift_date, recebeu target_shift_date
       days.delete(swap.requester_shift_date);
       const otherTeamId = swap.target?.team_id;
       const otherTeam = otherTeamId ? allTeams.find(t => t.id === otherTeamId) : null;
@@ -69,9 +70,10 @@ export function computeEffectiveSchedule(
         teamName: guardTeamName,
         isSwapped: true,
         originalTeamColor: otherTeam?.color || guardTeamColor,
+        originalTeamName: otherTeam?.name,
+        originalOwnerName: swap.target?.name,
       });
     } else if (isTarget) {
-      // Cedeu o dia target_shift_date, recebeu requester_shift_date
       days.delete(swap.target_shift_date);
       const otherTeamId = swap.requester?.team_id;
       const otherTeam = otherTeamId ? allTeams.find(t => t.id === otherTeamId) : null;
@@ -82,6 +84,8 @@ export function computeEffectiveSchedule(
         teamName: guardTeamName,
         isSwapped: true,
         originalTeamColor: otherTeam?.color || guardTeamColor,
+        originalTeamName: otherTeam?.name,
+        originalOwnerName: swap.requester?.name,
       });
     }
   });
