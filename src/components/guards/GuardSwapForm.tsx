@@ -543,8 +543,6 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
                       return isTargetDate(date);
                     }
                   }}
-                    }
-                  }}
                   modifiersStyles={{
                     userTeam: {
                       fontWeight: 'bold',
