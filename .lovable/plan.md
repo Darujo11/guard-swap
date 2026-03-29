@@ -1,23 +1,32 @@
 
 
-## Plano: Cor mista nos dias trocados (90% minha equipe + 10% equipe original)
+## Plano: Permitir re-troca de plantões recebidos por troca
 
-### Alteração
+### Diagnóstico
 
-**Arquivo:** `src/components/schedule/GuardPersonalCalendar.tsx`
+O fluxo atual **deveria funcionar** assim:
+1. Admin aprova troca → `swapTeamSchedules()` troca os `team_id` em `team_schedules`
+2. O dia recebido passa a ter o `team_id` do segurança
+3. No `GuardSwapForm`, `isDateInteractable()` verifica `schedule.team_id === currentUser.team_id` → dia aparece como selecionável
 
-1. **Interface `WorkingDay`**: Adicionar campo `originalTeamColor` para guardar a cor da equipe original do dia trocado.
+**Problema potencial:** A função `swapTeamSchedules` filtra por `.eq('admin_id', adminId)`, mas registros em `team_schedules` frequentemente têm `admin_id = NULL`. Isso faz com que o UPDATE não encontre nenhuma linha, e a troca no calendário nunca aconteça de fato.
 
-2. **Lógica de swap (linhas 99-125)**: Ao criar o dia trocado, guardar a cor da outra equipe em `originalTeamColor` e usar a cor da própria equipe (`teamColor`) como cor principal.
+### Solução
 
-3. **Renderização (linha 226)**: Para dias trocados, usar CSS `linear-gradient` misturando 90% da cor do segurança com 10% da cor original:
-   ```
-   background: linear-gradient(135deg, {myColor} 90%, {otherColor} 10%)
-   ```
+**Arquivo:** `src/utils/swapScheduleUpdate.ts`
 
-4. **Legenda**: Manter a legenda dinâmica com as cores das outras equipes para referência.
+Remover o filtro `.eq('admin_id', adminId)` e usar apenas `shift_date` + `team_id` para identificar os registros, já que essa combinação é suficiente para encontrar o registro correto. Também remover o parâmetro `adminId` da função.
+
+**Arquivos afetados:**
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/utils/swapScheduleUpdate.ts` | Remover filtro `admin_id` dos UPDATEs |
+| `src/pages/AdminSwaps.tsx` | Remover parâmetro `adminProfile.id` da chamada |
+| `src/pages/AdminDashboard.tsx` | Remover parâmetro `adminId` da chamada |
 
 ### Resultado
-- Dias normais: 100% cor da equipe do segurança
-- Dias trocados: 90% cor da própria equipe + 10% cor da equipe de quem era o dia (faixa diagonal no canto)
+Após a correção, quando o admin aprovar uma troca:
+1. Os `team_id` serão efetivamente trocados em `team_schedules`
+2. O dia recebido aparecerá no calendário pessoal do segurança
+3. No formulário de troca, o dia recebido aparecerá como selecionável para uma nova troca
 
