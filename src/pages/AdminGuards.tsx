@@ -854,15 +854,23 @@ const AdminGuards = () => {
                 <Shield className="h-5 w-5" />
                 Seguranças
               </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleGenerateAllPDF}
-                disabled={generatingAllPDF || guards.length === 0}
-              >
-                {generatingAllPDF ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-                Gerar PDF de Todos
-              </Button>
+              <div className="flex items-center gap-2">
+                <input
+                  type="month"
+                  value={pdfMonth}
+                  onChange={(e) => setPdfMonth(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateAllPDF}
+                  disabled={generatingAllPDF || guards.length === 0}
+                >
+                  {generatingAllPDF ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                  Gerar PDF de Todos
+                </Button>
+              </div>
             </div>
             <CardDescription>
               Total: {filteredGuards.length} seguranças
