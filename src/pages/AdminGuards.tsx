@@ -26,8 +26,10 @@ import {
   Crown,
   FileText,
   Users,
-  GripVertical
+  GripVertical,
+  Calendar
 } from 'lucide-react';
+import { GuardPersonalCalendar } from '@/components/schedule/GuardPersonalCalendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
@@ -169,6 +171,7 @@ const AdminGuards = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingGuard, setEditingGuard] = useState<Profile | null>(null);
+  const [selectedGuardForSchedule, setSelectedGuardForSchedule] = useState<Profile | null>(null);
   const [guardForm, setGuardForm] = useState({
     name: '',
     email: '',
@@ -809,6 +812,14 @@ const AdminGuards = () => {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => setSelectedGuardForSchedule(guard)}
+                            title="Ver Escala"
+                          >
+                            <Calendar className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             asChild
                           >
                             <Link to={`/admin/ficha/${guard.id}`}>
@@ -839,7 +850,23 @@ const AdminGuards = () => {
           </CardContent>
         </Card>
 
-        {/* Teams Section */}
+        {/* Dialog de Escala do Segurança */}
+        <Dialog open={selectedGuardForSchedule !== null} onOpenChange={(open) => { if (!open) setSelectedGuardForSchedule(null); }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Escala de {selectedGuardForSchedule?.name}</DialogTitle>
+            </DialogHeader>
+            {selectedGuardForSchedule && (
+              <GuardPersonalCalendar
+                guardId={selectedGuardForSchedule.id}
+                teamId={selectedGuardForSchedule.team_id || null}
+                teamColor={selectedGuardForSchedule.team?.color || '#6B7280'}
+                teamName={selectedGuardForSchedule.team?.name || 'Sem equipe'}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
