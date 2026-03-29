@@ -1,29 +1,24 @@
 
 
-## Plano: Corrigir erro RLS ao solicitar folga TRE
+## Plano: Corrigir envio de WhatsApp ao solicitar folga TRE
 
 ### Problema
-O erro `new row violates row-level security policy for table "leaves"` ocorre porque não existe uma policy de INSERT para guards na tabela `leaves`. Apenas admins e super_admins podem inserir.
+A edge function `notify-tre-leave` existe no código mas **não está implantada (deployed)** no Supabase — retorna 404. Por isso a mensagem nunca é enviada.
 
-### Alteração
+### Solução
 
-**Migração SQL** — Adicionar policy de INSERT para guards na tabela `leaves` (apenas TRE):
+#### 1. Forçar deploy da edge function
+A função já está correta em `supabase/functions/notify-tre-leave/index.ts`. Basta fazer um pequeno ajuste (adicionar log) para forçar o deploy automático.
 
-```sql
-CREATE POLICY "Guards can insert their own TRE leaves"
-  ON public.leaves FOR INSERT TO authenticated
-  WITH CHECK (
-    has_role(auth.uid(), 'guard'::app_role)
-    AND guard_id IN (SELECT id FROM profiles WHERE user_id = auth.uid())
-    AND leave_type = 'TRE'
-  );
-```
+#### 2. Verificar telefone do admin no banco
+A função busca o telefone do admin na tabela `profiles` pelo `admin_id`. Se o campo `phone` do admin estiver vazio ou incorreto, a mensagem não será enviada. Garantir que o número `5522992618308` está salvo no perfil do admin.
 
-Além disso, verificar no `GuardDashboard.tsx` se o campo `admin_id` está sendo preenchido no insert, pois a tabela `leaves` possui esse campo.
+### Alterações
 
-### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| Migração SQL | Nova policy INSERT para guards em `leaves` (apenas TRE) |
-| `src/pages/GuardDashboard.tsx` | Garantir que `admin_id` é passado no insert |
+| `supabase/functions/notify-tre-leave/index.ts` | Adicionar log inicial para forçar redeploy + melhorar tratamento de erros |
+
+### Verificação pós-deploy
+Após o deploy, testar a função diretamente para confirmar que está acessível e enviando a mensagem corretamente.
 
