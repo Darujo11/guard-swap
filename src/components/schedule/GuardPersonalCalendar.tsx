@@ -214,18 +214,24 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
               const inMonth = isSameMonth(day, currentMonth);
               const today = isToday(day);
 
-              return (
+               return (
                 <div
                   key={dateStr}
                   className={`
-                    relative flex flex-col items-center justify-center h-10 rounded-md text-sm transition-colors
+                    relative flex flex-col items-center justify-center h-12 rounded-md text-xs transition-colors
                     ${!inMonth ? 'opacity-30' : ''}
                     ${today ? 'ring-2 ring-primary ring-offset-1' : ''}
                     ${workDay ? 'text-white font-semibold' : 'text-foreground'}
                   `}
                   style={workDay ? { backgroundColor: workDay.teamColor } : undefined}
+                  title={workDay ? `${workDay.teamName}${workDay.isSwapped ? ' (troca)' : ''}` : undefined}
                 >
-                  <span>{format(day, 'd')}</span>
+                  <span className="text-sm">{format(day, 'd')}</span>
+                  {workDay && (
+                    <span className="text-[8px] leading-tight text-white/80 truncate max-w-full px-0.5">
+                      {workDay.teamName}
+                    </span>
+                  )}
                   {workDay?.isSwapped && (
                     <ArrowRightLeft className="absolute top-0.5 right-0.5 h-2.5 w-2.5 text-white/80" />
                   )}
