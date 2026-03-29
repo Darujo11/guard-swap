@@ -1,36 +1,37 @@
 
 
-## Plano: Botão "Solicitar Folga TRE" no dashboard do segurança
+## Plano: Enviar WhatsApp ao admin quando segurança solicitar folga TRE
 
 ### O que será feito
 
-Adicionar um botão "Solicitar Folga TRE" ao lado de "Ver Escala Completa" no dashboard do segurança. O botão só aparece se o segurança tiver saldo de folgas TRE (quota > 0). Ao clicar, abre um dialog com o calendário pessoal em modo de seleção — o segurança clica no dia desejado e aparece um botão "Solicitar" para confirmar. A solicitação cria um registro na tabela `leaves` com `leave_type = 'TRE'`.
+Após o segurança confirmar a solicitação de folga TRE, enviar uma mensagem WhatsApp para o administrador via Evolution API com saudação dinâmica e detalhes da solicitação.
 
 ### Alterações
 
-#### 1. `src/pages/GuardDashboard.tsx`
+#### 1. Nova Edge Function `supabase/functions/notify-tre-leave/index.ts`
 
-- Buscar a quota TRE do segurança (`guard_tre_quotas`) e as folgas TRE já usadas (`leaves` com `leave_type = 'TRE'`)
-- Calcular saldo. Se saldo > 0, exibir botão "Solicitar Folga TRE" ao lado dos outros botões
-- Ao clicar, abrir um dialog com o `GuardPersonalCalendar` em modo seleção (nova prop `selectionMode`)
-- Quando o segurança selecionar um dia, exibir botão "Solicitar Folga" com o dia selecionado
-- Ao confirmar, inserir na tabela `leaves` (`guard_id`, `start_date`, `end_date` = mesmo dia, `leave_type = 'TRE'`, `admin_id`)
-- Mostrar toast de sucesso e atualizar saldo
+- Recebe: `guard_name`, `admin_id`, `leave_date`, `remaining_days`
+- Busca o telefone do admin na tabela `profiles` pelo `admin_id`
+- Gera saudação dinâmica (Bom dia/Boa tarde/Boa noite) baseada no horário de Brasília
+- Envia mensagem via Evolution API:
+  - URL: `https://evolution.autozapx.com/message/sendText/escala`
+  - Token: secret `tokenevolutiondainstancia`
+  - Mensagem: `"Bom dia Morais, tudo bem!? O segurança João solicita folga do TRE no dia 15/04/2026. Restam ainda 3 folgas a retirar."`
+- Segue o mesmo padrão CORS e estrutura do `forgot-password`
 
-#### 2. `src/components/schedule/GuardPersonalCalendar.tsx`
+#### 2. `src/pages/GuardDashboard.tsx` — Chamar a edge function após insert
 
-- Adicionar props opcionais: `selectionMode?: boolean`, `selectedDate?: string | null`, `onDateSelect?: (date: string) => void`
-- Quando `selectionMode = true`, ao clicar num dia do calendário, chamar `onDateSelect` com a data clicada e destacar o dia selecionado com um ring/borda especial
+No `handleSubmitTreLeave`, após inserir com sucesso na tabela `leaves`, chamar `supabase.functions.invoke('notify-tre-leave', ...)` passando:
+- `guard_name`: `currentUser.name`
+- `admin_id`: `currentUser.admin_id`
+- `leave_date`: `treSelectedDate` formatado dd/MM/yyyy
+- `remaining_days`: `treQuota - treUsed - 1` (já descontando a folga recém-solicitada)
 
-### Fluxo do usuário
-1. Segurança vê botão "Solicitar Folga TRE (Saldo: X)" se tiver quota
-2. Clica → abre dialog com calendário
-3. Clica no dia desejado → dia fica destacado + botão "Solicitar Folga" aparece
-4. Confirma → registro criado, saldo atualizado, dialog fecha
+A notificação é fire-and-forget — se falhar, não impede a solicitação.
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/GuardDashboard.tsx` | Buscar quota TRE, botão condicional, dialog com calendário selecionável, inserção na tabela leaves |
-| `src/components/schedule/GuardPersonalCalendar.tsx` | Props de seleção, clique nos dias, destaque do dia selecionado |
+| `supabase/functions/notify-tre-leave/index.ts` | Nova edge function para enviar WhatsApp |
+| `src/pages/GuardDashboard.tsx` | Chamar edge function após insert da folga TRE |
 
