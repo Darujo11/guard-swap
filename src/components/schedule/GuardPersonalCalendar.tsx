@@ -43,15 +43,13 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
       const monthStart = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const monthEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
 
-      const [schedulesRes, swapsRes, teamsRes, extrasRes] = await Promise.all([
-        // Buscar escalas do meu time neste mês
+      const [schedulesRes, swapsRes, teamsRes, extrasRes, treLeavesRes] = await Promise.all([
         supabase
           .from('team_schedules')
           .select('*')
           .eq('team_id', teamId!)
           .gte('shift_date', monthStart)
           .lte('shift_date', monthEnd),
-        // Buscar trocas aprovadas onde sou requester ou target
         supabase
           .from('swap_requests')
           .select(`
@@ -61,15 +59,22 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
           `)
           .eq('status', 'APPROVED')
           .or(`requester_id.eq.${guardId},target_id.eq.${guardId}`),
-        // Buscar todas as equipes para pegar cores
         supabase.from('teams').select('id, name, color'),
-        // Buscar extras do segurança neste mês
         supabase
           .from('extras')
           .select('*')
           .eq('guard_id', guardId)
           .gte('extra_date', monthStart)
           .lte('extra_date', monthEnd),
+        // Buscar folgas TRE aprovadas
+        supabase
+          .from('leaves')
+          .select('start_date, end_date')
+          .eq('guard_id', guardId)
+          .eq('leave_type', 'TRE')
+          .eq('status', 'APPROVED')
+          .gte('start_date', monthStart)
+          .lte('start_date', monthEnd),
       ]);
 
       if (schedulesRes.error) throw schedulesRes.error;
