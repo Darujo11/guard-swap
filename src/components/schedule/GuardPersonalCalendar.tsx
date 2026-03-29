@@ -144,6 +144,18 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}>
               <ChevronRight className="h-4 w-4" />
             </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              title="Baixar PDF"
+              onClick={() => {
+                const monthLabel = format(currentMonth, 'MMMM yyyy', { locale: ptBR });
+                generateSchedulePDF(guardName || 'Segurança', teamName, monthLabel, workingDays);
+              }}
+            >
+              <Download className="h-4 w-4" />
+            </Button>
           </div>
         </div>
         {/* Legenda dinâmica */}

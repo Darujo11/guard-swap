@@ -862,6 +862,7 @@ const AdminGuards = () => {
                 teamId={selectedGuardForSchedule.team_id || null}
                 teamColor={selectedGuardForSchedule.team?.color || '#6B7280'}
                 teamName={selectedGuardForSchedule.team?.name || 'Sem equipe'}
+                guardName={selectedGuardForSchedule.name}
               />
             )}
           </DialogContent>

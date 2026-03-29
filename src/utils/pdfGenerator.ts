@@ -67,6 +67,60 @@ export const generateEvaluationPDF = (evaluation: Evaluation) => {
     doc.save(`avaliacao_${evaluation.guard?.name || 'seguranca'}_${new Date().toISOString().split('T')[0]}.pdf`);
 };
 
+export const generateSchedulePDF = (
+    guardName: string,
+    teamName: string,
+    monthLabel: string,
+    workingDays: Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string }>
+) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Escala de ${guardName}`, pageWidth / 2, 20, { align: "center" });
+
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Equipe: ${teamName}`, 14, 35);
+    doc.text(`Mês: ${monthLabel}`, 14, 43);
+
+    const sortedDays = Array.from(workingDays.entries()).sort(([a], [b]) => a.localeCompare(b));
+
+    const tableData = sortedDays.map(([dateStr, day]) => {
+        const [y, m, d] = dateStr.split('-');
+        const formattedDate = `${d}/${m}/${y}`;
+        const observation = day.isSwapped
+            ? `Troca com ${day.originalOwnerName || 'N/A'} (${day.originalTeamName || 'N/A'})`
+            : '';
+        return [formattedDate, day.teamName, observation];
+    });
+
+    autoTable(doc, {
+        startY: 52,
+        head: [['Data', 'Equipe', 'Observação']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+        styles: { fontSize: 10, cellPadding: 3 },
+        columnStyles: {
+            0: { cellWidth: 30, halign: 'center' },
+            1: { cellWidth: 40 },
+            2: { cellWidth: 'auto' },
+        },
+    });
+
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.text(`Página ${i} de ${pageCount}`, pageWidth - 20, doc.internal.pageSize.height - 10, { align: 'right' });
+        doc.text('Gerado pelo Sistema Guard Swap', pageWidth / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+    }
+
+    doc.save(`escala_${guardName.replace(/\s+/g, '_')}_${monthLabel.replace(/\s+/g, '_')}.pdf`);
+};
+
 export const generateEvaluationsSummaryPDF = (evaluations: Evaluation[]) => {
     const doc = new jsPDF();
 
