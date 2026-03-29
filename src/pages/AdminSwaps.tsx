@@ -259,8 +259,7 @@ const AdminSwaps = () => {
             selectedRequest.requester_id,
             selectedRequest.target_id,
             selectedRequest.requester_shift_date,
-            selectedRequest.target_shift_date,
-            adminProfile.id
+            selectedRequest.target_shift_date
           );
         } catch (scheduleError) {
           console.error('[AdminSwaps] Erro ao atualizar escala:', scheduleError);
