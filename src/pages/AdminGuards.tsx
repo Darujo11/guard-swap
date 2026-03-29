@@ -812,6 +812,14 @@ const AdminGuards = () => {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => setSelectedGuardForSchedule(guard)}
+                            title="Ver Escala"
+                          >
+                            <Calendar className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             asChild
                           >
                             <Link to={`/admin/ficha/${guard.id}`}>
