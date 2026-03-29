@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,7 @@ import { CalendarDays, ArrowRightLeft, Calendar as CalendarIcon } from 'lucide-r
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { getEffectiveDatesSet } from '@/utils/effectiveSchedule';
 
 interface TeamSchedule {
   id: string;
@@ -34,6 +35,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
   const [requesterShiftDate, setRequesterShiftDate] = useState<Date | undefined>();
   const [targetShiftDate, setTargetShiftDate] = useState<Date | undefined>();
   const [schedules, setSchedules] = useState<TeamSchedule[]>([]);
+  const [approvedSwaps, setApprovedSwaps] = useState<any[]>([]);
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [requesterCalendarOpen, setRequesterCalendarOpen] = useState(false);
@@ -43,6 +45,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
   useEffect(() => {
     fetchAvailableGuards();
     fetchSchedules();
+    fetchApprovedSwapsData();
   }, [currentUser]);
 
   const fetchAvailableGuards = async () => {
@@ -109,25 +112,53 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
     }
   };
 
+  const fetchApprovedSwapsData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('swap_requests')
+        .select(`
+          requester_id, target_id, requester_shift_date, target_shift_date,
+          requester:profiles!swap_requests_requester_id_fkey(id, team_id),
+          target:profiles!swap_requests_target_id_fkey(id, team_id)
+        `)
+        .eq('status', 'APPROVED');
+
+      if (error) throw error;
+      setApprovedSwaps(data || []);
+    } catch (error) {
+      console.error('[GuardSwapForm][FetchApprovedSwaps]', error);
+    }
+  };
+
+  // Escala efetiva do solicitante (meus dias reais de trabalho)
+  const myEffectiveDates = useMemo(() => {
+    if (!currentUser.team_id) return new Set<string>();
+    return getEffectiveDatesSet(schedules, approvedSwaps, currentUser.id, currentUser.team_id);
+  }, [schedules, approvedSwaps, currentUser.id, currentUser.team_id]);
+
+  // Escala efetiva do alvo selecionado
+  const targetEffectiveDates = useMemo(() => {
+    if (!selectedTarget) return new Set<string>();
+    const targetGuard = availableGuards.find(g => g.id === selectedTarget);
+    if (!targetGuard?.team_id) return new Set<string>();
+    return getEffectiveDatesSet(schedules, approvedSwaps, targetGuard.id, targetGuard.team_id);
+  }, [schedules, approvedSwaps, selectedTarget, availableGuards]);
+
   const getTeamForDate = (date: Date): TeamSchedule | undefined => {
     const dateStr = format(date, 'yyyy-MM-dd');
     return schedules.find(s => s.shift_date === dateStr);
   };
 
-  const isDateInteractable = (date: Date): boolean => {
-    const schedule = getTeamForDate(date);
-    if (!schedule) return false;
-    
-    // Data é interactível se for da equipe do usuário atual
-    if (schedule.team_id === currentUser.team_id) return true;
-    
-    // Ou se for da equipe do alvo selecionado
-    if (selectedTarget) {
-      const targetGuard = availableGuards.find(g => g.id === selectedTarget);
-      if (targetGuard && schedule.team_id === targetGuard.team_id) return true;
-    }
-    
-    return false;
+  // Verifica se a data é do solicitante (para o calendário "Data do Seu Plantão")
+  const isRequesterDate = (date: Date): boolean => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return myEffectiveDates.has(dateStr);
+  };
+
+  // Verifica se a data é do alvo (para o calendário "Data do Plantão que Quer Assumir")
+  const isTargetDate = (date: Date): boolean => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return targetEffectiveDates.has(dateStr);
   };
 
   const getTeamColor = (teamId: string): string => {
@@ -443,12 +474,11 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
                     if (date <= today || date > maxDateObj) return true;
-                    return !isDateInteractable(date);
+                    return !isRequesterDate(date);
                   }}
                   modifiers={{
                     userTeam: (date) => {
-                      const schedule = getTeamForDate(date);
-                      return schedule?.team_id === currentUser.team_id;
+                      return isRequesterDate(date);
                     }
                   }}
                   modifiersStyles={{
@@ -503,18 +533,14 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
                     if (date <= today || date > maxDateObj) return true;
-                    return !isDateInteractable(date);
+                    return !isTargetDate(date);
                   }}
                   modifiers={{
                     userTeam: (date) => {
-                      const schedule = getTeamForDate(date);
-                      return schedule?.team_id === currentUser.team_id;
+                      return isRequesterDate(date);
                     },
                     targetTeam: (date) => {
-                      if (!selectedTarget) return false;
-                      const schedule = getTeamForDate(date);
-                      const targetGuard = availableGuards.find(g => g.id === selectedTarget);
-                      return schedule !== undefined && targetGuard && schedule.team_id === targetGuard.team_id;
+                      return isTargetDate(date);
                     }
                   }}
                   modifiersStyles={{

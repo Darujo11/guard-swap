@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ChevronLeft, ChevronRight, ArrowRightLeft, Calendar as CalendarIcon } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { computeEffectiveSchedule, EffectiveDay } from '@/utils/effectiveSchedule';
 
 interface GuardPersonalCalendarProps {
   guardId: string;
@@ -14,13 +15,7 @@ interface GuardPersonalCalendarProps {
   teamName: string;
 }
 
-interface WorkingDay {
-  date: string;
-  teamColor: string;
-  teamName: string;
-  isSwapped: boolean;
-  originalTeamColor?: string;
-}
+interface WorkingDay extends EffectiveDay {}
 
 export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: GuardPersonalCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
@@ -77,56 +72,29 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
   };
 
   const workingDays = useMemo(() => {
-    const days = new Map<string, WorkingDay>();
+    const effectiveMap = computeEffectiveSchedule(
+      teamSchedules,
+      swapRequests,
+      guardId,
+      teamId || '',
+      teamColor,
+      teamName,
+      allTeams
+    );
 
-    // 1. Adicionar dias base da minha equipe
-    teamSchedules.forEach(schedule => {
-      days.set(schedule.shift_date, {
-        date: schedule.shift_date,
-        teamColor,
-        teamName,
-        isSwapped: false,
-      });
-    });
-
-    // 2. Aplicar trocas aprovadas
+    // Filtrar apenas dias do mês atual
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
+    const filtered = new Map<string, WorkingDay>();
 
-    swapRequests.forEach(swap => {
-      const isRequester = swap.requester_id === guardId;
-      const isTarget = swap.target_id === guardId;
-
-      if (isRequester) {
-        days.delete(swap.requester_shift_date);
-        const targetDate = new Date(`${swap.target_shift_date}T00:00:00`);
-        if (targetDate >= monthStart && targetDate <= monthEnd) {
-          const otherTeam = allTeams.find(t => t.id === swap.target?.team_id);
-          days.set(swap.target_shift_date, {
-            date: swap.target_shift_date,
-            teamColor: teamColor,
-            teamName: teamName,
-            isSwapped: true,
-            originalTeamColor: otherTeam?.color || teamColor,
-          });
-        }
-      } else if (isTarget) {
-        days.delete(swap.target_shift_date);
-        const requesterDate = new Date(`${swap.requester_shift_date}T00:00:00`);
-        if (requesterDate >= monthStart && requesterDate <= monthEnd) {
-          const otherTeam = allTeams.find(t => t.id === swap.requester?.team_id);
-          days.set(swap.requester_shift_date, {
-            date: swap.requester_shift_date,
-            teamColor: teamColor,
-            teamName: teamName,
-            isSwapped: true,
-            originalTeamColor: otherTeam?.color || teamColor,
-          });
-        }
+    effectiveMap.forEach((day, dateStr) => {
+      const d = new Date(`${dateStr}T00:00:00`);
+      if (d >= monthStart && d <= monthEnd) {
+        filtered.set(dateStr, day);
       }
     });
 
-    return days;
+    return filtered;
   }, [teamSchedules, swapRequests, allTeams, guardId, teamId, teamColor, teamName, currentMonth]);
 
   const calendarDays = useMemo(() => {
