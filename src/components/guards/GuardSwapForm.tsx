@@ -537,14 +537,12 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
                   }}
                   modifiers={{
                     userTeam: (date) => {
-                      const schedule = getTeamForDate(date);
-                      return schedule?.team_id === currentUser.team_id;
+                      return isRequesterDate(date);
                     },
                     targetTeam: (date) => {
-                      if (!selectedTarget) return false;
-                      const schedule = getTeamForDate(date);
-                      const targetGuard = availableGuards.find(g => g.id === selectedTarget);
-                      return schedule !== undefined && targetGuard && schedule.team_id === targetGuard.team_id;
+                      return isTargetDate(date);
+                    }
+                  }}
                     }
                   }}
                   modifiersStyles={{
