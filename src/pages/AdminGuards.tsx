@@ -26,8 +26,10 @@ import {
   Crown,
   FileText,
   Users,
-  GripVertical
+  GripVertical,
+  Calendar
 } from 'lucide-react';
+import { GuardPersonalCalendar } from '@/components/schedule/GuardPersonalCalendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
