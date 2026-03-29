@@ -52,6 +52,10 @@ const AdminDashboard = () => {
   const [decisionReason, setDecisionReason] = useState('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<SwapRequest | null>(null);
+  
+  // TRE leave states
+  const [pendingTreLeaves, setPendingTreLeaves] = useState<any[]>([]);
+  
   const { toast } = useToast();
 
   useEffect(() => {
