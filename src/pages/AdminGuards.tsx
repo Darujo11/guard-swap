@@ -273,7 +273,10 @@ const AdminGuards = () => {
           const start = new Date(l.start_date);
           const end = new Date(l.end_date);
           for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            treDates.add(d.toISOString().split('T')[0]);
+            const dateStr = d.toISOString().split('T')[0];
+            if (dateStr >= startOfMonth && dateStr <= endStr) {
+              treDates.add(dateStr);
+            }
           }
         });
 
