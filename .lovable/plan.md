@@ -1,60 +1,26 @@
 
 
-## Plano: Calendário Pessoal do Segurança com Reflexo de Trocas
+## Plano: Mostrar cores das outras equipes nos dias trocados
 
 ### Problema
-Atualmente o calendário mostra apenas a escala por equipe. Quando um segurança troca de plantão, não existe uma visão pessoal que mostre os dias que ele realmente vai trabalhar (incluindo dias recebidos de trocas e excluindo dias cedidos).
+Atualmente, quando um dia é recebido por troca, ele aparece com a cor da própria equipe do segurança. O correto é mostrar a cor da equipe original daquele plantão (a equipe do outro segurança), junto com o nome da equipe.
 
-### Solução
-Criar um componente `GuardPersonalCalendar` que calcula dinamicamente os dias de trabalho do segurança combinando:
-1. Dias da escala da sua equipe (`team_schedules`)
-2. **Menos** os dias que ele cedeu em trocas aprovadas
-3. **Mais** os dias que ele recebeu em trocas aprovadas
+### Alteração
 
-Cada dia recebido via troca mostra a cor da equipe do segurança que cedeu (ex: se Fabio da Equipe A recebe o dia 30 do Reginaldo da Equipe D, o dia 30 aparece com cor Azul/Equipe A no calendário do Fabio, e o dia 03 aparece Vermelho/Equipe D no calendário do Reginaldo).
+**Arquivo:** `src/components/schedule/GuardPersonalCalendar.tsx`
 
-### Não precisa de mudanças no banco de dados
-Tudo é calculado a partir de dados existentes: `team_schedules`, `swap_requests` (status APPROVED) e `profiles`/`teams`.
+1. **Lógica de swap (linhas 99-129):** Quando o segurança recebe um dia por troca, usar a cor e nome da equipe do OUTRO segurança (não da própria):
+   - Se sou requester: buscar o `team_id` do target nos dados do swap, e usar a cor/nome dessa equipe
+   - Se sou target: buscar o `team_id` do requester nos dados do swap, e usar a cor/nome dessa equipe
 
-### Alterações
+2. **Visual do calendário (linhas 206-222):** Adicionar o nome da equipe como tooltip ou texto pequeno nos dias que têm plantão, especialmente nos dias trocados.
 
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `src/components/schedule/GuardPersonalCalendar.tsx` | CRIAR | Calendário pessoal do segurança |
-| `src/pages/GuardDashboard.tsx` | MODIFICAR | Adicionar o calendário pessoal na dashboard do segurança |
+3. **Legenda (linhas 170-184):** Gerar legenda dinâmica mostrando todas as equipes que aparecem no calendário (a própria + qualquer equipe de dias trocados), cada uma com sua cor e nome.
 
-### Componente `GuardPersonalCalendar`
+4. **Busca de dados do swap:** O fetch atual já traz `requester` e `target` com `team_id`. Usar o `allTeams` para resolver a cor/nome da equipe do outro segurança.
 
-**Props:** `guardId`, `teamId`, `teamColor`, `teamName`
-
-**Lógica de cálculo:**
-```text
-1. Buscar team_schedules do mês (onde team_id = meu team_id)
-   → Esses são meus dias BASE de trabalho
-
-2. Buscar swap_requests APPROVED onde eu sou requester ou target
-
-3. Para cada swap aprovada:
-   - Se sou o requester:
-     → Remover requester_shift_date dos meus dias
-     → Adicionar target_shift_date (com a cor da equipe do target)
-   - Se sou o target:
-     → Remover target_shift_date dos meus dias
-     → Adicionar requester_shift_date (com a cor da equipe do requester)
-
-4. Renderizar calendário mensal com:
-   - Dias normais: cor da minha equipe
-   - Dias recebidos por troca: cor da equipe original (do outro segurança)
-   - Indicador visual (ícone ↔) nos dias que vieram de troca
-```
-
-**Visual:**
-- Calendário mensal com navegação por mês
-- Dias de trabalho coloridos com a cor da equipe
-- Dias recebidos por troca com badge/ícone indicando que foi troca
-- Legenda mostrando equipe do segurança e dias de troca
-
-### GuardDashboard
-- Adicionar `GuardPersonalCalendar` logo no topo da dashboard, antes dos botões de ação
-- Passa os dados do `currentUser` (id, team_id, team color/name)
+### Resultado
+- Dia normal: cor da equipe do segurança
+- Dia recebido por troca: cor da equipe original (do outro segurança) + nome da equipe visível
+- Legenda mostra todas as equipes presentes no calendário
 
