@@ -19,6 +19,7 @@ interface WorkingDay {
   teamColor: string;
   teamName: string;
   isSwapped: boolean;
+  originalTeamColor?: string;
 }
 
 export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: GuardPersonalCalendarProps) {
