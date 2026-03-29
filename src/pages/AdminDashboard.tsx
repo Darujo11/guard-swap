@@ -142,7 +142,87 @@ const AdminDashboard = () => {
     }
   };
 
-  const openDecisionDialog = (request: SwapRequest, action: 'APPROVED' | 'REJECTED') => {
+  const fetchPendingTreLeaves = async () => {
+    if (!profile?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('leaves')
+        .select('*, guard:profiles!leaves_guard_id_fkey(id, name, phone, team:teams(name))')
+        .eq('admin_id', profile.id)
+        .eq('leave_type', 'TRE')
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setPendingTreLeaves(data || []);
+    } catch (error) {
+      console.error('[AdminDashboard][FetchTreLeaves]', error);
+    }
+  };
+
+  const handleTreDecision = async (leave: any, approved: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('leaves')
+        .update({ status: approved ? 'APPROVED' : 'REJECTED' })
+        .eq('id', leave.id);
+      if (error) throw error;
+
+      // Notify guard via WhatsApp (fire-and-forget)
+      supabase.functions.invoke('notify-tre-leave-guard', {
+        body: {
+          guard_name: leave.guard?.name || '',
+          guard_phone: leave.guard?.phone || '',
+          leave_date: format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy'),
+          admin_name: profile?.name || '',
+          approved,
+        },
+      }).catch((err) => console.warn('[AdminDashboard] Falha ao notificar segurança:', err));
+
+      toast({
+        title: approved ? 'Folga aprovada' : 'Folga rejeitada',
+        description: `A folga TRE de ${leave.guard?.name} foi ${approved ? 'aprovada' : 'rejeitada'}.`,
+      });
+      fetchPendingTreLeaves();
+    } catch (error) {
+      console.error('[AdminDashboard][TreDecision]', error);
+      toast({ title: 'Erro', description: 'Não foi possível processar a decisão.', variant: 'destructive' });
+    }
+  };
+
+  const generateTreLeavePDF = (leave: any) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("Solicitação de Folga TRE", pageWidth / 2, 25, { align: "center" });
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+
+    let y = 45;
+    const lineH = 8;
+
+    if (leave.protocol) {
+      doc.text(`Protocolo: ${leave.protocol}`, 14, y); y += lineH;
+    }
+    doc.text(`Segurança: ${leave.guard?.name || 'N/A'}`, 14, y); y += lineH;
+    doc.text(`Equipe: ${leave.guard?.team?.name || 'N/A'}`, 14, y); y += lineH;
+    doc.text(`Data da Folga: ${format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}`, 14, y); y += lineH;
+    doc.text(`Data da Solicitação: ${format(new Date(leave.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 14, y); y += lineH;
+    
+    const statusLabel = leave.status === 'APPROVED' ? 'Aprovada' : leave.status === 'REJECTED' ? 'Rejeitada' : 'Pendente';
+    doc.text(`Status: ${statusLabel}`, 14, y); y += lineH * 2;
+
+    doc.text(`Coordenador: ${profile?.name || 'N/A'}`, 14, y); y += lineH;
+
+    doc.setFontSize(8);
+    doc.text('Gerado pelo Sistema Guard Swap', pageWidth / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+
+    doc.save(`folga-tre-${leave.protocol || leave.id}.pdf`);
+  };
+
+
     setDecisionDialog({ open: true, request, action });
     setDecisionReason('');
   };
