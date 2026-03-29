@@ -97,32 +97,28 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
       const isTarget = swap.target_id === guardId;
 
       if (isRequester) {
-        // Remover o dia que eu cedi (requester_shift_date)
         days.delete(swap.requester_shift_date);
-
-        // Adicionar o dia que eu recebi (target_shift_date) se estiver no mês
         const targetDate = new Date(`${swap.target_shift_date}T00:00:00`);
         if (targetDate >= monthStart && targetDate <= monthEnd) {
-          const myTeam = allTeams.find(t => t.id === teamId);
+          // Usar cor/nome da equipe do TARGET (outro segurança)
+          const otherTeam = allTeams.find(t => t.id === swap.target?.team_id);
           days.set(swap.target_shift_date, {
             date: swap.target_shift_date,
-            teamColor: myTeam?.color || teamColor,
-            teamName: myTeam?.name || teamName,
+            teamColor: otherTeam?.color || teamColor,
+            teamName: otherTeam?.name || teamName,
             isSwapped: true,
           });
         }
       } else if (isTarget) {
-        // Remover o dia que eu cedi (target_shift_date)
         days.delete(swap.target_shift_date);
-
-        // Adicionar o dia que eu recebi (requester_shift_date) se estiver no mês
         const requesterDate = new Date(`${swap.requester_shift_date}T00:00:00`);
         if (requesterDate >= monthStart && requesterDate <= monthEnd) {
-          const myTeam = allTeams.find(t => t.id === teamId);
+          // Usar cor/nome da equipe do REQUESTER (outro segurança)
+          const otherTeam = allTeams.find(t => t.id === swap.requester?.team_id);
           days.set(swap.requester_shift_date, {
             date: swap.requester_shift_date,
-            teamColor: myTeam?.color || teamColor,
-            teamName: myTeam?.name || teamName,
+            teamColor: otherTeam?.color || teamColor,
+            teamName: otherTeam?.name || teamName,
             isSwapped: true,
           });
         }
