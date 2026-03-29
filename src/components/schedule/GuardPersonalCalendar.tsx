@@ -224,7 +224,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: 
                     ${today ? 'ring-2 ring-primary ring-offset-1' : ''}
                     ${workDay ? 'text-white font-semibold' : 'text-foreground'}
                   `}
-                  style={workDay ? { backgroundColor: workDay.teamColor } : undefined}
+                  style={workDay ? (workDay.isSwapped && workDay.originalTeamColor ? { background: `linear-gradient(135deg, ${workDay.teamColor} 90%, ${workDay.originalTeamColor} 10%)` } : { backgroundColor: workDay.teamColor }) : undefined}
                   title={workDay ? `${workDay.teamName}${workDay.isSwapped ? ' (troca)' : ''}` : undefined}
                 >
                   <span className="text-sm">{format(day, 'd')}</span>
