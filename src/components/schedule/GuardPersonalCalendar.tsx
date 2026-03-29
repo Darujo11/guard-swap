@@ -22,7 +22,7 @@ interface GuardPersonalCalendarProps {
 
 interface WorkingDay extends EffectiveDay {}
 
-export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, guardName }: GuardPersonalCalendarProps) {
+export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, guardName, selectionMode, selectedDate, onDateSelect }: GuardPersonalCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [teamSchedules, setTeamSchedules] = useState<any[]>([]);
   const [swapRequests, setSwapRequests] = useState<any[]>([]);
