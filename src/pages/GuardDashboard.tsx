@@ -730,7 +730,7 @@ const GuardDashboard = () => {
                       <span className="text-xs text-muted-foreground">{leave.protocol}</span>
                     )}
                   </div>
-                  {leave.status === 'PENDING' && (
+                  {leave.status !== 'REJECTED' && (
                     <Button
                       variant="destructive"
                       size="sm"
