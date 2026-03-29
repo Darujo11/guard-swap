@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, ArrowRightLeft, Calendar as CalendarIcon, Do
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { computeEffectiveSchedule, EffectiveDay } from '@/utils/effectiveSchedule';
+import { generateSchedulePDF } from '@/utils/pdfGenerator';
 
 interface GuardPersonalCalendarProps {
   guardId: string;
