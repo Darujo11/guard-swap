@@ -780,6 +780,14 @@ export default function AdminLeaves() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => generateLeavePDF(leave)}
+                              title="Baixar PDF"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handleEdit(leave)}
                             >
                               <Pencil className="h-4 w-4" />
