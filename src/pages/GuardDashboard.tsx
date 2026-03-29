@@ -82,6 +82,7 @@ const GuardDashboard = () => {
   // Estados para folga TRE
   const [treQuota, setTreQuota] = useState<number>(0);
   const [treUsed, setTreUsed] = useState<number>(0);
+  const [treLeaves, setTreLeaves] = useState<{ id: string; start_date: string }[]>([]);
   const [isTreDialogOpen, setIsTreDialogOpen] = useState(false);
   const [treSelectedDate, setTreSelectedDate] = useState<string | null>(null);
   const [submittingTre, setSubmittingTre] = useState(false);
@@ -156,13 +157,15 @@ const GuardDashboard = () => {
           .maybeSingle(),
         supabase
           .from('leaves')
-          .select('start_date, end_date')
+          .select('id, start_date, end_date')
           .eq('guard_id', currentUser.id)
           .eq('leave_type', 'TRE'),
       ]);
       const total = quotaRes.data?.total_days || 0;
       setTreQuota(total);
-      const used = (leavesRes.data || []).reduce((sum, l) => {
+      const leaves = leavesRes.data || [];
+      setTreLeaves(leaves.map(l => ({ id: l.id, start_date: l.start_date })));
+      const used = leaves.reduce((sum, l) => {
         const start = new Date(l.start_date);
         const end = new Date(l.end_date);
         const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -171,6 +174,18 @@ const GuardDashboard = () => {
       setTreUsed(used);
     } catch (error) {
       console.error('[GuardDashboard][FetchTreQuota]', error);
+    }
+  };
+
+  const handleCancelTreLeave = async (leaveId: string) => {
+    try {
+      const { error } = await supabase.from('leaves').delete().eq('id', leaveId);
+      if (error) throw error;
+      toast({ title: 'Folga cancelada', description: 'A solicitação de folga TRE foi removida.' });
+      fetchTreQuota();
+    } catch (error) {
+      console.error('[GuardDashboard][CancelTreLeave]', error);
+      toast({ title: 'Erro', description: 'Não foi possível cancelar a folga.', variant: 'destructive' });
     }
   };
 
@@ -676,7 +691,40 @@ const GuardDashboard = () => {
         />
       )}
 
-      {/* Ranking de Extras Unificado com Filtros */}
+      {/* Folgas TRE Solicitadas */}
+      {treLeaves.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Scale className="h-5 w-5" />
+              Folgas TRE Solicitadas
+            </CardTitle>
+            <CardDescription>
+              Saldo: {treQuota - treUsed} de {treQuota} dia(s) restante(s)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {treLeaves
+                .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+                .map((leave) => (
+                <div key={leave.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
+                  <span className="text-sm font-medium">
+                    {format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}
+                  </span>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleCancelTreLeave(leave.id)}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
