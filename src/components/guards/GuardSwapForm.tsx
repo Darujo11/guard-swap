@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,7 @@ import { CalendarDays, ArrowRightLeft, Calendar as CalendarIcon } from 'lucide-r
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { getEffectiveDatesSet } from '@/utils/effectiveSchedule';
 
 interface TeamSchedule {
   id: string;
@@ -34,6 +35,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
   const [requesterShiftDate, setRequesterShiftDate] = useState<Date | undefined>();
   const [targetShiftDate, setTargetShiftDate] = useState<Date | undefined>();
   const [schedules, setSchedules] = useState<TeamSchedule[]>([]);
+  const [approvedSwaps, setApprovedSwaps] = useState<any[]>([]);
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [requesterCalendarOpen, setRequesterCalendarOpen] = useState(false);
