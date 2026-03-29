@@ -145,7 +145,60 @@ const GuardDashboard = () => {
     }
   };
 
-  const fetchExtras = async () => {
+  const fetchTreQuota = async () => {
+    if (!currentUser) return;
+    try {
+      const [quotaRes, leavesRes] = await Promise.all([
+        supabase
+          .from('guard_tre_quotas')
+          .select('total_days')
+          .eq('guard_id', currentUser.id)
+          .maybeSingle(),
+        supabase
+          .from('leaves')
+          .select('start_date, end_date')
+          .eq('guard_id', currentUser.id)
+          .eq('leave_type', 'TRE'),
+      ]);
+      const total = quotaRes.data?.total_days || 0;
+      setTreQuota(total);
+      const used = (leavesRes.data || []).reduce((sum, l) => {
+        const start = new Date(l.start_date);
+        const end = new Date(l.end_date);
+        const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        return sum + days;
+      }, 0);
+      setTreUsed(used);
+    } catch (error) {
+      console.error('[GuardDashboard][FetchTreQuota]', error);
+    }
+  };
+
+  const handleSubmitTreLeave = async () => {
+    if (!currentUser || !treSelectedDate) return;
+    setSubmittingTre(true);
+    try {
+      const { error } = await supabase.from('leaves').insert({
+        guard_id: currentUser.id,
+        admin_id: currentUser.admin_id,
+        start_date: treSelectedDate,
+        end_date: treSelectedDate,
+        leave_type: 'TRE',
+        notes: 'Solicitado pelo segurança',
+      });
+      if (error) throw error;
+      toast({ title: 'Folga TRE solicitada', description: `Folga registrada para ${format(new Date(treSelectedDate + 'T00:00:00'), 'dd/MM/yyyy')}.` });
+      setIsTreDialogOpen(false);
+      setTreSelectedDate(null);
+      fetchTreQuota();
+    } catch (error) {
+      console.error('[GuardDashboard][SubmitTreLeave]', error);
+      toast({ title: 'Erro', description: 'Não foi possível registrar a folga.', variant: 'destructive' });
+    } finally {
+      setSubmittingTre(false);
+    }
+  };
+
     if (!currentUser) return;
     
     setLoadingExtras(true);
