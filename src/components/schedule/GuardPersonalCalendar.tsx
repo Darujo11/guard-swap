@@ -210,6 +210,12 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               <span className="text-muted-foreground">Extra ({extrasMap.size})</span>
             </div>
           )}
+          {treApprovedDates.size > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#DC2626' }} />
+              <span className="text-muted-foreground">Folga TRE ({treApprovedDates.size})</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5">
             <span className="text-muted-foreground font-medium">Total: {workingDays.size} plantões</span>
           </div>
