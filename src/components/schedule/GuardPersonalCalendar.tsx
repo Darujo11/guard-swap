@@ -15,6 +15,9 @@ interface GuardPersonalCalendarProps {
   teamColor: string;
   teamName: string;
   guardName?: string;
+  selectionMode?: boolean;
+  selectedDate?: string | null;
+  onDateSelect?: (date: string) => void;
 }
 
 interface WorkingDay extends EffectiveDay {}
