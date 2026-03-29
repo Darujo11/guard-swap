@@ -199,6 +199,7 @@ const GuardDashboard = () => {
     }
   };
 
+  const fetchExtras = async () => {
     if (!currentUser) return;
     
     setLoadingExtras(true);
