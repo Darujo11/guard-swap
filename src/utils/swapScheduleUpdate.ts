@@ -29,8 +29,7 @@ export async function swapTeamSchedules(
     .from('team_schedules')
     .update({ team_id: targetTeamId })
     .eq('shift_date', requesterShiftDate)
-    .eq('team_id', requesterTeamId)
-    .eq('admin_id', adminId);
+    .eq('team_id', requesterTeamId);
 
   // 3. Update target_shift_date: was target's team → now requester's team
   const { error: err2 } = await supabase
