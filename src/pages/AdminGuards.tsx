@@ -27,8 +27,12 @@ import {
   FileText,
   Users,
   GripVertical,
-  Calendar
+  Calendar,
+  Download,
+  Loader2
 } from 'lucide-react';
+import { generateAllGuardsSchedulePDF } from '@/utils/pdfGenerator';
+import { computeEffectiveSchedule } from '@/utils/effectiveSchedule';
 import { GuardPersonalCalendar } from '@/components/schedule/GuardPersonalCalendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -190,8 +194,106 @@ const AdminGuards = () => {
   const [teamForm, setTeamForm] = useState({ name: '', description: '' });
   const [memberForm, setMemberForm] = useState({ name: '', phone: '' });
   const [memberTransfers, setMemberTransfers] = useState<Record<string, string>>({});
+  const [generatingAllPDF, setGeneratingAllPDF] = useState(false);
   
   const { toast } = useToast();
+
+  const handleGenerateAllPDF = async () => {
+    if (!profile?.id || guards.length === 0) return;
+    setGeneratingAllPDF(true);
+    try {
+      const now = new Date();
+      const startOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const endStr = `${endOfMonth.getFullYear()}-${String(endOfMonth.getMonth() + 1).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`;
+      const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+      // Fetch all data in parallel
+      const [schedulesRes, swapsRes, extrasRes, leavesRes] = await Promise.all([
+        supabase.from('team_schedules').select('*').eq('admin_id', profile.id).gte('shift_date', startOfMonth).lte('shift_date', endStr),
+        supabase.from('swap_requests').select('*, requester:profiles!swap_requests_requester_id_fkey(name, team_id), target:profiles!swap_requests_target_id_fkey(name, team_id)').eq('admin_id', profile.id).eq('status', 'APPROVED'),
+        supabase.from('extras').select('*').eq('admin_id', profile.id).gte('extra_date', startOfMonth).lte('extra_date', endStr),
+        supabase.from('leaves').select('*').eq('admin_id', profile.id).eq('leave_type', 'TRE').eq('status', 'APPROVED'),
+      ]);
+
+      const schedules = schedulesRes.data || [];
+      const swaps = swapsRes.data || [];
+      const extras = extrasRes.data || [];
+      const treLeaves = leavesRes.data || [];
+
+      const allGuardsData: Array<{
+        guardName: string;
+        teamName: string;
+        monthLabel: string;
+        workingDays: Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string; originalDate?: string }>;
+        extrasMap: Map<string, { justification: string; percentage_type: number }>;
+        treDates: Set<string>;
+      }> = [];
+
+      for (const guard of guards) {
+        const guardTeam = teams.find(t => t.id === guard.team_id);
+        if (!guardTeam) continue;
+
+        const effectiveDays = computeEffectiveSchedule(
+          schedules,
+          swaps as any,
+          guard.id,
+          guardTeam.id,
+          guardTeam.color || '#3b82f6',
+          guardTeam.name,
+          teams.map(t => ({ id: t.id, name: t.name, color: t.color || '#3b82f6' }))
+        );
+
+        const workingDays = new Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string; originalDate?: string }>();
+        effectiveDays.forEach((day, dateStr) => {
+          workingDays.set(dateStr, {
+            teamName: day.teamName,
+            teamColor: day.teamColor,
+            isSwapped: day.isSwapped,
+            originalTeamName: day.originalTeamName,
+            originalOwnerName: day.originalOwnerName,
+            originalDate: day.originalDate,
+          });
+        });
+
+        const guardExtras = extras.filter(e => e.guard_id === guard.id);
+        const extrasMap = new Map<string, { justification: string; percentage_type: number }>();
+        guardExtras.forEach(e => extrasMap.set(e.extra_date, { justification: e.justification, percentage_type: e.percentage_type }));
+
+        const guardTreLeaves = treLeaves.filter(l => l.guard_id === guard.id);
+        const treDates = new Set<string>();
+        guardTreLeaves.forEach(l => {
+          const start = new Date(l.start_date);
+          const end = new Date(l.end_date);
+          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            treDates.add(d.toISOString().split('T')[0]);
+          }
+        });
+
+        allGuardsData.push({
+          guardName: guard.name,
+          teamName: guardTeam.name,
+          monthLabel,
+          workingDays,
+          extrasMap,
+          treDates,
+        });
+      }
+
+      if (allGuardsData.length === 0) {
+        toast({ title: 'Nenhum segurança com equipe', variant: 'destructive' });
+        return;
+      }
+
+      generateAllGuardsSchedulePDF(allGuardsData, monthLabel);
+      toast({ title: 'PDF gerado com sucesso!' });
+    } catch (error) {
+      console.error('[AdminGuards][GenerateAllPDF]', error);
+      toast({ title: 'Erro ao gerar PDF', variant: 'destructive' });
+    } finally {
+      setGeneratingAllPDF(false);
+    }
+  };
 
   useEffect(() => {
     if (profile?.id) {
@@ -742,10 +844,21 @@ const AdminGuards = () => {
         {/* Guards List */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Seguranças Cadastrados
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Seguranças
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateAllPDF}
+                disabled={generatingAllPDF || guards.length === 0}
+              >
+                {generatingAllPDF ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                Gerar PDF de Todos
+              </Button>
+            </div>
             <CardDescription>
               Total: {filteredGuards.length} seguranças
             </CardDescription>

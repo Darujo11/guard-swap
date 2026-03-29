@@ -167,6 +167,99 @@ export const generateSchedulePDF = (
     doc.save(`escala_${guardName.replace(/\s+/g, '_')}_${monthLabel.replace(/\s+/g, '_')}.pdf`);
 };
 
+export const generateAllGuardsSchedulePDF = (
+    allGuardsData: Array<{
+        guardName: string;
+        teamName: string;
+        monthLabel: string;
+        workingDays: Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string; originalDate?: string }>;
+        extrasMap: Map<string, { justification: string; percentage_type: number }>;
+        treDates: Set<string>;
+    }>,
+    monthLabel: string
+) => {
+    const doc = new jsPDF('l');
+    const pageWidth = doc.internal.pageSize.width;
+
+    allGuardsData.forEach((guardData, index) => {
+        if (index > 0) doc.addPage();
+
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Escala de ${guardData.guardName}`, pageWidth / 2, 20, { align: "center" });
+
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Equipe: ${guardData.teamName}`, 14, 35);
+        doc.text(`Mês: ${guardData.monthLabel}`, 14, 43);
+
+        const allDates = new Set<string>();
+        guardData.workingDays.forEach((_, dateStr) => allDates.add(dateStr));
+        guardData.extrasMap.forEach((_, dateStr) => allDates.add(dateStr));
+        guardData.treDates.forEach(dateStr => allDates.add(dateStr));
+
+        const sortedAllDates = Array.from(allDates).sort();
+
+        const tableData = sortedAllDates.map(dateStr => {
+            const [y, m, d] = dateStr.split('-');
+            const formattedDate = `${d}/${m}/${y}`;
+            const workDay = guardData.workingDays.get(dateStr);
+            const extra = guardData.extrasMap.get(dateStr);
+            const isTre = guardData.treDates.has(dateStr);
+
+            const teamCol = isTre ? 'FOLGA TRE' : workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
+
+            const observations: string[] = [];
+            if (isTre) observations.push('Folga TRE');
+            if (workDay?.isSwapped) {
+                const swapDatesPart = workDay.originalDate
+                    ? (() => { const [oy, om, od] = workDay.originalDate.split('-'); return ` ${od}/${om} ↔ ${d}/${m}`; })()
+                    : '';
+                const teamLetter = workDay.originalTeamName ? workDay.originalTeamName.replace(/^Equipe\s*/i, '') : 'N/A';
+                observations.push(`↔ ${workDay.originalOwnerName || 'N/A'} (${teamLetter})${swapDatesPart}`);
+            }
+            if (extra) observations.push(`Extra ${extra.percentage_type}% — ${extra.justification}`);
+
+            return [formattedDate, teamCol, observations.join(' | ')];
+        });
+
+        autoTable(doc, {
+            startY: 52,
+            head: [['Data', 'Equipe', 'Observação']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+            styles: { fontSize: 9, cellPadding: 3 },
+            columnStyles: {
+                0: { cellWidth: 28, halign: 'center' },
+                1: { cellWidth: 35 },
+                2: { cellWidth: 'auto', fontSize: 8 },
+            },
+            didParseCell: (data: any) => {
+                if (data.section === 'body' && data.row.raw) {
+                    if (data.row.raw[1] === 'FOLGA TRE') {
+                        data.cell.styles.fillColor = [220, 38, 38];
+                        data.cell.styles.textColor = [255, 255, 255];
+                    } else if (data.row.raw[1] === 'EXTRA') {
+                        data.cell.styles.fillColor = [184, 134, 11];
+                        data.cell.styles.textColor = [255, 255, 255];
+                    }
+                }
+            },
+        });
+    });
+
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.text(`Página ${i} de ${pageCount}`, pageWidth - 20, doc.internal.pageSize.height - 10, { align: 'right' });
+        doc.text('Gerado pelo Sistema Guard Swap', pageWidth / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+    }
+
+    doc.save(`escala_completa_segurancas_${monthLabel.replace(/\s+/g, '_')}.pdf`);
+};
+
 export const generateEvaluationsSummaryPDF = (evaluations: Evaluation[]) => {
     const doc = new jsPDF();
 
