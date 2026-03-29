@@ -65,7 +65,7 @@ const GuardDashboard = () => {
   const [rankingMonth, setRankingMonth] = useState(startOfMonth(new Date()));
   
   // Estados independentes para Registros Detalhados
-  const [detailedAllMonths, setDetailedAllMonths] = useState<boolean>(false);
+  const [detailedAllMonths, setDetailedAllMonths] = useState<boolean>(true);
   const [detailedPercentageFilter, setDetailedPercentageFilter] = useState<'all' | '50' | '100'>('all');
   const [detailedMonth, setDetailedMonth] = useState(startOfMonth(new Date()));
   const [detailedExtras, setDetailedExtras] = useState<OrgExtra[]>([]);
