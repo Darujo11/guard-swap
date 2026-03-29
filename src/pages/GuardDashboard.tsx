@@ -496,6 +496,16 @@ const GuardDashboard = () => {
         teamName: currentUser.team?.name
       }}
     >
+      {/* Calendário Pessoal */}
+      {currentUser.team_id && (
+        <GuardPersonalCalendar
+          guardId={currentUser.id}
+          teamId={currentUser.team_id}
+          teamColor={currentUser.team?.color || '#3b82f6'}
+          teamName={currentUser.team?.name || 'Minha Equipe'}
+        />
+      )}
+
       {/* Quick Actions */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <Dialog open={isSwapFormOpen} onOpenChange={setIsSwapFormOpen}>
