@@ -1,0 +1,229 @@
+import { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { ChevronLeft, ChevronRight, ArrowRightLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface GuardPersonalCalendarProps {
+  guardId: string;
+  teamId: string | null;
+  teamColor: string;
+  teamName: string;
+}
+
+interface WorkingDay {
+  date: string;
+  teamColor: string;
+  teamName: string;
+  isSwapped: boolean;
+}
+
+export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName }: GuardPersonalCalendarProps) {
+  const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
+  const [teamSchedules, setTeamSchedules] = useState<any[]>([]);
+  const [swapRequests, setSwapRequests] = useState<any[]>([]);
+  const [allTeams, setAllTeams] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (teamId) {
+      fetchData();
+    }
+  }, [teamId, guardId, currentMonth]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const monthStart = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+      const monthEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+
+      const [schedulesRes, swapsRes, teamsRes] = await Promise.all([
+        // Buscar escalas do meu time neste mês
+        supabase
+          .from('team_schedules')
+          .select('*')
+          .eq('team_id', teamId!)
+          .gte('shift_date', monthStart)
+          .lte('shift_date', monthEnd),
+        // Buscar trocas aprovadas onde sou requester ou target
+        supabase
+          .from('swap_requests')
+          .select(`
+            *,
+            requester:profiles!swap_requests_requester_id_fkey(id, name, team_id),
+            target:profiles!swap_requests_target_id_fkey(id, name, team_id)
+          `)
+          .eq('status', 'APPROVED')
+          .or(`requester_id.eq.${guardId},target_id.eq.${guardId}`),
+        // Buscar todas as equipes para pegar cores
+        supabase.from('teams').select('id, name, color'),
+      ]);
+
+      if (schedulesRes.error) throw schedulesRes.error;
+      if (swapsRes.error) throw swapsRes.error;
+
+      setTeamSchedules(schedulesRes.data || []);
+      setSwapRequests(swapsRes.data || []);
+      setAllTeams(teamsRes.data || []);
+    } catch (error) {
+      console.error('[GuardPersonalCalendar] Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const workingDays = useMemo(() => {
+    const days = new Map<string, WorkingDay>();
+
+    // 1. Adicionar dias base da minha equipe
+    teamSchedules.forEach(schedule => {
+      days.set(schedule.shift_date, {
+        date: schedule.shift_date,
+        teamColor,
+        teamName,
+        isSwapped: false,
+      });
+    });
+
+    // 2. Aplicar trocas aprovadas
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+
+    swapRequests.forEach(swap => {
+      const isRequester = swap.requester_id === guardId;
+      const isTarget = swap.target_id === guardId;
+
+      if (isRequester) {
+        // Remover o dia que eu cedi (requester_shift_date)
+        days.delete(swap.requester_shift_date);
+
+        // Adicionar o dia que eu recebi (target_shift_date) se estiver no mês
+        const targetDate = new Date(`${swap.target_shift_date}T00:00:00`);
+        if (targetDate >= monthStart && targetDate <= monthEnd) {
+          const myTeam = allTeams.find(t => t.id === teamId);
+          days.set(swap.target_shift_date, {
+            date: swap.target_shift_date,
+            teamColor: myTeam?.color || teamColor,
+            teamName: myTeam?.name || teamName,
+            isSwapped: true,
+          });
+        }
+      } else if (isTarget) {
+        // Remover o dia que eu cedi (target_shift_date)
+        days.delete(swap.target_shift_date);
+
+        // Adicionar o dia que eu recebi (requester_shift_date) se estiver no mês
+        const requesterDate = new Date(`${swap.requester_shift_date}T00:00:00`);
+        if (requesterDate >= monthStart && requesterDate <= monthEnd) {
+          const myTeam = allTeams.find(t => t.id === teamId);
+          days.set(swap.requester_shift_date, {
+            date: swap.requester_shift_date,
+            teamColor: myTeam?.color || teamColor,
+            teamName: myTeam?.name || teamName,
+            isSwapped: true,
+          });
+        }
+      }
+    });
+
+    return days;
+  }, [teamSchedules, swapRequests, allTeams, guardId, teamId, teamColor, teamName, currentMonth]);
+
+  const calendarDays = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    const calStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+    const calEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+    return eachDayOfInterval({ start: calStart, end: calEnd });
+  }, [currentMonth]);
+
+  const swappedCount = useMemo(() => {
+    return Array.from(workingDays.values()).filter(d => d.isSwapped).length;
+  }, [workingDays]);
+
+  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  return (
+    <Card className="mb-6">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Minha Escala</CardTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium min-w-[140px] text-center capitalize">
+              {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
+            </span>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        {/* Legenda */}
+        <div className="flex flex-wrap gap-3 mt-2 text-xs">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: teamColor }} />
+            <span className="text-muted-foreground">{teamName} (seus plantões)</span>
+          </div>
+          {swappedCount > 0 && (
+            <div className="flex items-center gap-1.5">
+              <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
+              <span className="text-muted-foreground">Dia recebido por troca ({swappedCount})</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground font-medium">Total: {workingDays.size} plantões</span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex items-center justify-center h-40">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-7 gap-1">
+            {/* Header dias da semana */}
+            {weekDays.map(day => (
+              <div key={day} className="text-center text-xs font-medium text-muted-foreground py-1">
+                {day}
+              </div>
+            ))}
+            {/* Dias do calendário */}
+            {calendarDays.map(day => {
+              const dateStr = format(day, 'yyyy-MM-dd');
+              const workDay = workingDays.get(dateStr);
+              const inMonth = isSameMonth(day, currentMonth);
+              const today = isToday(day);
+
+              return (
+                <div
+                  key={dateStr}
+                  className={`
+                    relative flex flex-col items-center justify-center h-10 rounded-md text-sm transition-colors
+                    ${!inMonth ? 'opacity-30' : ''}
+                    ${today ? 'ring-2 ring-primary ring-offset-1' : ''}
+                    ${workDay ? 'text-white font-semibold' : 'text-foreground'}
+                  `}
+                  style={workDay ? { backgroundColor: workDay.teamColor } : undefined}
+                >
+                  <span>{format(day, 'd')}</span>
+                  {workDay?.isSwapped && (
+                    <ArrowRightLeft className="absolute top-0.5 right-0.5 h-2.5 w-2.5 text-white/80" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

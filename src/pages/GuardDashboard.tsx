@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { GuardSwapForm } from '@/components/guards/GuardSwapForm';
 import { GuardSwapList } from '@/components/guards/GuardSwapList';
 import { TeamScheduleCalendar } from '@/components/schedule/TeamScheduleCalendar';
+import { GuardPersonalCalendar } from '@/components/schedule/GuardPersonalCalendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/lib/types';
@@ -495,6 +496,16 @@ const GuardDashboard = () => {
         teamName: currentUser.team?.name
       }}
     >
+      {/* Calendário Pessoal */}
+      {currentUser.team_id && (
+        <GuardPersonalCalendar
+          guardId={currentUser.id}
+          teamId={currentUser.team_id}
+          teamColor={currentUser.team?.color || '#3b82f6'}
+          teamName={currentUser.team?.name || 'Minha Equipe'}
+        />
+      )}
+
       {/* Quick Actions */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <Dialog open={isSwapFormOpen} onOpenChange={setIsSwapFormOpen}>
