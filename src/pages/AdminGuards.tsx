@@ -761,21 +761,18 @@ const AdminGuards = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Telefone</TableHead>
                     <TableHead>Equipe</TableHead>
-                    <TableHead>Cargo</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredGuards.map((guard) => (
                     <TableRow key={guard.id}>
-                      <TableCell className="font-medium">{guard.name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Mail className="h-4 w-4" />
-                          {guard.email}
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-1.5">
+                          {guard.is_shift_chief && <Crown className="h-4 w-4 text-amber-500" />}
+                          {guard.name}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -793,18 +790,6 @@ const AdminGuards = () => {
                           <TeamBadge team={guard.team} />
                         ) : (
                           <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {guard.is_shift_chief ? (
-                          <Badge variant="secondary" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
-                            <Crown className="h-3 w-3 mr-1" />
-                            Chefe
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-muted-foreground">
-                            Segurança
-                          </Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
