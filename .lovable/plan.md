@@ -1,26 +1,12 @@
 
 
-## Plano: Confirmação com digitação "TRE" para cancelar folga
-
-### O que será feito
-
-Ao clicar em "Cancelar", abrir um dialog pedindo que o segurança digite "TRE" para confirmar. Após a exclusão, exibir um toast com a mensagem "Informe ao Coordenador que cancelou a troca."
+## Plano: Atualizar versão para 4.1.3
 
 ### Alterações
 
-#### `src/pages/GuardDashboard.tsx`
-
-- Adicionar estados: `cancelDialogOpen`, `cancelLeaveId`, `cancelConfirmText`
-- Substituir o `onClick` direto do botão "Cancelar" por abertura do dialog
-- Adicionar um `AlertDialog` com:
-  - Título: "Confirmar cancelamento"
-  - Input de texto onde o usuário deve digitar "TRE"
-  - Botão "Confirmar" habilitado apenas quando o texto for exatamente "TRE"
-- No `handleCancelTreLeave`: após exclusão bem-sucedida, exibir toast com mensagem "Informe ao Coordenador que cancelou a troca."
-- Fechar dialog e limpar estados após confirmar
-
-### Escopo
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/GuardDashboard.tsx` | Dialog de confirmação com input "TRE" + toast informativo |
+| Arquivo | De | Para |
+|---------|-----|------|
+| `src/lib/version.ts` | `APP_VERSION = '4.1.2'`, `BUILD_DATE = '2026-02-11'` | `APP_VERSION = '4.1.3'`, `BUILD_DATE = '2026-03-29'` |
+| `public/version.json` | `"version": "4.1.0"`, `"buildDate": "2026-01-31"` | `"version": "4.1.3"`, `"buildDate": "2026-03-29"` |
+| `index.html` | Versão anterior (se presente na meta tag) | `4.1.3` |
 
