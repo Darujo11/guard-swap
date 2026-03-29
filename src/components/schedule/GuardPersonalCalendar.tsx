@@ -240,8 +240,8 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               const workDay = workingDays.get(dateStr);
               const inMonth = isSameMonth(day, currentMonth);
               const today = isToday(day);
-
               const extraDay = extrasMap.get(dateStr);
+              const isTreLeave = treApprovedDates.has(dateStr);
 
                return (
                 <div
@@ -253,29 +253,35 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                     ${today ? 'ring-2 ring-primary ring-offset-1' : ''}
                     ${selectionMode && selectedDate === dateStr ? 'ring-2 ring-yellow-400 ring-offset-2' : ''}
                     ${selectionMode && inMonth ? 'cursor-pointer hover:opacity-80' : ''}
-                    ${workDay || extraDay ? 'text-white font-semibold' : 'text-foreground'}
+                    ${isTreLeave || workDay || extraDay ? 'text-white font-semibold' : 'text-foreground'}
                   `}
                   style={
-                    workDay && extraDay
-                      ? { background: `linear-gradient(135deg, ${workDay.teamColor} 70%, #B8860B 30%)` }
-                      : workDay
-                        ? (workDay.isSwapped && workDay.originalTeamColor ? { background: `linear-gradient(135deg, ${workDay.teamColor} 90%, ${workDay.originalTeamColor} 10%)` } : { backgroundColor: workDay.teamColor })
-                        : extraDay
-                          ? { backgroundColor: '#B8860B' }
-                          : undefined
+                    isTreLeave
+                      ? { backgroundColor: '#DC2626' }
+                      : workDay && extraDay
+                        ? { background: `linear-gradient(135deg, ${workDay.teamColor} 70%, #B8860B 30%)` }
+                        : workDay
+                          ? (workDay.isSwapped && workDay.originalTeamColor ? { background: `linear-gradient(135deg, ${workDay.teamColor} 90%, ${workDay.originalTeamColor} 10%)` } : { backgroundColor: workDay.teamColor })
+                          : extraDay
+                            ? { backgroundColor: '#B8860B' }
+                            : undefined
                   }
                   title={
-                    workDay && extraDay
-                      ? `${workDay.teamName} + Extra ${extraDay.percentage_type}%`
-                      : workDay
-                        ? `${workDay.teamName}${workDay.isSwapped ? ` (troca com ${workDay.originalOwnerName || ''})` : ''}`
-                        : extraDay
-                          ? `Extra ${extraDay.percentage_type}% — ${extraDay.justification}`
-                          : undefined
+                    isTreLeave
+                      ? 'Folga TRE'
+                      : workDay && extraDay
+                        ? `${workDay.teamName} + Extra ${extraDay.percentage_type}%`
+                        : workDay
+                          ? `${workDay.teamName}${workDay.isSwapped ? ` (troca com ${workDay.originalOwnerName || ''})` : ''}`
+                          : extraDay
+                            ? `Extra ${extraDay.percentage_type}% — ${extraDay.justification}`
+                            : undefined
                   }
                 >
                   <span className="text-sm">{format(day, 'd')}</span>
-                  {extraDay && !workDay ? (
+                  {isTreLeave ? (
+                    <span className="text-[8px] leading-tight text-white/90 font-bold">Folga TRE</span>
+                  ) : extraDay && !workDay ? (
                     <span className="text-[8px] leading-tight text-white/90 font-bold">Extra</span>
                   ) : workDay && workDay.isSwapped ? (
                     <>
@@ -293,10 +299,10 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                       {workDay.teamName}
                     </span>
                   ) : null}
-                  {workDay?.isSwapped && (
+                  {workDay?.isSwapped && !isTreLeave && (
                     <ArrowRightLeft className="absolute top-0.5 right-0.5 h-2.5 w-2.5 text-white/80" />
                   )}
-                  {extraDay && workDay && (
+                  {extraDay && workDay && !isTreLeave && (
                     <span className="absolute bottom-0.5 right-0.5 text-[7px] text-yellow-200 font-bold">E</span>
                   )}
                 </div>
