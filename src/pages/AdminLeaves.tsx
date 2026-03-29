@@ -97,6 +97,7 @@ export default function AdminLeaves() {
     if (profile?.id) {
       fetchGuards();
       fetchLeaves();
+      fetchTreQuotas();
     }
   }, [profile?.id]);
 
