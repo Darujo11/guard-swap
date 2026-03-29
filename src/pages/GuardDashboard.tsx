@@ -78,6 +78,13 @@ const GuardDashboard = () => {
   
   // Estado para expansão do ranking
   const [expandedGuards, setExpandedGuards] = useState<Set<string>>(new Set());
+
+  // Estados para folga TRE
+  const [treQuota, setTreQuota] = useState<number>(0);
+  const [treUsed, setTreUsed] = useState<number>(0);
+  const [isTreDialogOpen, setIsTreDialogOpen] = useState(false);
+  const [treSelectedDate, setTreSelectedDate] = useState<string | null>(null);
+  const [submittingTre, setSubmittingTre] = useState(false);
   
   const { toast } = useToast();
 
