@@ -1,36 +1,45 @@
 
 
-## Plano: Corrigir rotação de escalas Jan-Mar 2026
+## Plano: Mostrar letra da equipe e nome do antigo dono nos dias trocados
 
-### Diagnóstico
+### Alterações
 
-**Abril em diante (correto):** rotação diária A→B→C→D→A→B→C→D...
-- Apr 1=C, Apr 2=D, Apr 3=A, Apr 4=B, Apr 5=C...
+#### 1. `src/utils/effectiveSchedule.ts` — Adicionar campos ao `EffectiveDay`
 
-**Jan/Feb/Mar (quebrado):** dados sem padrão consistente (ex: Jan 1=A, Jan 2=B, Jan 3=A, Jan 4=D — pula equipes).
+Novos campos na interface:
+- `originalTeamName?: string` — nome da equipe original (ex: "Equipe D")
+- `originalOwnerName?: string` — nome do segurança que era dono do dia (ex: "Reginaldo")
+- `originalDate?: string` — data que o outro segurança fez a troca
 
-### Cálculo
+No `computeEffectiveSchedule`, os swaps já trazem `requester.name` e `target.name`. Ao criar o dia trocado:
+- Se é requester: `originalOwnerName = swap.target.name`, `originalTeamName = otherTeam.name`
+- Se é target: `originalOwnerName = swap.requester.name`, `originalTeamName = otherTeam.name`
 
-Abril 1 = Equipe C (índice 2). Retrocedendo 90 dias até Jan 1:
-- Jan 1 = índice (2 - 90) mod 4 = 0 = **Equipe A**
-- Jan 2 = B, Jan 3 = C, Jan 4 = D, Jan 5 = A...
+Atualizar o tipo do parâmetro `approvedSwaps` para incluir `name` em `requester` e `target` (já vem do fetch).
 
-Isso garante continuidade perfeita com abril.
+#### 2. `src/components/schedule/GuardPersonalCalendar.tsx` — Renderização dos dias trocados
 
-### Solução
+Aumentar altura das células de `h-12` para `h-16` (para caber mais info nos dias trocados).
 
-**Migration SQL** que:
-1. Deleta todos os registros de `team_schedules` entre 2026-01-01 e 2026-03-31
-2. Insere novos registros com a rotação correta A→B→C→D para cada dia
+Para dias trocados, mostrar:
+- Número do dia
+- Primeira letra da equipe (ex: "A" extraída de "Equipe A")
+- Nome do antigo dono em fonte pequena (ex: "Reginaldo")
 
-IDs das equipes:
-- Equipe A: `96f49762-c5cd-4569-bb89-9120974e1ad6`
-- Equipe B: `d8029803-d2a5-49a4-873d-c53b9d814cf7`
-- Equipe C: `0855ea10-2a80-455c-b30f-21b2ca10b494`
-- Equipe D: `5f763a8d-2f0a-41ed-924d-2ffa266e9bca`
+Para dias normais, manter como está (número + nome da equipe).
 
-A migration usa `generate_series` para gerar os 90 dias e atribui a equipe com base em `(dia mod 4)`, mapeando 0→A, 1→B, 2→C, 3→D.
+Layout do dia trocado:
+```text
+┌─────────┐
+│  30   ↔ │
+│    A    │
+│Reginaldo│
+└─────────┘
+```
 
 ### Escopo
-- Apenas 1 migration SQL (nenhuma alteração de código frontend)
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/utils/effectiveSchedule.ts` | Adicionar `originalTeamName`, `originalOwnerName` à interface e ao cálculo |
+| `src/components/schedule/GuardPersonalCalendar.tsx` | Renderizar letra da equipe + nome do antigo dono nos dias trocados |
 
