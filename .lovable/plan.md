@@ -1,36 +1,20 @@
 
 
-## Plano: Incluir datas da troca na observação do PDF
+## Plano: Reduzir tamanho do texto na coluna Observação do PDF
 
 ### Problema
-A observação atual mostra apenas "Troca com Reginaldo (Equipe D)". Falta indicar os dias envolvidos (ex: "dia 03/04 ↔ 30/04").
+O texto da observação (ex: "Troca com Philipe (Equipe B) — dias 15/02 ↔ 06/02") está muito grande e cortando na página.
 
-### Alterações
+### Alteração
 
-#### 1. `src/utils/effectiveSchedule.ts` — Adicionar `originalDate` ao `EffectiveDay`
+**Arquivo:** `src/utils/pdfGenerator.ts`
 
-- Novo campo: `originalDate?: string` (a data que o segurança cedeu na troca)
-- Para requester: `originalDate = requester_shift_date` (dia que cedeu)
-- Para target: `originalDate = target_shift_date` (dia que cedeu)
-
-#### 2. `src/utils/pdfGenerator.ts` — Atualizar observação
-
-Atualizar a tipagem do parâmetro `workingDays` para incluir `originalDate`.
-
-Alterar a linha de observação de troca de:
-```
-Troca com Reginaldo (Equipe D)
-```
-Para:
-```
-Troca com Reginaldo (Equipe D) — dias 03/04 ↔ 30/04
-```
-
-Onde o primeiro dia é o `originalDate` (dia cedido) e o segundo é o `dateStr` (dia recebido), ambos formatados dd/MM.
+1. Reduzir `fontSize` da coluna Observação para `8` (ao invés de `10` global)
+2. Usar `jsPDF` em modo paisagem (`'l'`) para dar mais espaço horizontal
+3. Abreviar o texto: trocar "Troca com" por "↔", e "(Equipe X)" por apenas a letra — ex: `"↔ Philipe (B) — 15/02 ↔ 06/02"`
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/utils/effectiveSchedule.ts` | Adicionar campo `originalDate` à interface e ao cálculo |
-| `src/utils/pdfGenerator.ts` | Incluir datas na observação de troca |
+| `src/utils/pdfGenerator.ts` | Reduzir fontSize da observação, abreviar texto, usar landscape |
 
