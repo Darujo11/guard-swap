@@ -95,6 +95,9 @@ export const generateSchedulePDF = (
     if (extrasMap) {
         extrasMap.forEach((_, dateStr) => allDates.add(dateStr));
     }
+    if (treDates) {
+        treDates.forEach(dateStr => allDates.add(dateStr));
+    }
 
     const sortedAllDates = Array.from(allDates).sort();
 
