@@ -84,6 +84,12 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
       setSwapRequests(swapsRes.data || []);
       setAllTeams(teamsRes.data || []);
       setExtras(extrasRes.data || []);
+      // Build TRE approved dates set
+      const treDates = new Set<string>();
+      (treLeavesRes.data || []).forEach((l: any) => {
+        treDates.add(l.start_date);
+      });
+      setTreApprovedDates(treDates);
     } catch (error) {
       console.error('[GuardPersonalCalendar] Error fetching data:', error);
     } finally {
