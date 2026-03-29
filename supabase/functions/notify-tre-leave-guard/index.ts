@@ -6,8 +6,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// v2 - forced redeploy 2026-03-29
 Deno.serve(async (req) => {
-  console.log("notify-tre-leave-guard invoked:", req.method, new Date().toISOString());
+  console.log("notify-tre-leave-guard v2 invoked:", req.method, new Date().toISOString());
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
