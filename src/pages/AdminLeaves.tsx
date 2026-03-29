@@ -159,7 +159,52 @@ export default function AdminLeaves() {
     }
   };
 
-  const resetForm = () => {
+  const fetchTreQuotas = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('guard_tre_quotas')
+        .select('guard_id, total_days')
+        .eq('admin_id', profile!.id);
+      if (error) throw error;
+      setTreQuotas(data || []);
+    } catch (error) {
+      console.error('Error fetching TRE quotas:', error);
+    }
+  };
+
+  const handleSaveTreQuota = async () => {
+    if (!treGuard) {
+      toast({ title: 'Selecione um segurança', variant: 'destructive' });
+      return;
+    }
+    try {
+      setTreSaving(true);
+      const existing = treQuotas.find(q => q.guard_id === treGuard);
+      if (existing) {
+        const { error } = await supabase
+          .from('guard_tre_quotas')
+          .update({ total_days: treDays, updated_at: new Date().toISOString() })
+          .eq('guard_id', treGuard)
+          .eq('admin_id', profile!.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('guard_tre_quotas')
+          .insert({ guard_id: treGuard, admin_id: profile!.id, total_days: treDays });
+        if (error) throw error;
+      }
+      toast({ title: 'Sucesso', description: 'Cota TRE salva com sucesso!' });
+      setTreGuard('');
+      setTreDays(0);
+      fetchTreQuotas();
+    } catch (error) {
+      console.error('Error saving TRE quota:', error);
+      toast({ title: 'Erro', description: 'Falha ao salvar cota TRE.', variant: 'destructive' });
+    } finally {
+      setTreSaving(false);
+    }
+  };
+
     setSelectedGuard('');
     setLeaveType('');
     setCustomType('');
