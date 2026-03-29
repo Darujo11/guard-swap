@@ -15,6 +15,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { SwapRequest } from '@/lib/types';
 import { swapTeamSchedules } from '@/utils/swapScheduleUpdate';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 import {
   Users,
@@ -25,7 +29,9 @@ import {
   BarChart3,
   ArrowUpRight,
   Filter,
-  Trash2
+  Trash2,
+  Scale,
+  Download
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -46,11 +52,16 @@ const AdminDashboard = () => {
   const [decisionReason, setDecisionReason] = useState('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<SwapRequest | null>(null);
+  
+  // TRE leave states
+  const [pendingTreLeaves, setPendingTreLeaves] = useState<any[]>([]);
+  
   const { toast } = useToast();
 
   useEffect(() => {
     if (profile?.id) {
       fetchData();
+      fetchPendingTreLeaves();
     }
   }, [profile?.id]);
 
@@ -129,6 +140,86 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchPendingTreLeaves = async () => {
+    if (!profile?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('leaves')
+        .select('*, guard:profiles!leaves_guard_id_fkey(id, name, phone, team:teams(name))')
+        .eq('admin_id', profile.id)
+        .eq('leave_type', 'TRE')
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setPendingTreLeaves(data || []);
+    } catch (error) {
+      console.error('[AdminDashboard][FetchTreLeaves]', error);
+    }
+  };
+
+  const handleTreDecision = async (leave: any, approved: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('leaves')
+        .update({ status: approved ? 'APPROVED' : 'REJECTED' })
+        .eq('id', leave.id);
+      if (error) throw error;
+
+      // Notify guard via WhatsApp (fire-and-forget)
+      supabase.functions.invoke('notify-tre-leave-guard', {
+        body: {
+          guard_name: leave.guard?.name || '',
+          guard_phone: leave.guard?.phone || '',
+          leave_date: format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy'),
+          admin_name: profile?.name || '',
+          approved,
+        },
+      }).catch((err) => console.warn('[AdminDashboard] Falha ao notificar segurança:', err));
+
+      toast({
+        title: approved ? 'Folga aprovada' : 'Folga rejeitada',
+        description: `A folga TRE de ${leave.guard?.name} foi ${approved ? 'aprovada' : 'rejeitada'}.`,
+      });
+      fetchPendingTreLeaves();
+    } catch (error) {
+      console.error('[AdminDashboard][TreDecision]', error);
+      toast({ title: 'Erro', description: 'Não foi possível processar a decisão.', variant: 'destructive' });
+    }
+  };
+
+  const generateTreLeavePDF = (leave: any) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("Solicitação de Folga TRE", pageWidth / 2, 25, { align: "center" });
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+
+    let y = 45;
+    const lineH = 8;
+
+    if (leave.protocol) {
+      doc.text(`Protocolo: ${leave.protocol}`, 14, y); y += lineH;
+    }
+    doc.text(`Segurança: ${leave.guard?.name || 'N/A'}`, 14, y); y += lineH;
+    doc.text(`Equipe: ${leave.guard?.team?.name || 'N/A'}`, 14, y); y += lineH;
+    doc.text(`Data da Folga: ${format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}`, 14, y); y += lineH;
+    doc.text(`Data da Solicitação: ${format(new Date(leave.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 14, y); y += lineH;
+    
+    const statusLabel = leave.status === 'APPROVED' ? 'Aprovada' : leave.status === 'REJECTED' ? 'Rejeitada' : 'Pendente';
+    doc.text(`Status: ${statusLabel}`, 14, y); y += lineH * 2;
+
+    doc.text(`Coordenador: ${profile?.name || 'N/A'}`, 14, y); y += lineH;
+
+    doc.setFontSize(8);
+    doc.text('Gerado pelo Sistema Guard Swap', pageWidth / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+
+    doc.save(`folga-tre-${leave.protocol || leave.id}.pdf`);
   };
 
   const openDecisionDialog = (request: SwapRequest, action: 'APPROVED' | 'REJECTED') => {
@@ -471,6 +562,79 @@ const AdminDashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* TRE Leave Requests */}
+        {pendingTreLeaves.length > 0 && (
+          <Card className="order-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Scale className="h-5 w-5" />
+                Solicitações de Folga TRE
+              </CardTitle>
+              <CardDescription>
+                {pendingTreLeaves.length} solicitação(ões) pendente(s) de aprovação
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {pendingTreLeaves.map((leave) => (
+                  <div
+                    key={leave.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">{leave.guard?.name || 'N/A'}</span>
+                        {leave.guard?.team && (
+                          <Badge variant="outline">{leave.guard.team.name}</Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        <strong>Data da folga:</strong> {format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}
+                      </div>
+                      {leave.protocol && (
+                        <div className="text-xs text-muted-foreground">
+                          Protocolo: {leave.protocol}
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground">
+                        Solicitado em {format(new Date(leave.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-3 sm:mt-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => generateTreLeavePDF(leave)}
+                        title="Baixar PDF"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleTreDecision(leave, true)}
+                        className="gap-1"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Aprovar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleTreDecision(leave, false)}
+                        className="gap-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Rejeitar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Schedule Calendar - Order 3 */}
         <Card className="order-3">

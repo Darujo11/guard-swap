@@ -82,7 +82,7 @@ const GuardDashboard = () => {
   // Estados para folga TRE
   const [treQuota, setTreQuota] = useState<number>(0);
   const [treUsed, setTreUsed] = useState<number>(0);
-  const [treLeaves, setTreLeaves] = useState<{ id: string; start_date: string }[]>([]);
+  const [treLeaves, setTreLeaves] = useState<{ id: string; start_date: string; status: string; protocol: string | null }[]>([]);
   const [isTreDialogOpen, setIsTreDialogOpen] = useState(false);
   const [treSelectedDate, setTreSelectedDate] = useState<string | null>(null);
   const [submittingTre, setSubmittingTre] = useState(false);
@@ -157,15 +157,15 @@ const GuardDashboard = () => {
           .maybeSingle(),
         supabase
           .from('leaves')
-          .select('id, start_date, end_date')
+          .select('id, start_date, end_date, status, protocol')
           .eq('guard_id', currentUser.id)
           .eq('leave_type', 'TRE'),
       ]);
       const total = quotaRes.data?.total_days || 0;
       setTreQuota(total);
-      const leaves = leavesRes.data || [];
-      setTreLeaves(leaves.map(l => ({ id: l.id, start_date: l.start_date })));
-      const used = leaves.reduce((sum, l) => {
+      const leaves = (leavesRes.data || []).filter((l: any) => l.status !== 'REJECTED');
+      setTreLeaves(leaves.map((l: any) => ({ id: l.id, start_date: l.start_date, status: l.status || 'PENDING', protocol: l.protocol || null })));
+      const used = leaves.filter((l: any) => l.status !== 'REJECTED').reduce((sum: number, l: any) => {
         const start = new Date(l.start_date);
         const end = new Date(l.end_date);
         const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -181,7 +181,7 @@ const GuardDashboard = () => {
     try {
       const { error } = await supabase.from('leaves').delete().eq('id', leaveId);
       if (error) throw error;
-      toast({ title: 'Folga cancelada', description: 'A solicitação de folga TRE foi removida.' });
+      toast({ title: 'Folga cancelada', description: 'A solicitação de folga TRE foi cancelada.' });
       fetchTreQuota();
     } catch (error) {
       console.error('[GuardDashboard][CancelTreLeave]', error);
@@ -193,6 +193,10 @@ const GuardDashboard = () => {
     if (!currentUser || !treSelectedDate) return;
     setSubmittingTre(true);
     try {
+      // Generate protocol
+      const now = new Date();
+      const protocol = `TRE-${format(now, 'yyyyMMdd')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
       const { error } = await supabase.from('leaves').insert({
         guard_id: currentUser.id,
         admin_id: currentUser.admin_id,
@@ -200,6 +204,8 @@ const GuardDashboard = () => {
         end_date: treSelectedDate,
         leave_type: 'TRE',
         notes: 'Solicitado pelo segurança',
+        status: 'PENDING',
+        protocol,
       });
       if (error) throw error;
 
@@ -215,7 +221,7 @@ const GuardDashboard = () => {
         },
       }).catch((err) => console.warn('[GuardDashboard] Falha ao notificar admin:', err));
 
-      toast({ title: 'Folga TRE solicitada', description: `Folga registrada para ${formattedDate}.` });
+      toast({ title: 'Folga TRE solicitada', description: `Solicitação enviada para aprovação. Protocolo: ${protocol}` });
       setIsTreDialogOpen(false);
       setTreSelectedDate(null);
       fetchTreQuota();
@@ -709,16 +715,30 @@ const GuardDashboard = () => {
                 .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
                 .map((leave) => (
                 <div key={leave.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
-                  <span className="text-sm font-medium">
-                    {format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}
-                  </span>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleCancelTreLeave(leave.id)}
-                  >
-                    Cancelar
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium">
+                      {format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      leave.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                      leave.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {leave.status === 'APPROVED' ? 'Aprovada' : leave.status === 'REJECTED' ? 'Rejeitada' : 'Pendente'}
+                    </span>
+                    {leave.protocol && (
+                      <span className="text-xs text-muted-foreground">{leave.protocol}</span>
+                    )}
+                  </div>
+                  {leave.status === 'PENDING' && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleCancelTreLeave(leave.id)}
+                    >
+                      Cancelar
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

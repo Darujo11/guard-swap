@@ -320,7 +320,9 @@ export type Database = {
           id: string
           leave_type: string
           notes: string | null
+          protocol: string | null
           start_date: string
+          status: string
           updated_at: string
         }
         Insert: {
@@ -332,7 +334,9 @@ export type Database = {
           id?: string
           leave_type: string
           notes?: string | null
+          protocol?: string | null
           start_date: string
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -344,7 +348,9 @@ export type Database = {
           id?: string
           leave_type?: string
           notes?: string | null
+          protocol?: string | null
           start_date?: string
+          status?: string
           updated_at?: string
         }
         Relationships: [
