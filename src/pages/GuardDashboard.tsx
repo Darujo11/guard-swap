@@ -1308,6 +1308,35 @@ const GuardDashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de confirmação para cancelar folga TRE */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar cancelamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Para cancelar a folga TRE, digite <strong>TRE</strong> no campo abaixo para confirmar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            placeholder="Digite TRE para confirmar"
+            value={cancelConfirmText}
+            onChange={(e) => setCancelConfirmText(e.target.value.toUpperCase())}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setCancelConfirmText(''); setCancelLeaveId(null); }}>
+              Voltar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={cancelConfirmText !== 'TRE'}
+              onClick={handleCancelTreLeave}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirmar cancelamento
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };
