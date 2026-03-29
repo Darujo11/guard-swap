@@ -157,13 +157,15 @@ const GuardDashboard = () => {
           .maybeSingle(),
         supabase
           .from('leaves')
-          .select('start_date, end_date')
+          .select('id, start_date, end_date')
           .eq('guard_id', currentUser.id)
           .eq('leave_type', 'TRE'),
       ]);
       const total = quotaRes.data?.total_days || 0;
       setTreQuota(total);
-      const used = (leavesRes.data || []).reduce((sum, l) => {
+      const leaves = leavesRes.data || [];
+      setTreLeaves(leaves.map(l => ({ id: l.id, start_date: l.start_date })));
+      const used = leaves.reduce((sum, l) => {
         const start = new Date(l.start_date);
         const end = new Date(l.end_date);
         const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -172,6 +174,18 @@ const GuardDashboard = () => {
       setTreUsed(used);
     } catch (error) {
       console.error('[GuardDashboard][FetchTreQuota]', error);
+    }
+  };
+
+  const handleCancelTreLeave = async (leaveId: string) => {
+    try {
+      const { error } = await supabase.from('leaves').delete().eq('id', leaveId);
+      if (error) throw error;
+      toast({ title: 'Folga cancelada', description: 'A solicitação de folga TRE foi removida.' });
+      fetchTreQuota();
+    } catch (error) {
+      console.error('[GuardDashboard][CancelTreLeave]', error);
+      toast({ title: 'Erro', description: 'Não foi possível cancelar a folga.', variant: 'destructive' });
     }
   };
 
