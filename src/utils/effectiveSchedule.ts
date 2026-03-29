@@ -7,6 +7,8 @@ export interface EffectiveDay {
   teamName: string;
   isSwapped: boolean;
   originalTeamColor?: string;
+  originalTeamName?: string;
+  originalOwnerName?: string;
 }
 
 /**
