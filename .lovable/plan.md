@@ -1,29 +1,17 @@
 
 
-## Plano: Reordenar seções do dashboard
+## Plano: Remover "Avaliação Simulador" do menu de navegação admin
 
 ### Alteração
 
-**Arquivo:** `src/pages/GuardDashboard.tsx`
+**Arquivo:** `src/components/layout/AppLayout.tsx`
 
-1. **Mover "Ranking de Extras"** (linhas 873-1049) para logo após `GuardPersonalCalendar` (linha 553), antes do bloco atual de "Registros Detalhados".
+Remover o item de navegação "Avaliação Simulador" do array `navigation` (linhas 50-55).
 
-2. **Alterar default de `rankingAllMonths`** de `false` para `true` (linha 63).
-
-3. **Mover "Registros Detalhados de Extras"** (atualmente linhas 555-737) para depois do "Relatório Mensal" (após linha 871).
-
-### Ordem final do layout:
-1. Botões (Solicitar Troca + Ver Escala Completa)
-2. Dialog da Escala Completa
-3. Calendário Pessoal ("Minha Escala")
-4. **Ranking de Extras** (acumulado por padrão)
-5. Swap Requests
-6. Meus Extras
-7. Relatório Mensal
-8. **Registros Detalhados de Extras**
+As rotas em `App.tsx` e as páginas `EvaluationSimulator.tsx` / `EvaluationHistory.tsx` permanecem — apenas o link no menu lateral será removido.
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/GuardDashboard.tsx` | Reordenar blocos JSX + mudar default `rankingAllMonths` para `true` |
+| `src/components/layout/AppLayout.tsx` | Remover item `Avaliação Simulador` do array `navigation` |
 
