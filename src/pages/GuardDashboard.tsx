@@ -181,7 +181,7 @@ const GuardDashboard = () => {
     try {
       const { error } = await supabase.from('leaves').delete().eq('id', leaveId);
       if (error) throw error;
-      toast({ title: 'Folga cancelada', description: 'A solicitação de folga TRE foi removida.' });
+      toast({ title: 'Folga cancelada', description: 'A solicitação de folga TRE foi cancelada.' });
       fetchTreQuota();
     } catch (error) {
       console.error('[GuardDashboard][CancelTreLeave]', error);
