@@ -60,7 +60,7 @@ const GuardDashboard = () => {
   const [allGuardsExtras, setAllGuardsExtras] = useState<OrgExtra[]>([]);
   const [guards, setGuards] = useState<any[]>([]);
   const [loadingRanking, setLoadingRanking] = useState(false);
-  const [rankingAllMonths, setRankingAllMonths] = useState<boolean>(false);
+  const [rankingAllMonths, setRankingAllMonths] = useState<boolean>(true);
   const [rankingPercentageFilter, setRankingPercentageFilter] = useState<'all' | '50' | '100'>('all');
   const [rankingMonth, setRankingMonth] = useState(startOfMonth(new Date()));
   
