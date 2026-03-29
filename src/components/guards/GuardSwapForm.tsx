@@ -474,7 +474,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
                     if (date <= today || date > maxDateObj) return true;
-                    return !isDateInteractable(date);
+                    return !isRequesterDate(date);
                   }}
                   modifiers={{
                     userTeam: (date) => {
