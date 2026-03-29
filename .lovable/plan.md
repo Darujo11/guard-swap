@@ -1,31 +1,31 @@
 
 
-## Plano: Incluir folgas TRE no PDF da escala
+## Plano: Botão de download PDF por folga registrada
 
 ### O que será feito
 
-Quando o segurança exportar o PDF da escala, os dias com folga TRE aprovada aparecerão com fundo vermelho e observação "Folga TRE".
+Adicionar um botão de download PDF em cada linha da tabela "Folgas Registradas", ao lado dos botões de editar e excluir. O PDF conterá os dados completos da folga: protocolo, nome do segurança, tipo de folga, período, dias, observações, data de registro e status.
 
 ### Alterações
 
-#### 1. `src/components/schedule/GuardPersonalCalendar.tsx`
+#### 1. `src/pages/AdminLeaves.tsx`
 
-Passar `treApprovedDates` como novo parâmetro ao chamar `generateSchedulePDF`:
-
-```ts
-generateSchedulePDF(guardName || 'Segurança', teamName, monthLabel, workingDays, extrasMap, treApprovedDates);
-```
-
-#### 2. `src/utils/pdfGenerator.ts`
-
-- Adicionar parâmetro `treDates?: Set<string>` na assinatura de `generateSchedulePDF`
-- Incluir datas TRE no `allDates` (para aparecerem mesmo que não sejam dia de plantão)
-- Para dias com TRE: coluna Equipe = "FOLGA TRE", observação = "Folga TRE"
-- No `didParseCell`: linhas com "FOLGA TRE" recebem fundo vermelho (`[220, 38, 38]`) e texto branco
+- Importar `Download` do lucide-react
+- Criar função `generateLeavePDF(leave: Leave)` que gera um PDF com:
+  - Título: "Comprovante de Folga"
+  - Protocolo (se existir, senão gerar um baseado no ID)
+  - Nome do segurança
+  - Tipo de folga (label legível)
+  - Data inicial e final
+  - Quantidade de dias
+  - Observações
+  - Data de registro
+  - Status (PENDING/APPROVED/REJECTED traduzido)
+  - Rodapé com "Gerado pelo Sistema Guard Swap" e linha de assinatura do coordenador
+- Adicionar botão `Download` na coluna de ações de cada linha (ao lado de Editar e Excluir)
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/schedule/GuardPersonalCalendar.tsx` | Passar `treApprovedDates` ao `generateSchedulePDF` |
-| `src/utils/pdfGenerator.ts` | Novo parâmetro `treDates`, renderizar linhas TRE em vermelho |
+| `src/pages/AdminLeaves.tsx` | Função `generateLeavePDF` + botão de download por linha |
 
