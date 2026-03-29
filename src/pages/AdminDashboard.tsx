@@ -61,6 +61,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (profile?.id) {
       fetchData();
+      fetchPendingTreLeaves();
     }
   }, [profile?.id]);
 
