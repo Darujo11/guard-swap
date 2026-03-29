@@ -746,10 +746,21 @@ const AdminGuards = () => {
         {/* Guards List */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Seguranças Cadastrados
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Seguranças
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateAllPDF}
+                disabled={generatingAllPDF || guards.length === 0}
+              >
+                {generatingAllPDF ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                Gerar PDF de Todos
+              </Button>
+            </div>
             <CardDescription>
               Total: {filteredGuards.length} seguranças
             </CardDescription>
