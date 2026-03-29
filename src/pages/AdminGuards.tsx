@@ -251,14 +251,16 @@ const AdminGuards = () => {
 
         const workingDays = new Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string; originalDate?: string }>();
         effectiveDays.forEach((day, dateStr) => {
-          workingDays.set(dateStr, {
-            teamName: day.teamName,
-            teamColor: day.teamColor,
-            isSwapped: day.isSwapped,
-            originalTeamName: day.originalTeamName,
-            originalOwnerName: day.originalOwnerName,
-            originalDate: day.originalDate,
-          });
+          if (dateStr >= startOfMonth && dateStr <= endStr) {
+            workingDays.set(dateStr, {
+              teamName: day.teamName,
+              teamColor: day.teamColor,
+              isSwapped: day.isSwapped,
+              originalTeamName: day.originalTeamName,
+              originalOwnerName: day.originalOwnerName,
+              originalDate: day.originalDate,
+            });
+          }
         });
 
         const guardExtras = extras.filter(e => e.guard_id === guard.id);
@@ -271,7 +273,10 @@ const AdminGuards = () => {
           const start = new Date(l.start_date);
           const end = new Date(l.end_date);
           for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            treDates.add(d.toISOString().split('T')[0]);
+            const dateStr = d.toISOString().split('T')[0];
+            if (dateStr >= startOfMonth && dateStr <= endStr) {
+              treDates.add(dateStr);
+            }
           }
         });
 
