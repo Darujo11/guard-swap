@@ -183,11 +183,21 @@ const GuardDashboard = () => {
     }
   };
 
-  const handleCancelTreLeave = async (leaveId: string) => {
+  const openCancelDialog = (leaveId: string) => {
+    setCancelLeaveId(leaveId);
+    setCancelConfirmText('');
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelTreLeave = async () => {
+    if (!cancelLeaveId || cancelConfirmText !== 'TRE') return;
     try {
-      const { error } = await supabase.from('leaves').delete().eq('id', leaveId);
+      const { error } = await supabase.from('leaves').delete().eq('id', cancelLeaveId);
       if (error) throw error;
-      toast({ title: 'Folga cancelada', description: 'A solicitação de folga TRE foi cancelada.' });
+      toast({ title: 'Folga cancelada', description: 'Informe ao Coordenador que cancelou a troca.' });
+      setCancelDialogOpen(false);
+      setCancelLeaveId(null);
+      setCancelConfirmText('');
       fetchTreQuota();
     } catch (error) {
       console.error('[GuardDashboard][CancelTreLeave]', error);
