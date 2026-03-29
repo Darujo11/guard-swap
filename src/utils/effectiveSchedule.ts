@@ -9,6 +9,7 @@ export interface EffectiveDay {
   originalTeamColor?: string;
   originalTeamName?: string;
   originalOwnerName?: string;
+  originalDate?: string;
 }
 
 /**
