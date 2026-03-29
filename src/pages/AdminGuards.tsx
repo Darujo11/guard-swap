@@ -195,6 +195,10 @@ const AdminGuards = () => {
   const [memberForm, setMemberForm] = useState({ name: '', phone: '' });
   const [memberTransfers, setMemberTransfers] = useState<Record<string, string>>({});
   const [generatingAllPDF, setGeneratingAllPDF] = useState(false);
+  const [pdfMonth, setPdfMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   
   const { toast } = useToast();
 
@@ -202,11 +206,12 @@ const AdminGuards = () => {
     if (!profile?.id || guards.length === 0) return;
     setGeneratingAllPDF(true);
     try {
-      const now = new Date();
-      const startOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const [year, month] = pdfMonth.split('-').map(Number);
+      const selectedDate = new Date(year, month - 1, 1);
+      const startOfMonth = `${year}-${String(month).padStart(2, '0')}-01`;
+      const endOfMonth = new Date(year, month, 0);
       const endStr = `${endOfMonth.getFullYear()}-${String(endOfMonth.getMonth() + 1).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`;
-      const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      const monthLabel = selectedDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
       // Fetch all data in parallel
       const [schedulesRes, swapsRes, extrasRes, leavesRes] = await Promise.all([
@@ -849,15 +854,23 @@ const AdminGuards = () => {
                 <Shield className="h-5 w-5" />
                 Seguranças
               </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleGenerateAllPDF}
-                disabled={generatingAllPDF || guards.length === 0}
-              >
-                {generatingAllPDF ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-                Gerar PDF de Todos
-              </Button>
+              <div className="flex items-center gap-2">
+                <input
+                  type="month"
+                  value={pdfMonth}
+                  onChange={(e) => setPdfMonth(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateAllPDF}
+                  disabled={generatingAllPDF || guards.length === 0}
+                >
+                  {generatingAllPDF ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                  Gerar PDF de Todos
+                </Button>
+              </div>
             </div>
             <CardDescription>
               Total: {filteredGuards.length} seguranças
