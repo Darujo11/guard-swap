@@ -205,6 +205,7 @@ export default function AdminLeaves() {
     }
   };
 
+  const resetForm = () => {
     setSelectedGuard('');
     setLeaveType('');
     setCustomType('');
