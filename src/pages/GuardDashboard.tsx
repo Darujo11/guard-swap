@@ -595,7 +595,50 @@ const GuardDashboard = () => {
           <Eye className="h-4 w-4" />
           Ver Escala Completa
         </Button>
+        {treQuota > 0 && (treQuota - treUsed) > 0 && (
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            onClick={() => { setTreSelectedDate(null); setIsTreDialogOpen(true); }}
+          >
+            <Scale className="h-4 w-4" />
+            Solicitar Folga TRE (Saldo: {treQuota - treUsed})
+          </Button>
+        )}
       </div>
+
+      {/* Dialog Folga TRE */}
+      <Dialog open={isTreDialogOpen} onOpenChange={(open) => { setIsTreDialogOpen(open); if (!open) setTreSelectedDate(null); }}>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Solicitar Folga TRE</DialogTitle>
+            <DialogDescription>
+              Selecione o dia que deseja folgar. Saldo disponível: {treQuota - treUsed} dia(s).
+            </DialogDescription>
+          </DialogHeader>
+          {currentUser.team_id && (
+            <GuardPersonalCalendar
+              guardId={currentUser.id}
+              teamId={currentUser.team_id}
+              teamColor={currentUser.team?.color || '#3b82f6'}
+              teamName={currentUser.team?.name || 'Minha Equipe'}
+              selectionMode
+              selectedDate={treSelectedDate}
+              onDateSelect={(date) => setTreSelectedDate(date)}
+            />
+          )}
+          {treSelectedDate && (
+            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <span className="text-sm">
+                Dia selecionado: <strong>{format(new Date(treSelectedDate + 'T00:00:00'), 'dd/MM/yyyy')}</strong>
+              </span>
+              <Button onClick={handleSubmitTreLeave} disabled={submittingTre}>
+                {submittingTre ? 'Enviando...' : 'Solicitar Folga'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Full Schedule Dialog */}
       <Dialog open={isFullScheduleOpen} onOpenChange={setIsFullScheduleOpen}>
