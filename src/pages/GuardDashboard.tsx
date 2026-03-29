@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { TeamBadge } from '@/components/ui/team-badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { GuardSwapForm } from '@/components/guards/GuardSwapForm';
@@ -87,6 +89,9 @@ const GuardDashboard = () => {
   const [isTreDialogOpen, setIsTreDialogOpen] = useState(false);
   const [treSelectedDate, setTreSelectedDate] = useState<string | null>(null);
   const [submittingTre, setSubmittingTre] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelLeaveId, setCancelLeaveId] = useState<string | null>(null);
+  const [cancelConfirmText, setCancelConfirmText] = useState('');
   
   const { toast } = useToast();
 
@@ -178,11 +183,21 @@ const GuardDashboard = () => {
     }
   };
 
-  const handleCancelTreLeave = async (leaveId: string) => {
+  const openCancelDialog = (leaveId: string) => {
+    setCancelLeaveId(leaveId);
+    setCancelConfirmText('');
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelTreLeave = async () => {
+    if (!cancelLeaveId || cancelConfirmText !== 'TRE') return;
     try {
-      const { error } = await supabase.from('leaves').delete().eq('id', leaveId);
+      const { error } = await supabase.from('leaves').delete().eq('id', cancelLeaveId);
       if (error) throw error;
-      toast({ title: 'Folga cancelada', description: 'A solicitação de folga TRE foi cancelada.' });
+      toast({ title: 'Folga cancelada', description: 'Informe ao Coordenador que cancelou a troca.' });
+      setCancelDialogOpen(false);
+      setCancelLeaveId(null);
+      setCancelConfirmText('');
       fetchTreQuota();
     } catch (error) {
       console.error('[GuardDashboard][CancelTreLeave]', error);
@@ -787,7 +802,7 @@ const GuardDashboard = () => {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleCancelTreLeave(leave.id)}
+                        onClick={() => openCancelDialog(leave.id)}
                       >
                         Cancelar
                       </Button>
@@ -1293,6 +1308,35 @@ const GuardDashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de confirmação para cancelar folga TRE */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar cancelamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Para cancelar a folga TRE, digite <strong>TRE</strong> no campo abaixo para confirmar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            placeholder="Digite TRE para confirmar"
+            value={cancelConfirmText}
+            onChange={(e) => setCancelConfirmText(e.target.value.toUpperCase())}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setCancelConfirmText(''); setCancelLeaveId(null); }}>
+              Voltar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={cancelConfirmText !== 'TRE'}
+              onClick={handleCancelTreLeave}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirmar cancelamento
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };
