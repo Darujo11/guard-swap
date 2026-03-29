@@ -39,7 +39,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
       const monthStart = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const monthEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
 
-      const [schedulesRes, swapsRes, teamsRes] = await Promise.all([
+      const [schedulesRes, swapsRes, teamsRes, extrasRes] = await Promise.all([
         // Buscar escalas do meu time neste mês
         supabase
           .from('team_schedules')
@@ -59,6 +59,13 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
           .or(`requester_id.eq.${guardId},target_id.eq.${guardId}`),
         // Buscar todas as equipes para pegar cores
         supabase.from('teams').select('id, name, color'),
+        // Buscar extras do segurança neste mês
+        supabase
+          .from('extras')
+          .select('*')
+          .eq('guard_id', guardId)
+          .gte('extra_date', monthStart)
+          .lte('extra_date', monthEnd),
       ]);
 
       if (schedulesRes.error) throw schedulesRes.error;
@@ -67,6 +74,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
       setTeamSchedules(schedulesRes.data || []);
       setSwapRequests(swapsRes.data || []);
       setAllTeams(teamsRes.data || []);
+      setExtras(extrasRes.data || []);
     } catch (error) {
       console.error('[GuardPersonalCalendar] Error fetching data:', error);
     } finally {
