@@ -45,6 +45,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
   useEffect(() => {
     fetchAvailableGuards();
     fetchSchedules();
+    fetchApprovedSwapsData();
   }, [currentUser]);
 
   const fetchAvailableGuards = async () => {
