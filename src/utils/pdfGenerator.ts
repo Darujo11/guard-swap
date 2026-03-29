@@ -72,7 +72,8 @@ export const generateSchedulePDF = (
     teamName: string,
     monthLabel: string,
     workingDays: Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string; originalDate?: string }>,
-    extrasMap?: Map<string, { justification: string; percentage_type: number }>
+    extrasMap?: Map<string, { justification: string; percentage_type: number }>,
+    treDates?: Set<string>
 ) => {
     const doc = new jsPDF('l');
     const pageWidth = doc.internal.pageSize.width;
@@ -94,6 +95,9 @@ export const generateSchedulePDF = (
     if (extrasMap) {
         extrasMap.forEach((_, dateStr) => allDates.add(dateStr));
     }
+    if (treDates) {
+        treDates.forEach(dateStr => allDates.add(dateStr));
+    }
 
     const sortedAllDates = Array.from(allDates).sort();
 
@@ -103,9 +107,13 @@ export const generateSchedulePDF = (
         const workDay = workingDays.get(dateStr);
         const extra = extrasMap?.get(dateStr);
 
-        const teamCol = workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
+        const isTre = treDates?.has(dateStr) ?? false;
+        const teamCol = isTre ? 'FOLGA TRE' : workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
         
         const observations: string[] = [];
+        if (isTre) {
+            observations.push('Folga TRE');
+        }
         if (workDay?.isSwapped) {
             const swapDatesPart = workDay.originalDate
                 ? (() => {
@@ -136,10 +144,14 @@ export const generateSchedulePDF = (
             2: { cellWidth: 'auto', fontSize: 8 },
         },
         didParseCell: (data: any) => {
-            // Highlight EXTRA rows with golden background
-            if (data.section === 'body' && data.row.raw && data.row.raw[1] === 'EXTRA') {
-                data.cell.styles.fillColor = [184, 134, 11];
-                data.cell.styles.textColor = [255, 255, 255];
+            if (data.section === 'body' && data.row.raw) {
+                if (data.row.raw[1] === 'FOLGA TRE') {
+                    data.cell.styles.fillColor = [220, 38, 38];
+                    data.cell.styles.textColor = [255, 255, 255];
+                } else if (data.row.raw[1] === 'EXTRA') {
+                    data.cell.styles.fillColor = [184, 134, 11];
+                    data.cell.styles.textColor = [255, 255, 255];
+                }
             }
         },
     });
