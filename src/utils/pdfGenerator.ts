@@ -107,7 +107,13 @@ export const generateSchedulePDF = (
         
         const observations: string[] = [];
         if (workDay?.isSwapped) {
-            observations.push(`Troca com ${workDay.originalOwnerName || 'N/A'} (${workDay.originalTeamName || 'N/A'})`);
+            const swapDatesPart = workDay.originalDate
+                ? (() => {
+                    const [oy, om, od] = workDay.originalDate.split('-');
+                    return ` — dias ${od}/${om} ↔ ${d}/${m}`;
+                })()
+                : '';
+            observations.push(`Troca com ${workDay.originalOwnerName || 'N/A'} (${workDay.originalTeamName || 'N/A'})${swapDatesPart}`);
         }
         if (extra) {
             observations.push(`Extra ${extra.percentage_type}% — ${extra.justification}`);

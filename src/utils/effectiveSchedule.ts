@@ -88,6 +88,7 @@ export function computeEffectiveSchedule(
         originalTeamColor: otherTeam?.color || guardTeamColor,
         originalTeamName: otherTeam?.name,
         originalOwnerName: swap.requester?.name,
+        originalDate: swap.target_shift_date,
       });
     }
   });
