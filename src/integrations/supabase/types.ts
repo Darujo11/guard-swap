@@ -253,6 +253,48 @@ export type Database = {
           },
         ]
       }
+      guard_tre_quotas: {
+        Row: {
+          admin_id: string | null
+          created_at: string
+          guard_id: string
+          id: string
+          total_days: number
+          updated_at: string
+        }
+        Insert: {
+          admin_id?: string | null
+          created_at?: string
+          guard_id: string
+          id?: string
+          total_days?: number
+          updated_at?: string
+        }
+        Update: {
+          admin_id?: string | null
+          created_at?: string
+          guard_id?: string
+          id?: string
+          total_days?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guard_tre_quotas_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guard_tre_quotas_guard_id_fkey"
+            columns: ["guard_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       keep_alive: {
         Row: {
           id: number

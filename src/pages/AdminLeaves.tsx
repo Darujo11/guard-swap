@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { CalendarOff, CalendarIcon, Plus, Pencil, Trash2, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarOff, CalendarIcon, Plus, Pencil, Trash2, FileText, ChevronLeft, ChevronRight, Scale, Save } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -80,6 +80,12 @@ export default function AdminLeaves() {
   // Filter state
   const [filterGuard, setFilterGuard] = useState<string>('all');
 
+  // TRE Quota state
+  const [treGuard, setTreGuard] = useState<string>('');
+  const [treDays, setTreDays] = useState<number>(0);
+  const [treQuotas, setTreQuotas] = useState<Array<{ guard_id: string; total_days: number }>>([]);
+  const [treSaving, setTreSaving] = useState(false);
+
   // Report state
   const [reportAllMonths, setReportAllMonths] = useState(false);
   const [reportMonth, setReportMonth] = useState<Date>(new Date());
@@ -91,6 +97,7 @@ export default function AdminLeaves() {
     if (profile?.id) {
       fetchGuards();
       fetchLeaves();
+      fetchTreQuotas();
     }
   }, [profile?.id]);
 
@@ -149,6 +156,52 @@ export default function AdminLeaves() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTreQuotas = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('guard_tre_quotas')
+        .select('guard_id, total_days')
+        .eq('admin_id', profile!.id);
+      if (error) throw error;
+      setTreQuotas(data || []);
+    } catch (error) {
+      console.error('Error fetching TRE quotas:', error);
+    }
+  };
+
+  const handleSaveTreQuota = async () => {
+    if (!treGuard) {
+      toast({ title: 'Selecione um segurança', variant: 'destructive' });
+      return;
+    }
+    try {
+      setTreSaving(true);
+      const existing = treQuotas.find(q => q.guard_id === treGuard);
+      if (existing) {
+        const { error } = await supabase
+          .from('guard_tre_quotas')
+          .update({ total_days: treDays, updated_at: new Date().toISOString() })
+          .eq('guard_id', treGuard)
+          .eq('admin_id', profile!.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('guard_tre_quotas')
+          .insert({ guard_id: treGuard, admin_id: profile!.id, total_days: treDays });
+        if (error) throw error;
+      }
+      toast({ title: 'Sucesso', description: 'Cota TRE salva com sucesso!' });
+      setTreGuard('');
+      setTreDays(0);
+      fetchTreQuotas();
+    } catch (error) {
+      console.error('Error saving TRE quota:', error);
+      toast({ title: 'Erro', description: 'Falha ao salvar cota TRE.', variant: 'destructive' });
+    } finally {
+      setTreSaving(false);
     }
   };
 
@@ -692,7 +745,104 @@ export default function AdminLeaves() {
           </CardContent>
         </Card>
 
-        {/* Report Section */}
+        {/* TRE Quota Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Scale className="h-5 w-5" />
+              Folgas TRE
+            </CardTitle>
+            <CardDescription>
+              Defina a quantidade de folgas TRE por {settings.guard_label.toLowerCase()} e acompanhe o saldo
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Form to set quota */}
+            <div className="flex flex-col sm:flex-row gap-4 items-end">
+              <div className="space-y-2 flex-1">
+                <Label>{settings.guard_label}</Label>
+                <Select value={treGuard} onValueChange={(v) => {
+                  setTreGuard(v);
+                  const existing = treQuotas.find(q => q.guard_id === v);
+                  setTreDays(existing?.total_days || 0);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={`Selecione o ${settings.guard_label.toLowerCase()}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {guards.map(guard => (
+                      <SelectItem key={guard.id} value={guard.id}>
+                        {guard.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 w-32">
+                <Label>Total de Folgas</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={treDays}
+                  onChange={(e) => setTreDays(parseInt(e.target.value) || 0)}
+                />
+              </div>
+              <Button onClick={handleSaveTreQuota} disabled={treSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                {treSaving ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </div>
+
+            {/* Quota table */}
+            {(() => {
+              const treLeaves = leaves.filter(l => l.leave_type === 'TRE');
+              const guardsWithQuota = guards.map(guard => {
+                const quota = treQuotas.find(q => q.guard_id === guard.id);
+                const totalDays = quota?.total_days || 0;
+                const usedDays = treLeaves
+                  .filter(l => l.guard_id === guard.id)
+                  .reduce((sum, l) => sum + calculateDays(l.start_date, l.end_date), 0);
+                const balance = totalDays - usedDays;
+                return { ...guard, totalDays, usedDays, balance };
+              }).filter(g => g.totalDays > 0 || g.usedDays > 0);
+
+              if (guardsWithQuota.length === 0) return (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  Nenhuma cota TRE definida ainda.
+                </div>
+              );
+
+              return (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{settings.guard_label}</TableHead>
+                      <TableHead className="text-center">Total TRE</TableHead>
+                      <TableHead className="text-center">Usadas</TableHead>
+                      <TableHead className="text-center">Saldo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {guardsWithQuota.map(g => (
+                      <TableRow key={g.id}>
+                        <TableCell className="font-medium">{g.name}</TableCell>
+                        <TableCell className="text-center">{g.totalDays}</TableCell>
+                        <TableCell className="text-center">{g.usedDays}</TableCell>
+                        <TableCell className={cn(
+                          "text-center font-semibold",
+                          g.balance > 0 ? "text-green-600" : "text-destructive"
+                        )}>
+                          {g.balance}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
