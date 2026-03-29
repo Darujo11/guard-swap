@@ -73,6 +73,7 @@ export function computeEffectiveSchedule(
         originalTeamColor: otherTeam?.color || guardTeamColor,
         originalTeamName: otherTeam?.name,
         originalOwnerName: swap.target?.name,
+        originalDate: swap.requester_shift_date,
       });
     } else if (isTarget) {
       days.delete(swap.target_shift_date);
