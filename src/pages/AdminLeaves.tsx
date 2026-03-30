@@ -259,6 +259,9 @@ export default function AdminLeaves() {
     }
   };
 
+  // Document file state
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+
   const resetForm = () => {
     setSelectedGuard('');
     setLeaveType('');
@@ -266,6 +269,7 @@ export default function AdminLeaves() {
     setStartDate(undefined);
     setEndDate(undefined);
     setNotes('');
+    setDocumentFile(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
