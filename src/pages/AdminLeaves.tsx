@@ -505,7 +505,7 @@ export default function AdminLeaves() {
     const totalLeaves = reportLeaves.length;
     const totalDays = reportLeaves.reduce((sum, leave) => sum + calculateDays(leave.start_date, leave.end_date), 0);
     doc.setFontSize(11);
-    doc.text(`Total de folgas: ${totalLeaves} | Total de dias: ${totalDays}`, 14, 42);
+    doc.text(`Total de afastamentos: ${totalLeaves} | Total de dias: ${totalDays}`, 14, 42);
 
     // Table
     const tableData = reportLeaves.map(leave => [
