@@ -1055,7 +1055,7 @@ const AdminGuardProfile = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CalendarOff className="h-5 w-5" />
-                  Histórico de Folgas e Atestados
+                  Histórico de Afastamentos
                 </CardTitle>
               </CardHeader>
               <CardContent>
