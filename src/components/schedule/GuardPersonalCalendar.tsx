@@ -9,7 +9,20 @@ import { ptBR } from 'date-fns/locale';
 import { computeEffectiveSchedule, EffectiveDay } from '@/utils/effectiveSchedule';
 import { generateSchedulePDF } from '@/utils/pdfGenerator';
 
-interface GuardPersonalCalendarProps {
+const getLeaveLabel = (leaveType: string, customType?: string | null): string => {
+  switch (leaveType) {
+    case 'TRE': return 'TRE';
+    case 'ATESTADO': return 'Atestado';
+    case 'FERIAS': return 'Férias';
+    case 'LICENCA_NOJO': return 'Lic. Nojo';
+    case 'LICENCA_PATERNIDADE': return 'Lic. Pat.';
+    case 'LICENCA_NAO_REMUNERADA': return 'Lic. N/R';
+    case 'FALTA_INJUSTIFICADA': return 'Falta';
+    default: return customType || 'Afastamento';
+  }
+};
+
+
   guardId: string;
   teamId: string | null;
   teamColor: string;
