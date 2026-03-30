@@ -269,8 +269,20 @@ const AdminGuards = () => {
         guardExtras.forEach(e => extrasMap.set(e.extra_date, { justification: e.justification, percentage_type: e.percentage_type }));
 
         const guardTreLeaves = treLeaves.filter(l => l.guard_id === guard.id);
-        const treDates = new Set<string>();
+        const treDates = new Map<string, string>();
         guardTreLeaves.forEach(l => {
+          const label = (() => {
+            switch (l.leave_type) {
+              case 'TRE': return 'TRE';
+              case 'ATESTADO': return 'Atestado';
+              case 'FERIAS': return 'Férias';
+              case 'LICENCA_NOJO': return 'Lic. Nojo';
+              case 'LICENCA_PATERNIDADE': return 'Lic. Pat.';
+              case 'LICENCA_NAO_REMUNERADA': return 'Lic. N/R';
+              case 'FALTA_INJUSTIFICADA': return 'Falta';
+              default: return l.custom_type || 'Afastamento';
+            }
+          })();
           const [sy, sm, sd] = l.start_date.split('-').map(Number);
           const [ey, em, ed] = l.end_date.split('-').map(Number);
           const start = new Date(sy, sm - 1, sd);
@@ -278,7 +290,7 @@ const AdminGuards = () => {
           for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
             const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             if (dateStr >= startOfMonth && dateStr <= endStr) {
-              treDates.add(dateStr);
+              treDates.set(dateStr, label);
             }
           }
         });
