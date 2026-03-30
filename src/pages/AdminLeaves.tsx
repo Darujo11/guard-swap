@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { CalendarOff, CalendarIcon, Plus, Pencil, Trash2, FileText, ChevronLeft, ChevronRight, Scale, Save, Download } from 'lucide-react';
+import { CalendarOff, CalendarIcon, Plus, Pencil, Trash2, FileText, ChevronLeft, ChevronRight, Scale, Save, Download, Paperclip } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,6 +39,7 @@ interface Leave {
   start_date: string;
   end_date: string;
   notes: string | null;
+  document_url: string | null;
   created_at: string;
   guard?: Guard;
 }
@@ -258,6 +259,9 @@ export default function AdminLeaves() {
     }
   };
 
+  // Document file state
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+
   const resetForm = () => {
     setSelectedGuard('');
     setLeaveType('');
@@ -265,6 +269,7 @@ export default function AdminLeaves() {
     setStartDate(undefined);
     setEndDate(undefined);
     setNotes('');
+    setDocumentFile(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -300,7 +305,7 @@ export default function AdminLeaves() {
     try {
       setSubmitting(true);
 
-      const { error } = await supabase.from('leaves').insert({
+      const { data: insertData, error } = await supabase.from('leaves').insert({
         guard_id: selectedGuard,
         admin_id: profile!.id,
         leave_type: leaveType,
@@ -309,9 +314,28 @@ export default function AdminLeaves() {
         end_date: format(endDate, 'yyyy-MM-dd'),
         notes: notes.trim() || null,
         status: 'APPROVED',
-      });
+      }).select('id').single();
 
       if (error) throw error;
+
+      // Upload document if provided
+      if (documentFile && insertData?.id) {
+        const fileExt = documentFile.name.split('.').pop();
+        const filePath = `${insertData.id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('leave-documents')
+          .upload(filePath, documentFile);
+        
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('leave-documents')
+            .getPublicUrl(filePath);
+          
+          await supabase.from('leaves')
+            .update({ document_url: urlData.publicUrl })
+            .eq('id', insertData.id);
+        }
+      }
 
       toast({
         title: 'Sucesso',
@@ -757,6 +781,21 @@ export default function AdminLeaves() {
                     rows={1}
                   />
                 </div>
+                {/* Document Upload */}
+                <div className="space-y-2 lg:col-span-1">
+                  <Label>Documento Comprobatório (opcional)</Label>
+                  <Input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
+                  />
+                  {documentFile && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Paperclip className="h-3 w-3" />
+                      {documentFile.name}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="flex justify-end">
@@ -913,6 +952,7 @@ export default function AdminLeaves() {
                       <TableHead>Período</TableHead>
                       <TableHead className="text-center">Dias</TableHead>
                       <TableHead>Observações</TableHead>
+                      <TableHead className="text-center">Doc</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -936,6 +976,20 @@ export default function AdminLeaves() {
                         </TableCell>
                         <TableCell className="max-w-[200px] truncate">
                           {leave.notes || '-'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {leave.document_url ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => window.open(leave.document_url!, '_blank')}
+                              title="Baixar documento"
+                            >
+                              <Paperclip className="h-4 w-4 text-primary" />
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">

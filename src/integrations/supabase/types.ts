@@ -315,6 +315,7 @@ export type Database = {
           admin_id: string | null
           created_at: string
           custom_type: string | null
+          document_url: string | null
           end_date: string
           guard_id: string
           id: string
@@ -329,6 +330,7 @@ export type Database = {
           admin_id?: string | null
           created_at?: string
           custom_type?: string | null
+          document_url?: string | null
           end_date: string
           guard_id: string
           id?: string
@@ -343,6 +345,7 @@ export type Database = {
           admin_id?: string | null
           created_at?: string
           custom_type?: string | null
+          document_url?: string | null
           end_date?: string
           guard_id?: string
           id?: string
