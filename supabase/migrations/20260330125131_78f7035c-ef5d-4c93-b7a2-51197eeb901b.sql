@@ -1,0 +1,1 @@
+UPDATE leaves SET status = 'APPROVED', updated_at = now() WHERE status = 'PENDING' AND admin_id IS NOT NULL;
