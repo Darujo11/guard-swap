@@ -1,0 +1,1 @@
+ALTER TABLE organization_settings ADD COLUMN swap_same_month_only boolean NOT NULL DEFAULT false;

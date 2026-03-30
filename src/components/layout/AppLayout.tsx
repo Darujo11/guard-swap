@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign, Settings, Menu, CalendarOff, FileText, ClipboardCheck, RefreshCw } from 'lucide-react';
+import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign, Settings, Menu, CalendarOff, FileText, ClipboardCheck, RefreshCw, CalendarDays } from 'lucide-react';
 const logoImage = '/android-chrome-192x192.png';
 import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,8 @@ export function AppLayout({
   } = useSwapNotifications();
   const location = useLocation();
   const {
-    settings
+    settings,
+    updateSettings
   } = useOrganizationSettings();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigation = [{
@@ -189,12 +190,23 @@ export function AppLayout({
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild>
                   <Link to="/perfil" className="cursor-pointer">
                     <UserCircle className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                   </Link>
                 </DropdownMenuItem>
+                {(role === 'admin' || role === 'super_admin') && (
+                  <DropdownMenuItem onSelect={() => {
+                    updateSettings({ swap_same_month_only: !settings.swap_same_month_only });
+                  }} className="cursor-pointer">
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    <span>Troca só dentro do mês</span>
+                    {settings.swap_same_month_only && (
+                      <Badge variant="default" className="ml-auto text-xs px-1.5 py-0">Ativo</Badge>
+                    )}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onSelect={async () => {
                   if ('serviceWorker' in navigator) {
                     const registrations = await navigator.serviceWorker.getRegistrations();

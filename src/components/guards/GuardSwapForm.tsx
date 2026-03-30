@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { getEffectiveDatesSet } from '@/utils/effectiveSchedule';
+import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
 
 interface TeamSchedule {
   id: string;
@@ -41,6 +42,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
   const [requesterCalendarOpen, setRequesterCalendarOpen] = useState(false);
   const [targetCalendarOpen, setTargetCalendarOpen] = useState(false);
   const { toast } = useToast();
+  const { settings } = useOrganizationSettings();
 
   useEffect(() => {
     fetchAvailableGuards();
@@ -212,6 +214,17 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
         variant: 'destructive',
       });
       return false;
+    }
+
+    if (settings.swap_same_month_only) {
+      if (requesterDate.getMonth() !== targetDate.getMonth() || requesterDate.getFullYear() !== targetDate.getFullYear()) {
+        toast({
+          title: 'Troca não permitida',
+          description: 'As trocas só são permitidas dentro do mesmo mês.',
+          variant: 'destructive',
+        });
+        return false;
+      }
     }
 
     return true;
