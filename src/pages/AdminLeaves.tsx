@@ -305,7 +305,7 @@ export default function AdminLeaves() {
     try {
       setSubmitting(true);
 
-      const { error } = await supabase.from('leaves').insert({
+      const { data: insertData, error } = await supabase.from('leaves').insert({
         guard_id: selectedGuard,
         admin_id: profile!.id,
         leave_type: leaveType,
@@ -314,9 +314,28 @@ export default function AdminLeaves() {
         end_date: format(endDate, 'yyyy-MM-dd'),
         notes: notes.trim() || null,
         status: 'APPROVED',
-      });
+      }).select('id').single();
 
       if (error) throw error;
+
+      // Upload document if provided
+      if (documentFile && insertData?.id) {
+        const fileExt = documentFile.name.split('.').pop();
+        const filePath = `${insertData.id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('leave-documents')
+          .upload(filePath, documentFile);
+        
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('leave-documents')
+            .getPublicUrl(filePath);
+          
+          await supabase.from('leaves')
+            .update({ document_url: urlData.publicUrl })
+            .eq('id', insertData.id);
+        }
+      }
 
       toast({
         title: 'Sucesso',
