@@ -100,10 +100,23 @@ interface Extra {
   month_reference: string;
   justification: string;
   quantity: number;
+  minutes: number;
   percentage_type: number;
   created_at: string;
   guard?: Profile;
 }
+
+const formatHoursMinutes = (hours: number, minutes: number) => {
+  if (minutes > 0) return `${hours}h${String(minutes).padStart(2, '0')}min`;
+  return `${hours}h`;
+};
+
+const sumHoursMinutes = (items: { quantity: number; minutes: number }[]) => {
+  let totalMinutes = items.reduce((sum, e) => sum + (Number(e.quantity) || 0) * 60 + (Number(e.minutes) || 0), 0);
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  return { hours, minutes: mins, totalMinutes };
+};
 
 export default function AdminExtras() {
   const navigate = useNavigate();
