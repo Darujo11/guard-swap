@@ -194,14 +194,14 @@ const GuardDashboard = () => {
     try {
       const { error } = await supabase.from('leaves').delete().eq('id', cancelLeaveId);
       if (error) throw error;
-      toast({ title: 'Folga cancelada', description: 'Informe ao Coordenador que cancelou a troca.' });
+      toast({ title: 'Afastamento cancelado', description: 'Informe ao Coordenador que cancelou a troca.' });
       setCancelDialogOpen(false);
       setCancelLeaveId(null);
       setCancelConfirmText('');
       fetchTreQuota();
     } catch (error) {
       console.error('[GuardDashboard][CancelTreLeave]', error);
-      toast({ title: 'Erro', description: 'Não foi possível cancelar a folga.', variant: 'destructive' });
+      toast({ title: 'Erro', description: 'Não foi possível cancelar o afastamento.', variant: 'destructive' });
     }
   };
 
@@ -237,13 +237,13 @@ const GuardDashboard = () => {
         },
       }).catch((err) => console.warn('[GuardDashboard] Falha ao notificar admin:', err));
 
-      toast({ title: 'Folga TRE solicitada', description: `Solicitação enviada para aprovação. Protocolo: ${protocol}` });
+      toast({ title: 'Afastamento TRE solicitado', description: `Solicitação enviada para aprovação. Protocolo: ${protocol}` });
       setIsTreDialogOpen(false);
       setTreSelectedDate(null);
       fetchTreQuota();
     } catch (error) {
       console.error('[GuardDashboard][SubmitTreLeave]', error);
-      toast({ title: 'Erro', description: 'Não foi possível registrar a folga.', variant: 'destructive' });
+      toast({ title: 'Erro', description: 'Não foi possível registrar o afastamento.', variant: 'destructive' });
     } finally {
       setSubmittingTre(false);
     }
@@ -652,7 +652,7 @@ const GuardDashboard = () => {
             onClick={() => { setTreSelectedDate(null); setIsTreDialogOpen(true); }}
           >
             <Scale className="h-4 w-4" />
-            Solicitar Folga TRE (Saldo: {treQuota - treUsed})
+            Solicitar Afastamento TRE (Saldo: {treQuota - treUsed})
           </Button>
         )}
       </div>
@@ -661,9 +661,9 @@ const GuardDashboard = () => {
       <Dialog open={isTreDialogOpen} onOpenChange={(open) => { setIsTreDialogOpen(open); if (!open) setTreSelectedDate(null); }}>
         <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Solicitar Folga TRE</DialogTitle>
+            <DialogTitle>Solicitar Afastamento TRE</DialogTitle>
             <DialogDescription>
-              Selecione o dia que deseja folgar. Saldo disponível: {treQuota - treUsed} dia(s).
+              Selecione o dia do afastamento. Saldo disponível: {treQuota - treUsed} dia(s).
             </DialogDescription>
           </DialogHeader>
           {currentUser.team_id && (
@@ -683,7 +683,7 @@ const GuardDashboard = () => {
                 Dia selecionado: <strong>{format(new Date(treSelectedDate + 'T00:00:00'), 'dd/MM/yyyy')}</strong>
               </span>
               <Button onClick={handleSubmitTreLeave} disabled={submittingTre}>
-                {submittingTre ? 'Enviando...' : 'Solicitar Folga'}
+                {submittingTre ? 'Enviando...' : 'Solicitar Afastamento'}
               </Button>
             </div>
           )}
@@ -713,13 +713,13 @@ const GuardDashboard = () => {
         />
       )}
 
-      {/* Folgas TRE Solicitadas */}
+      {/* Afastamentos TRE Solicitados */}
       {treLeaves.length > 0 && (
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Scale className="h-5 w-5" />
-              Folgas TRE Solicitadas
+              Afastamentos TRE Solicitados
             </CardTitle>
             <CardDescription>
               Saldo: {treQuota - treUsed} de {treQuota} dia(s) restante(s)
@@ -757,7 +757,7 @@ const GuardDashboard = () => {
 
                         doc.setFontSize(18);
                         doc.setFont("helvetica", "bold");
-                        doc.text("Comprovante de Folga TRE", pageWidth / 2, 25, { align: "center" });
+                        doc.text("Comprovante de Afastamento TRE", pageWidth / 2, 25, { align: "center" });
 
                         doc.setDrawColor(41, 128, 185);
                         doc.setLineWidth(0.5);
@@ -777,7 +777,7 @@ const GuardDashboard = () => {
 
                         field("Protocolo", protocol);
                         field("Segurança", currentUser?.name || 'N/A');
-                        field("Tipo", "Folga TRE");
+                        field("Tipo", "Afastamento TRE");
                         field("Data", format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy'));
                         field("Status", leave.status === 'APPROVED' ? 'Aprovada' : leave.status === 'REJECTED' ? 'Rejeitada' : 'Pendente');
                         field("Registro", leave.created_at ? format(new Date(leave.created_at), 'dd/MM/yyyy HH:mm') : '-');
@@ -792,7 +792,7 @@ const GuardDashboard = () => {
                         doc.setFontSize(9);
                         doc.text("Gerado pelo Sistema Guard Swap", pageWidth / 2, doc.internal.pageSize.height - 10, { align: "center" });
 
-                        doc.save(`folga_tre_${protocol}.pdf`);
+                        doc.save(`afastamento_tre_${protocol}.pdf`);
                       }}
                       title="Baixar PDF"
                     >

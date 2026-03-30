@@ -569,7 +569,7 @@ const AdminGuardProfile = () => {
     yPos += 6;
     doc.text(`Total de Extras: ${extras.length}`, 14, yPos);
     yPos += 6;
-    doc.text(`Total de Folgas/Atestados: ${leaves.length}`, 14, yPos);
+    doc.text(`Total de Afastamentos: ${leaves.length}`, 14, yPos);
     yPos += 6;
     doc.text(`Observações Positivas: ${notes.filter(n => n.note_type === 'positive').length}`, 14, yPos);
     yPos += 6;
@@ -920,7 +920,7 @@ const AdminGuardProfile = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{leaves.length}</p>
-                  <p className="text-sm text-muted-foreground">Folgas</p>
+                  <p className="text-sm text-muted-foreground">Afastamentos</p>
                 </div>
               </div>
             </CardContent>
@@ -960,7 +960,7 @@ const AdminGuardProfile = () => {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="swaps">Trocas</TabsTrigger>
             <TabsTrigger value="extras">Extras</TabsTrigger>
-            <TabsTrigger value="leaves">Folgas</TabsTrigger>
+            <TabsTrigger value="leaves">Afastamentos</TabsTrigger>
             <TabsTrigger value="notes">Observações</TabsTrigger>
           </TabsList>
 
@@ -1055,12 +1055,12 @@ const AdminGuardProfile = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CalendarOff className="h-5 w-5" />
-                  Histórico de Folgas e Atestados
+                  Histórico de Afastamentos
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {leaves.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">Nenhuma folga ou atestado registrado.</p>
+                  <p className="text-center text-muted-foreground py-8">Nenhum afastamento registrado.</p>
                 ) : (
                   <Table>
                     <TableHeader>

@@ -151,7 +151,7 @@ export default function AdminLeaves() {
       console.error('Error fetching leaves:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao carregar folgas.',
+        description: 'Falha ao carregar afastamentos.',
         variant: 'destructive',
       });
     } finally {
@@ -238,7 +238,7 @@ export default function AdminLeaves() {
     if (leaveType === 'OUTRO' && !customType.trim()) {
       toast({
         title: 'Campo obrigatório',
-        description: 'Especifique o tipo de folga.',
+        description: 'Especifique o tipo de afastamento.',
         variant: 'destructive',
       });
       return;
@@ -261,7 +261,7 @@ export default function AdminLeaves() {
 
       toast({
         title: 'Sucesso',
-        description: 'Folga registrada com sucesso!',
+        description: 'Afastamento registrado com sucesso!',
       });
 
       resetForm();
@@ -270,7 +270,7 @@ export default function AdminLeaves() {
       console.error('Error creating leave:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao registrar folga.',
+        description: 'Falha ao registrar afastamento.',
         variant: 'destructive',
       });
     } finally {
@@ -305,7 +305,7 @@ export default function AdminLeaves() {
 
       toast({
         title: 'Sucesso',
-        description: 'Folga atualizada com sucesso!',
+        description: 'Afastamento atualizado com sucesso!',
       });
 
       setEditDialogOpen(false);
@@ -315,7 +315,7 @@ export default function AdminLeaves() {
       console.error('Error updating leave:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao atualizar folga.',
+        description: 'Falha ao atualizar afastamento.',
         variant: 'destructive',
       });
     } finally {
@@ -336,7 +336,7 @@ export default function AdminLeaves() {
 
       toast({
         title: 'Sucesso',
-        description: 'Folga excluída com sucesso!',
+        description: 'Afastamento excluído com sucesso!',
       });
 
       setDeleteLeaveId(null);
@@ -345,7 +345,7 @@ export default function AdminLeaves() {
       console.error('Error deleting leave:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao excluir folga.',
+        description: 'Falha ao excluir afastamento.',
         variant: 'destructive',
       });
     }
@@ -464,7 +464,7 @@ export default function AdminLeaves() {
     doc.setFontSize(8);
     doc.text("Gerado pelo Sistema Guard Swap", pageWidth / 2, doc.internal.pageSize.height - 10, { align: "center" });
 
-    doc.save(`folga_${protocol}.pdf`);
+    doc.save(`afastamento_${protocol}.pdf`);
   };
 
   const generatePDF = () => {
@@ -473,7 +473,7 @@ export default function AdminLeaves() {
     if (reportLeaves.length === 0) {
       toast({
         title: 'Sem dados',
-        description: 'Não há folgas para o período/filtros selecionados.',
+        description: 'Não há afastamentos para o período/filtros selecionados.',
         variant: 'destructive',
       });
       return;
@@ -505,7 +505,7 @@ export default function AdminLeaves() {
     const totalLeaves = reportLeaves.length;
     const totalDays = reportLeaves.reduce((sum, leave) => sum + calculateDays(leave.start_date, leave.end_date), 0);
     doc.setFontSize(11);
-    doc.text(`Total de folgas: ${totalLeaves} | Total de dias: ${totalDays}`, 14, 42);
+    doc.text(`Total de afastamentos: ${totalLeaves} | Total de dias: ${totalDays}`, 14, 42);
 
     // Table
     const tableData = reportLeaves.map(leave => [
@@ -557,7 +557,7 @@ export default function AdminLeaves() {
 
     // Save
     const monthName = reportAllMonths ? 'todos' : format(reportMonth, 'yyyy-MM', { locale: ptBR });
-    doc.save(`relatorio-folgas-${monthName}.pdf`);
+    doc.save(`relatorio-afastamentos-${monthName}.pdf`);
 
     toast({
       title: 'Sucesso',
@@ -567,7 +567,7 @@ export default function AdminLeaves() {
 
   return (
     <AppLayout
-      title="Folgas"
+      title="Afastamentos"
       user={profile ? {
         name: profile.name,
         role: 'ADMIN',
@@ -607,7 +607,7 @@ export default function AdminLeaves() {
 
                 {/* Leave Type */}
                 <div className="space-y-2">
-                  <Label>Tipo de Folga</Label>
+                  <Label>Tipo de Afastamento</Label>
                   <Select value={leaveType} onValueChange={setLeaveType}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o tipo" />
@@ -704,7 +704,7 @@ export default function AdminLeaves() {
               <div className="flex justify-end">
                 <Button type="submit" disabled={submitting}>
                   <Plus className="h-4 w-4 mr-2" />
-                  {submitting ? 'Registrando...' : 'Registrar Folga'}
+                  {submitting ? 'Registrando...' : 'Registrar Afastamento'}
                 </Button>
               </div>
             </form>
@@ -716,10 +716,10 @@ export default function AdminLeaves() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Scale className="h-5 w-5" />
-              Folgas TRE
+              Afastamentos TRE
             </CardTitle>
             <CardDescription>
-              Defina a quantidade de folgas TRE por {settings.guard_label.toLowerCase()} e acompanhe o saldo
+              Defina a quantidade de afastamentos TRE por {settings.guard_label.toLowerCase()} e acompanhe o saldo
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -745,7 +745,7 @@ export default function AdminLeaves() {
                 </Select>
               </div>
               <div className="space-y-2 w-32">
-                <Label>Total de Folgas</Label>
+                <Label>Total de Afastamentos</Label>
                 <Input
                   type="number"
                   min={0}
@@ -814,7 +814,7 @@ export default function AdminLeaves() {
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <CardTitle>Folgas Registradas</CardTitle>
+                <CardTitle>Afastamentos Registrados</CardTitle>
                 <CardDescription>
                   Lista de todos os afastamentos registrados
                 </CardDescription>
@@ -843,7 +843,7 @@ export default function AdminLeaves() {
               </div>
             ) : filteredLeaves.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                Nenhuma folga registrada.
+                Nenhum afastamento registrado.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -918,10 +918,10 @@ export default function AdminLeaves() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Relatório de Folgas
+              Relatório de Afastamentos
             </CardTitle>
             <CardDescription>
-              Gere um relatório em PDF com as folgas do período selecionado
+              Gere um relatório em PDF com os afastamentos do período selecionado
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -974,7 +974,7 @@ export default function AdminLeaves() {
 
               {/* Leave Type Filter */}
               <div className="space-y-2">
-                <Label>Tipo de Folga</Label>
+                <Label>Tipo de Afastamento</Label>
                 <Select value={reportLeaveType} onValueChange={setReportLeaveType}>
                   <SelectTrigger>
                     <SelectValue />

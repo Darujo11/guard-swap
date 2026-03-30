@@ -179,8 +179,8 @@ const AdminDashboard = () => {
       }).catch((err) => console.warn('[AdminDashboard] Falha ao notificar segurança:', err));
 
       toast({
-        title: approved ? 'Folga aprovada' : 'Folga rejeitada',
-        description: `A folga TRE de ${leave.guard?.name} foi ${approved ? 'aprovada' : 'rejeitada'}.`,
+        title: approved ? 'Afastamento aprovado' : 'Afastamento rejeitado',
+        description: `O afastamento TRE de ${leave.guard?.name} foi ${approved ? 'aprovado' : 'rejeitado'}.`,
       });
       fetchPendingTreLeaves();
     } catch (error) {
@@ -195,7 +195,7 @@ const AdminDashboard = () => {
 
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("Solicitação de Folga TRE", pageWidth / 2, 25, { align: "center" });
+    doc.text("Solicitação de Afastamento TRE", pageWidth / 2, 25, { align: "center" });
 
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
@@ -208,7 +208,7 @@ const AdminDashboard = () => {
     }
     doc.text(`Segurança: ${leave.guard?.name || 'N/A'}`, 14, y); y += lineH;
     doc.text(`Equipe: ${leave.guard?.team?.name || 'N/A'}`, 14, y); y += lineH;
-    doc.text(`Data da Folga: ${format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}`, 14, y); y += lineH;
+    doc.text(`Data do Afastamento: ${format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}`, 14, y); y += lineH;
     doc.text(`Data da Solicitação: ${format(new Date(leave.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 14, y); y += lineH;
     
     const statusLabel = leave.status === 'APPROVED' ? 'Aprovada' : leave.status === 'REJECTED' ? 'Rejeitada' : 'Pendente';
@@ -219,7 +219,7 @@ const AdminDashboard = () => {
     doc.setFontSize(8);
     doc.text('Gerado pelo Sistema Guard Swap', pageWidth / 2, doc.internal.pageSize.height - 10, { align: 'center' });
 
-    doc.save(`folga-tre-${leave.protocol || leave.id}.pdf`);
+    doc.save(`afastamento-tre-${leave.protocol || leave.id}.pdf`);
   };
 
   const openDecisionDialog = (request: SwapRequest, action: 'APPROVED' | 'REJECTED') => {
@@ -569,7 +569,7 @@ const AdminDashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Scale className="h-5 w-5" />
-                Solicitações de Folga TRE
+                Solicitações de Afastamento TRE
               </CardTitle>
               <CardDescription>
                 {pendingTreLeaves.length} solicitação(ões) pendente(s) de aprovação
@@ -590,7 +590,7 @@ const AdminDashboard = () => {
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        <strong>Data da folga:</strong> {format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}
+                        <strong>Data do afastamento:</strong> {format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}
                       </div>
                       {leave.protocol && (
                         <div className="text-xs text-muted-foreground">
