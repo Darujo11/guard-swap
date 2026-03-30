@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, ArrowLeft, X } from "lucide-react";
+import { Loader2, ArrowLeft, X, RefreshCw } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 const nameSchema = z.object({
@@ -318,6 +318,26 @@ export default function Profile() {
             </Form>
           </CardContent>
         </Card>
+
+        <div className="flex justify-center mt-6">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const registration of registrations) {
+                  await registration.unregister();
+                }
+              }
+              const cacheKeys = await caches.keys();
+              await Promise.all(cacheKeys.map(key => caches.delete(key)));
+              window.location.reload();
+            }}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Atualizar Sistema
+          </Button>
+        </div>
       </div>
     </AppLayout>
   );
