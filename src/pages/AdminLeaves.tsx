@@ -190,7 +190,7 @@ export default function AdminLeaves() {
       } else {
         const { error } = await supabase
           .from('guard_tre_quotas')
-          .insert({ guard_id: treGuard, admin_id: profile!.id, total_days: treDays });
+          .insert({ guard_id: treGuard, admin_id: profile!.id, total_days: parseInt(treDays) || 0 });
         if (error) throw error;
       }
       toast({ title: 'Sucesso', description: 'Cota TRE salva com sucesso!' });
