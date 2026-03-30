@@ -154,6 +154,7 @@ export type Database = {
           guard_id: string
           id: string
           justification: string
+          minutes: number
           month_reference: string
           percentage_type: number
           quantity: number
@@ -167,6 +168,7 @@ export type Database = {
           guard_id: string
           id?: string
           justification: string
+          minutes?: number
           month_reference: string
           percentage_type?: number
           quantity?: number
@@ -180,6 +182,7 @@ export type Database = {
           guard_id?: string
           id?: string
           justification?: string
+          minutes?: number
           month_reference?: string
           percentage_type?: number
           quantity?: number

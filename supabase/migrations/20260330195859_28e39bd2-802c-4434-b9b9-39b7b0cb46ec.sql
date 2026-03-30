@@ -1,0 +1,1 @@
+ALTER TABLE extras ADD COLUMN minutes integer NOT NULL DEFAULT 0;
