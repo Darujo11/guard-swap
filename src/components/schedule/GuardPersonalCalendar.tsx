@@ -203,7 +203,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               title="Baixar PDF"
               onClick={() => {
                 const monthLabel = format(currentMonth, 'MMMM yyyy', { locale: ptBR });
-                generateSchedulePDF(guardName || 'Segurança', teamName, monthLabel, workingDays, extrasMap, treApprovedDates);
+                generateSchedulePDF(guardName || 'Segurança', teamName, monthLabel, workingDays, extrasMap, leaveDates);
               }}
             >
               <Download className="h-4 w-4" />
