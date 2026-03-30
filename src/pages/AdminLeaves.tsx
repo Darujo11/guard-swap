@@ -739,6 +739,8 @@ export default function AdminLeaves() {
                         onSelect={setEndDate}
                         locale={ptBR}
                         className="pointer-events-auto"
+                        modifiers={{ workDay: (date: Date) => guardWorkDays.has(format(date, 'yyyy-MM-dd')) }}
+                        modifiersStyles={{ workDay: { backgroundColor: guardTeamColor, color: 'white', borderRadius: '50%' } }}
                       />
                     </PopoverContent>
                   </Popover>
