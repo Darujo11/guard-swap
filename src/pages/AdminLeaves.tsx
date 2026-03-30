@@ -82,7 +82,7 @@ export default function AdminLeaves() {
 
   // TRE Quota state
   const [treGuard, setTreGuard] = useState<string>('');
-  const [treDays, setTreDays] = useState<number>(0);
+  const [treDays, setTreDays] = useState<string>('');
   const [treQuotas, setTreQuotas] = useState<Array<{ guard_id: string; total_days: number }>>([]);
   const [treSaving, setTreSaving] = useState(false);
 
@@ -183,19 +183,19 @@ export default function AdminLeaves() {
       if (existing) {
         const { error } = await supabase
           .from('guard_tre_quotas')
-          .update({ total_days: treDays, updated_at: new Date().toISOString() })
+          .update({ total_days: parseInt(treDays) || 0, updated_at: new Date().toISOString() })
           .eq('guard_id', treGuard)
           .eq('admin_id', profile!.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('guard_tre_quotas')
-          .insert({ guard_id: treGuard, admin_id: profile!.id, total_days: treDays });
+          .insert({ guard_id: treGuard, admin_id: profile!.id, total_days: parseInt(treDays) || 0 });
         if (error) throw error;
       }
       toast({ title: 'Sucesso', description: 'Cota TRE salva com sucesso!' });
       setTreGuard('');
-      setTreDays(0);
+      setTreDays('');
       fetchTreQuotas();
     } catch (error) {
       console.error('Error saving TRE quota:', error);
@@ -724,7 +724,7 @@ export default function AdminLeaves() {
                 <Select value={treGuard} onValueChange={(v) => {
                   setTreGuard(v);
                   const existing = treQuotas.find(q => q.guard_id === v);
-                  setTreDays(existing?.total_days || 0);
+                  setTreDays(existing ? String(existing.total_days) : '');
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder={`Selecione o ${settings.guard_label.toLowerCase()}`} />
@@ -744,7 +744,7 @@ export default function AdminLeaves() {
                   type="number"
                   min={0}
                   value={treDays}
-                  onChange={(e) => setTreDays(parseInt(e.target.value) || 0)}
+                  onChange={(e) => setTreDays(e.target.value)}
                 />
               </div>
               <Button onClick={handleSaveTreQuota} disabled={treSaving}>
