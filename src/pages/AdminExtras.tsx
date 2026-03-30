@@ -1953,9 +1953,6 @@ export default function AdminExtras() {
           )}
         </CardContent>
       </Card>
-        </TabsContent>
-
-        <TabsContent value="ranking" className="space-y-6">
           {/* Ranking Filters */}
           <Card>
             <CardHeader>
