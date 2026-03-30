@@ -22,7 +22,7 @@ const getLeaveLabel = (leaveType: string, customType?: string | null): string =>
   }
 };
 
-
+interface GuardPersonalCalendarProps {
   guardId: string;
   teamId: string | null;
   teamColor: string;
