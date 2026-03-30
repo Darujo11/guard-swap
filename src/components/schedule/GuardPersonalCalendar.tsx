@@ -277,10 +277,10 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                     ${today ? 'ring-2 ring-primary ring-offset-1' : ''}
                     ${selectionMode && selectedDate === dateStr ? 'ring-2 ring-yellow-400 ring-offset-2' : ''}
                     ${selectionMode && inMonth ? 'cursor-pointer hover:opacity-80' : ''}
-                    ${isTreLeave || workDay || extraDay ? 'text-white font-semibold' : 'text-foreground'}
+                    ${leaveLabel || workDay || extraDay ? 'text-white font-semibold' : 'text-foreground'}
                   `}
                   style={
-                    isTreLeave
+                    leaveLabel
                       ? { backgroundColor: '#DC2626' }
                       : workDay && extraDay
                         ? { background: `linear-gradient(135deg, ${workDay.teamColor} 70%, #B8860B 30%)` }
@@ -291,8 +291,8 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                             : undefined
                   }
                   title={
-                    isTreLeave
-                      ? 'Folga TRE'
+                    leaveLabel
+                      ? leaveLabel
                       : workDay && extraDay
                         ? `${workDay.teamName} + Extra ${extraDay.percentage_type}%`
                         : workDay
@@ -303,8 +303,8 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                   }
                 >
                   <span className="text-sm">{format(day, 'd')}</span>
-                  {isTreLeave ? (
-                    <span className="text-[8px] leading-tight text-white/90 font-bold">Folga TRE</span>
+                  {leaveLabel ? (
+                    <span className="text-[8px] leading-tight text-white/90 font-bold">{leaveLabel}</span>
                   ) : extraDay && !workDay ? (
                     <span className="text-[8px] leading-tight text-white/90 font-bold">Extra</span>
                   ) : workDay && workDay.isSwapped ? (
@@ -323,10 +323,10 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                       {workDay.teamName}
                     </span>
                   ) : null}
-                  {workDay?.isSwapped && !isTreLeave && (
+                  {workDay?.isSwapped && !leaveLabel && (
                     <ArrowRightLeft className="absolute top-0.5 right-0.5 h-2.5 w-2.5 text-white/80" />
                   )}
-                  {extraDay && workDay && !isTreLeave && (
+                  {extraDay && workDay && !leaveLabel && (
                     <span className="absolute bottom-0.5 right-0.5 text-[7px] text-yellow-200 font-bold">E</span>
                   )}
                 </div>
