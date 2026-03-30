@@ -1,20 +1,42 @@
 
 
-## Plano: Bloquear datas fora do mês no calendário de troca
+## Plano: Botão "Bloquear Trocas" no dropdown Minha Conta
 
 ### O que será feito
 
-Quando `swap_same_month_only` estiver ativo, o calendário "Data do Plantão que Você Quer Assumir" só permitirá selecionar datas do mesmo mês/ano da data já escolhida em "Data do Seu Plantão". Datas de outros meses ficarão desabilitadas (cinza, não clicáveis).
+Adicionar um toggle "Bloquear Trocas" no dropdown "Minha Conta" do admin, abaixo de "Troca só dentro do mês". Quando ativo, os seguranças não conseguirão solicitar trocas — o formulário exibirá uma mensagem de bloqueio.
 
-### Alteração
+### Alterações
 
-#### `src/components/guards/GuardSwapForm.tsx`
+#### 1. Migração SQL — nova coluna
 
-- Linha 545-549: Na função `disabled` do calendário de target, adicionar verificação: se `settings.swap_same_month_only` e `requesterShiftDate` existir, desabilitar qualquer data cujo mês/ano seja diferente do `requesterShiftDate`
-- Também limpar `targetShiftDate` quando `requesterShiftDate` mudar (linha 482-484), caso a data do target já selecionada fique fora do mês
+```sql
+ALTER TABLE organization_settings 
+ADD COLUMN swaps_blocked boolean NOT NULL DEFAULT false;
+```
+
+#### 2. `src/hooks/useOrganizationSettings.tsx`
+
+- Adicionar `swaps_blocked: boolean` à interface e `swaps_blocked: false` ao `defaultSettings`
+
+#### 3. `src/components/layout/AppLayout.tsx`
+
+- Importar `ShieldOff` (ou `Ban`) do lucide-react
+- Após o item "Troca só dentro do mês" (linha 208), adicionar novo `DropdownMenuItem` visível apenas para admin/super_admin
+- Texto: "Bloquear Trocas" com badge "Ativo" quando `settings.swaps_blocked === true`
+- Ao clicar: `updateSettings({ swaps_blocked: !settings.swaps_blocked })`
+
+#### 4. `src/components/guards/GuardSwapForm.tsx`
+
+- Já importa `useOrganizationSettings`
+- No início do componente, verificar `settings.swaps_blocked`
+- Se bloqueado, renderizar um Card com mensagem "Trocas bloqueadas no sistema pelo coordenador" em vez do formulário
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/guards/GuardSwapForm.tsx` | Filtro de mês no `disabled` do calendário target + reset ao mudar data do requester |
+| Migração SQL | Nova coluna `swaps_blocked` em `organization_settings` |
+| `src/hooks/useOrganizationSettings.tsx` | Campo na interface e defaults |
+| `src/components/layout/AppLayout.tsx` | Toggle no dropdown |
+| `src/components/guards/GuardSwapForm.tsx` | Bloquear formulário quando ativo |
 
