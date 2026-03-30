@@ -2166,8 +2166,6 @@ export default function AdminExtras() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
 
       {/* Edit Dialog */}
       <Dialog open={!!editingExtra} onOpenChange={(open) => !open && closeEditDialog()}>
