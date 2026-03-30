@@ -438,7 +438,7 @@ export default function AdminLeaves() {
     const protocol = (leave as any).protocol || `FLG-${leave.id.slice(0, 8).toUpperCase()}`;
     addField("Protocolo", protocol);
     addField(settings.guard_label, leave.guard?.name || "Desconhecido");
-    addField("Tipo de Folga", getLeaveTypeLabel(leave.leave_type, leave.custom_type));
+    addField("Tipo de Afastamento", getLeaveTypeLabel(leave.leave_type, leave.custom_type));
     addField("Data Inicial", format(new Date(`${leave.start_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR }));
     addField("Data Final", format(new Date(`${leave.end_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR }));
     addField("Total de Dias", calculateDays(leave.start_date, leave.end_date).toString());
