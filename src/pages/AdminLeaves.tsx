@@ -139,7 +139,7 @@ export default function AdminLeaves() {
       const guardIds = [...new Set((data || []).map(l => l.guard_id))];
       const { data: guardsData } = await supabase
         .from('profiles')
-        .select('id, name, email')
+        .select('id, name, email, team_id')
         .in('id', guardIds);
 
       const guardsMap = new Map((guardsData || []).map(g => [g.id, g]));
