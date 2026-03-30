@@ -345,7 +345,7 @@ export default function AdminLeaves() {
       console.error('Error deleting leave:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao excluir folga.',
+        description: 'Falha ao excluir afastamento.',
         variant: 'destructive',
       });
     }
