@@ -744,7 +744,7 @@ export default function AdminLeaves() {
                   type="number"
                   min={0}
                   value={treDays}
-                  onChange={(e) => setTreDays(parseInt(e.target.value) || 0)}
+                  onChange={(e) => setTreDays(e.target.value)}
                 />
               </div>
               <Button onClick={handleSaveTreQuota} disabled={treSaving}>
