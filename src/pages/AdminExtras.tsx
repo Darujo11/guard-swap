@@ -781,6 +781,7 @@ export default function AdminExtras() {
         month_reference: format(startOfMonth(editDate), "yyyy-MM-dd"),
         justification: editJustification,
         quantity: editQuantity,
+        minutes: editMinutes,
         percentage_type: editPercentageType,
       })
       .eq("id", editingExtra.id);
