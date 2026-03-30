@@ -265,7 +265,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               const inMonth = isSameMonth(day, currentMonth);
               const today = isToday(day);
               const extraDay = extrasMap.get(dateStr);
-              const isTreLeave = treApprovedDates.has(dateStr);
+              const leaveLabel = leaveDates.get(dateStr);
 
                return (
                 <div
