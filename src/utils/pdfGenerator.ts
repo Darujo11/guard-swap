@@ -108,11 +108,12 @@ export const generateSchedulePDF = (
         const extra = extrasMap?.get(dateStr);
 
         const isTre = treDates?.has(dateStr) ?? false;
-        const teamCol = isTre ? 'FOLGA TRE' : workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
+        const leaveLabel = treDates?.get(dateStr);
+        const teamCol = leaveLabel ? leaveLabel.toUpperCase() : workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
         
         const observations: string[] = [];
-        if (isTre) {
-            observations.push('Folga TRE');
+        if (leaveLabel) {
+            observations.push(leaveLabel);
         }
         if (workDay?.isSwapped) {
             const swapDatesPart = workDay.originalDate
