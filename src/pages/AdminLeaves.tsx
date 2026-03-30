@@ -977,6 +977,20 @@ export default function AdminLeaves() {
                         <TableCell className="max-w-[200px] truncate">
                           {leave.notes || '-'}
                         </TableCell>
+                        <TableCell className="text-center">
+                          {leave.document_url ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => window.open(leave.document_url!, '_blank')}
+                              title="Baixar documento"
+                            >
+                              <Paperclip className="h-4 w-4 text-primary" />
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Button
