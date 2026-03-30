@@ -411,7 +411,13 @@ export default function AdminLeaves() {
     // Title
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("Comprovante de Folga", pageWidth / 2, 25, { align: "center" });
+    const getDocTitle = (type: string) => {
+      if (type.includes('LICENCA')) return "Comprovante de Licença";
+      if (type === 'FERIAS') return "Comprovante de Férias";
+      if (type === 'ATESTADO') return "Comprovante de Atestado";
+      return "Comprovante de Afastamento";
+    };
+    doc.text(getDocTitle(leave.leave_type), pageWidth / 2, 25, { align: "center" });
 
     // Separator line
     doc.setLineWidth(0.5);
