@@ -88,8 +88,7 @@ const AdminDashboard = () => {
             team:teams(id, name)
           )
         `)
-        .eq('status', 'ACCEPTED')
-        .eq('target_confirmation', true)
+        .in('status', ['PENDING', 'ACCEPTED'])
         .eq('admin_id', profile.id)
         .order('created_at', { ascending: false })
         .limit(10);
