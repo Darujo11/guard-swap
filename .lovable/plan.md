@@ -1,30 +1,45 @@
 
 
-## Plano: Ranking de Extras abaixo de "Cadastrar Plantão Extra" com todos os meses acumulados
-
-### Situação atual
-
-A página AdminExtras usa Tabs com duas abas: "Cadastro de Extras" e "Ranking de Extras". O ranking fica escondido na segunda aba. O estado `rankingAllMonths` inicia como `false` (mês específico).
+## Plano: Botão "Troca só dentro do mês" no dropdown Minha Conta
 
 ### O que será feito
 
-1. Remover o sistema de Tabs — mostrar tudo em uma única página
-2. Mover o card "Ranking de Extras com Filtros" (linhas 1610-1965) para logo após o card "Cadastrar Plantão Extra" (após ~linha 1608, antes dos "Registros Detalhados")
-3. Inicializar `rankingAllMonths` como `true` para já mostrar todos os meses acumulados por padrão
-4. Mover o conteúdo da tab "ranking" (linhas 1968-2265) para dentro do fluxo principal, removendo o wrapper `TabsContent`
+Adicionar um toggle no dropdown "Minha Conta" (abaixo de "Perfil") que permite ao admin ativar/desativar a restrição de trocas apenas dentro do mesmo mês. Quando ativo, os seguranças só poderão solicitar trocas em que ambas as datas estejam no mesmo mês.
 
 ### Alterações
 
-#### `src/pages/AdminExtras.tsx`
+#### 1. Migração SQL — nova coluna na tabela `organization_settings`
 
-| Mudança | Detalhe |
-|---------|---------|
-| Remover `Tabs`/`TabsList`/`TabsTrigger`/`TabsContent` wrappers | Exibir tudo sequencialmente sem abas |
-| Linha 130: `rankingAllMonths` | Mudar default de `false` para `true` |
-| Reordenar seções | 1) Preferência no Extra → 2) Cadastrar Plantão Extra → 3) Ranking de Extras (filtros + tabela + gráfico) → 4) Registros Detalhados + PDF |
+```sql
+ALTER TABLE organization_settings 
+ADD COLUMN swap_same_month_only boolean NOT NULL DEFAULT false;
+```
+
+#### 2. `src/hooks/useOrganizationSettings.tsx`
+
+- Adicionar `swap_same_month_only: boolean` à interface `OrganizationSettings`
+- Adicionar default `swap_same_month_only: false` ao `defaultSettings`
+
+#### 3. `src/components/layout/AppLayout.tsx`
+
+- Importar `useOrganizationSettings` (já disponível via import existente)
+- Após o item "Perfil" no dropdown, adicionar um `DropdownMenuItem` com ícone `Calendar` e texto "Troca só dentro do mês"
+- Mostrar um indicador visual (badge ou check) quando ativo
+- Ao clicar, chamar `updateSettings({ swap_same_month_only: !settings.swap_same_month_only })`
+- Mostrar apenas para role `admin` ou `super_admin`
+
+#### 4. `src/components/guards/GuardSwapForm.tsx`
+
+- Importar `useOrganizationSettings`
+- Na função `validateSwapDates`, quando `settings.swap_same_month_only === true`, verificar se `requesterDate` e `targetDate` têm o mesmo mês/ano
+- Se não tiverem, exibir toast "As trocas só são permitidas dentro do mesmo mês" e retornar `false`
 
 ### Escopo
+
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/AdminExtras.tsx` | Remover Tabs, reordenar seções, `rankingAllMonths` default `true` |
+| Migração SQL | Nova coluna `swap_same_month_only` em `organization_settings` |
+| `src/hooks/useOrganizationSettings.tsx` | Adicionar campo à interface e defaults |
+| `src/components/layout/AppLayout.tsx` | Toggle no dropdown "Minha Conta" |
+| `src/components/guards/GuardSwapForm.tsx` | Validação de mesmo mês na criação de troca |
 
