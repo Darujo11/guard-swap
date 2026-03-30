@@ -239,15 +239,17 @@ export const generateAllGuardsSchedulePDF = (
                 2: { cellWidth: 'auto', fontSize: 8 },
             },
             didParseCell: (data: any) => {
-                if (data.section === 'body' && data.row.raw) {
-                    if (data.row.raw[1] === 'FOLGA TRE') {
-                        data.cell.styles.fillColor = [220, 38, 38];
-                        data.cell.styles.textColor = [255, 255, 255];
-                    } else if (data.row.raw[1] === 'EXTRA') {
-                        data.cell.styles.fillColor = [184, 134, 11];
-                        data.cell.styles.textColor = [255, 255, 255];
-                    }
+            if (data.section === 'body' && data.row.raw) {
+                const teamValue = data.row.raw[1] as string;
+                const isLeave = guardData.treDates && Array.from(guardData.treDates.values()).some(label => teamValue === label.toUpperCase());
+                if (isLeave) {
+                    data.cell.styles.fillColor = [220, 38, 38];
+                    data.cell.styles.textColor = [255, 255, 255];
+                } else if (teamValue === 'EXTRA') {
+                    data.cell.styles.fillColor = [184, 134, 11];
+                    data.cell.styles.textColor = [255, 255, 255];
                 }
+            }
             },
         });
     });
