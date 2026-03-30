@@ -338,7 +338,7 @@ export default function AdminExtras() {
       };
     });
     
-    return summary.filter(s => s.totalHours > 0).sort((a, b) => b.totalHours - a.totalHours);
+    return summary.filter(s => s.totalInMinutes > 0).sort((a, b) => b.totalInMinutes - a.totalInMinutes);
   }, [guards, extras, rankingDate, rankingAllMonths, rankingPercentageFilter]);
 
   // Keep combined ranking for backward compatibility (PDF export, etc.)
