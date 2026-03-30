@@ -2258,14 +2258,30 @@ export default function AdminExtras() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-quantity">Horas de Extras Concedido *</Label>
-                <Input
-                  id="edit-quantity"
-                  type="number"
-                  min="1"
-                  value={editQuantity}
-                  onChange={(e) => setEditQuantity(parseInt(e.target.value) || 1)}
-                />
+                <Label>Horas e Minutos de Extras Concedido *</Label>
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1">
+                    <Input
+                      id="edit-quantity"
+                      type="number"
+                      min="0"
+                      value={editQuantity}
+                      onChange={(e) => setEditQuantity(parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <span className="text-sm text-muted-foreground">h</span>
+                  <div className="w-24">
+                    <Input
+                      id="edit-minutes"
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={editMinutes}
+                      onChange={(e) => setEditMinutes(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
+                    />
+                  </div>
+                  <span className="text-sm text-muted-foreground">min</span>
+                </div>
               </div>
             </div>
 
