@@ -243,7 +243,7 @@ const GuardDashboard = () => {
       fetchTreQuota();
     } catch (error) {
       console.error('[GuardDashboard][SubmitTreLeave]', error);
-      toast({ title: 'Erro', description: 'Não foi possível registrar a folga.', variant: 'destructive' });
+      toast({ title: 'Erro', description: 'Não foi possível registrar o afastamento.', variant: 'destructive' });
     } finally {
       setSubmittingTre(false);
     }
