@@ -745,7 +745,7 @@ export default function AdminLeaves() {
                 </Select>
               </div>
               <div className="space-y-2 w-32">
-                <Label>Total de Folgas</Label>
+                <Label>Total de Afastamentos</Label>
                 <Input
                   type="number"
                   min={0}
