@@ -213,10 +213,11 @@ const AdminGuards = () => {
       const endStr = `${endOfMonth.getFullYear()}-${String(endOfMonth.getMonth() + 1).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`;
       const monthLabel = selectedDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
-      // Fetch all data in parallel
+      // Fetch all data in parallel — query schedules by team_id (not admin_id) for reliability
+      const teamIds = teams.map(t => t.id);
       const [schedulesRes, swapsRes, extrasRes, leavesRes] = await Promise.all([
-        supabase.from('team_schedules').select('*').eq('admin_id', profile.id).gte('shift_date', startOfMonth).lte('shift_date', endStr),
-        supabase.from('swap_requests').select('*, requester:profiles!swap_requests_requester_id_fkey(name, team_id), target:profiles!swap_requests_target_id_fkey(name, team_id)').eq('admin_id', profile.id).eq('status', 'APPROVED'),
+        supabase.from('team_schedules').select('*').in('team_id', teamIds).gte('shift_date', startOfMonth).lte('shift_date', endStr),
+        supabase.from('swap_requests').select('*, requester:profiles!swap_requests_requester_id_fkey(name, team_id), target:profiles!swap_requests_target_id_fkey(name, team_id)').eq('admin_id', profile.id).eq('status', 'APPROVED').or(`requester_shift_date.gte.${startOfMonth},target_shift_date.gte.${startOfMonth}`).or(`requester_shift_date.lte.${endStr},target_shift_date.lte.${endStr}`),
         supabase.from('extras').select('*').eq('admin_id', profile.id).gte('extra_date', startOfMonth).lte('extra_date', endStr),
         supabase.from('leaves').select('*').eq('admin_id', profile.id).eq('leave_type', 'TRE').eq('status', 'APPROVED'),
       ]);
@@ -270,10 +271,12 @@ const AdminGuards = () => {
         const guardTreLeaves = treLeaves.filter(l => l.guard_id === guard.id);
         const treDates = new Set<string>();
         guardTreLeaves.forEach(l => {
-          const start = new Date(l.start_date);
-          const end = new Date(l.end_date);
+          const [sy, sm, sd] = l.start_date.split('-').map(Number);
+          const [ey, em, ed] = l.end_date.split('-').map(Number);
+          const start = new Date(sy, sm - 1, sd);
+          const end = new Date(ey, em - 1, ed);
           for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            const dateStr = d.toISOString().split('T')[0];
+            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             if (dateStr >= startOfMonth && dateStr <= endStr) {
               treDates.add(dateStr);
             }
