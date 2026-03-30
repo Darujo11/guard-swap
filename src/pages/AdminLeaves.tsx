@@ -579,7 +579,7 @@ export default function AdminLeaves() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarOff className="h-5 w-5" />
-              Registrar Nova Folga
+              Registro de Afastamento
             </CardTitle>
             <CardDescription>
               Registre afastamentos como atestados, faltas, licenças, etc.
