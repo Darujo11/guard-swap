@@ -719,7 +719,7 @@ export default function AdminLeaves() {
               Afastamentos TRE
             </CardTitle>
             <CardDescription>
-              Defina a quantidade de folgas TRE por {settings.guard_label.toLowerCase()} e acompanhe o saldo
+              Defina a quantidade de afastamentos TRE por {settings.guard_label.toLowerCase()} e acompanhe o saldo
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
