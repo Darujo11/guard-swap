@@ -237,7 +237,7 @@ const GuardDashboard = () => {
         },
       }).catch((err) => console.warn('[GuardDashboard] Falha ao notificar admin:', err));
 
-      toast({ title: 'Folga TRE solicitada', description: `Solicitação enviada para aprovação. Protocolo: ${protocol}` });
+      toast({ title: 'Afastamento TRE solicitado', description: `Solicitação enviada para aprovação. Protocolo: ${protocol}` });
       setIsTreDialogOpen(false);
       setTreSelectedDate(null);
       fetchTreQuota();
