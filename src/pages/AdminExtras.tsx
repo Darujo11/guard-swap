@@ -158,6 +158,7 @@ export default function AdminExtras() {
   const [editDate, setEditDate] = useState<Date>();
   const [editJustification, setEditJustification] = useState("");
   const [editQuantity, setEditQuantity] = useState<number>(1);
+  const [editMinutes, setEditMinutes] = useState<number>(0);
   const [editPercentageType, setEditPercentageType] = useState<number>(100);
   
   // Delete confirmation state
