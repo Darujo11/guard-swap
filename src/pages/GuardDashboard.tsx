@@ -713,13 +713,13 @@ const GuardDashboard = () => {
         />
       )}
 
-      {/* Folgas TRE Solicitadas */}
+      {/* Afastamentos TRE Solicitados */}
       {treLeaves.length > 0 && (
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Scale className="h-5 w-5" />
-              Folgas TRE Solicitadas
+              Afastamentos TRE Solicitados
             </CardTitle>
             <CardDescription>
               Saldo: {treQuota - treUsed} de {treQuota} dia(s) restante(s)
