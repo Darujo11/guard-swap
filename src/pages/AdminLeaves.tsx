@@ -183,7 +183,7 @@ export default function AdminLeaves() {
       if (existing) {
         const { error } = await supabase
           .from('guard_tre_quotas')
-          .update({ total_days: treDays, updated_at: new Date().toISOString() })
+          .update({ total_days: parseInt(treDays) || 0, updated_at: new Date().toISOString() })
           .eq('guard_id', treGuard)
           .eq('admin_id', profile!.id);
         if (error) throw error;
