@@ -724,7 +724,7 @@ export default function AdminLeaves() {
                 <Select value={treGuard} onValueChange={(v) => {
                   setTreGuard(v);
                   const existing = treQuotas.find(q => q.guard_id === v);
-                  setTreDays(existing?.total_days || 0);
+                  setTreDays(existing ? String(existing.total_days) : '');
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder={`Selecione o ${settings.guard_label.toLowerCase()}`} />
