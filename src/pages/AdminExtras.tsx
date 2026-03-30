@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { toast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -127,7 +127,7 @@ export default function AdminExtras() {
   
   // Ranking filter state
   const [rankingDate, setRankingDate] = useState<Date>(new Date());
-  const [rankingAllMonths, setRankingAllMonths] = useState<boolean>(false);
+  const [rankingAllMonths, setRankingAllMonths] = useState<boolean>(true);
   const [rankingPercentageFilter, setRankingPercentageFilter] = useState<'all' | '50' | '100'>('all');
   
   // Details filter state (separate from filterMonth)
@@ -1290,16 +1290,6 @@ export default function AdminExtras() {
     <AppLayout title="Plantões Extras" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
       <div className="space-y-6">
 
-      <Tabs defaultValue="register" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="register">Cadastro de Extras</TabsTrigger>
-          <TabsTrigger value="ranking">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Ranking de Extras
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="register" className="space-y-6">
 
       {/* Preferência no Extra */}
       <Card>
@@ -1963,9 +1953,6 @@ export default function AdminExtras() {
           )}
         </CardContent>
       </Card>
-        </TabsContent>
-
-        <TabsContent value="ranking" className="space-y-6">
           {/* Ranking Filters */}
           <Card>
             <CardHeader>
@@ -2179,8 +2166,6 @@ export default function AdminExtras() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
 
       {/* Edit Dialog */}
       <Dialog open={!!editingExtra} onOpenChange={(open) => !open && closeEditDialog()}>
