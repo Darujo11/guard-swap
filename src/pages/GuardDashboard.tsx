@@ -777,7 +777,7 @@ const GuardDashboard = () => {
 
                         field("Protocolo", protocol);
                         field("Segurança", currentUser?.name || 'N/A');
-                        field("Tipo", "Folga TRE");
+                        field("Tipo", "Afastamento TRE");
                         field("Data", format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy'));
                         field("Status", leave.status === 'APPROVED' ? 'Aprovada' : leave.status === 'REJECTED' ? 'Rejeitada' : 'Pendente');
                         field("Registro", leave.created_at ? format(new Date(leave.created_at), 'dd/MM/yyyy HH:mm') : '-');
