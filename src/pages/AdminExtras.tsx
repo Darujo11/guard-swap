@@ -1948,7 +1948,7 @@ export default function AdminExtras() {
                   {detailsExtras.map((extra) => (
                     <TableRow key={extra.id}>
                       <TableCell className="font-medium">{extra.guard?.name || "Desconhecido"}</TableCell>
-                      <TableCell className="text-center">{extra.quantity || 1}</TableCell>
+                      <TableCell className="text-center">{formatHoursMinutes(extra.quantity || 1, extra.minutes || 0)}</TableCell>
                       <TableCell className="text-center">
                         <span className={cn(
                           "px-2 py-1 rounded-full text-xs font-medium",
