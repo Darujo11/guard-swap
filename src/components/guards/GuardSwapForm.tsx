@@ -42,6 +42,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
   const [requesterCalendarOpen, setRequesterCalendarOpen] = useState(false);
   const [targetCalendarOpen, setTargetCalendarOpen] = useState(false);
   const { toast } = useToast();
+  const { settings } = useOrganizationSettings();
 
   useEffect(() => {
     fetchAvailableGuards();
