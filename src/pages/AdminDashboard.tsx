@@ -179,8 +179,8 @@ const AdminDashboard = () => {
       }).catch((err) => console.warn('[AdminDashboard] Falha ao notificar segurança:', err));
 
       toast({
-        title: approved ? 'Folga aprovada' : 'Folga rejeitada',
-        description: `A folga TRE de ${leave.guard?.name} foi ${approved ? 'aprovada' : 'rejeitada'}.`,
+        title: approved ? 'Afastamento aprovado' : 'Afastamento rejeitado',
+        description: `O afastamento TRE de ${leave.guard?.name} foi ${approved ? 'aprovado' : 'rejeitado'}.`,
       });
       fetchPendingTreLeaves();
     } catch (error) {
