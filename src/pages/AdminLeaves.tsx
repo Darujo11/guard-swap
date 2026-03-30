@@ -781,6 +781,21 @@ export default function AdminLeaves() {
                     rows={1}
                   />
                 </div>
+                {/* Document Upload */}
+                <div className="space-y-2 lg:col-span-1">
+                  <Label>Documento Comprobatório (opcional)</Label>
+                  <Input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
+                  />
+                  {documentFile && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Paperclip className="h-3 w-3" />
+                      {documentFile.name}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="flex justify-end">
