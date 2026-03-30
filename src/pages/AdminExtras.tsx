@@ -127,7 +127,7 @@ export default function AdminExtras() {
   
   // Ranking filter state
   const [rankingDate, setRankingDate] = useState<Date>(new Date());
-  const [rankingAllMonths, setRankingAllMonths] = useState<boolean>(false);
+  const [rankingAllMonths, setRankingAllMonths] = useState<boolean>(true);
   const [rankingPercentageFilter, setRankingPercentageFilter] = useState<'all' | '50' | '100'>('all');
   
   // Details filter state (separate from filterMonth)
