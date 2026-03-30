@@ -10,7 +10,7 @@ import { TeamBadge } from '@/components/ui/team-badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile, Team } from '@/lib/types';
-import { CalendarDays, ArrowRightLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { CalendarDays, ArrowRightLeft, Calendar as CalendarIcon, ShieldOff } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
