@@ -189,12 +189,23 @@ export function AppLayout({
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild>
                   <Link to="/perfil" className="cursor-pointer">
                     <UserCircle className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                   </Link>
                 </DropdownMenuItem>
+                {(role === 'admin' || role === 'super_admin') && (
+                  <DropdownMenuItem onSelect={() => {
+                    updateSettings({ swap_same_month_only: !settings.swap_same_month_only });
+                  }} className="cursor-pointer">
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    <span>Troca só dentro do mês</span>
+                    {settings.swap_same_month_only && (
+                      <Badge variant="default" className="ml-auto text-xs px-1.5 py-0">Ativo</Badge>
+                    )}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onSelect={async () => {
                   if ('serviceWorker' in navigator) {
                     const registrations = await navigator.serviceWorker.getRegistrations();
