@@ -814,7 +814,7 @@ export default function AdminLeaves() {
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <CardTitle>Folgas Registradas</CardTitle>
+                <CardTitle>Afastamentos Registrados</CardTitle>
                 <CardDescription>
                   Lista de todos os afastamentos registrados
                 </CardDescription>
