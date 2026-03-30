@@ -2172,10 +2172,9 @@ export default function AdminExtras() {
                       <TableBody>
                         {(() => {
                           // Obter valores únicos de total, ordenados decrescente
-                          const uniqueTotals = [...new Set(rankingSummary100.data.map(i => i.totalHours))].sort((a, b) => b - a);
+                          const uniqueTotals = [...new Set(rankingSummary100.data.map(i => i.totalInMinutes))].sort((a, b) => b - a);
                           return rankingSummary100.data.map((item) => {
-                          // Calcular posição baseada em valores únicos
-                          const position = uniqueTotals.indexOf(item.totalHours) + 1;
+                          const position = uniqueTotals.indexOf(item.totalInMinutes) + 1;
                           return (
                             <TableRow key={item.guardId}>
                               <TableCell className="font-bold text-lg">
