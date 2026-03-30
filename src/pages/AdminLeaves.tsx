@@ -151,7 +151,7 @@ export default function AdminLeaves() {
       console.error('Error fetching leaves:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao carregar folgas.',
+        description: 'Falha ao carregar afastamentos.',
         variant: 'destructive',
       });
     } finally {
