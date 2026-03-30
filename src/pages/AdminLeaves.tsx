@@ -95,6 +95,10 @@ export default function AdminLeaves() {
   const [reportGuardFilter, setReportGuardFilter] = useState<string>('all');
   const [reportSortBy, setReportSortBy] = useState<string>('name');
 
+  // Work days for selected guard (highlighted in calendars)
+  const [guardWorkDays, setGuardWorkDays] = useState<Set<string>>(new Set());
+  const [guardTeamColor, setGuardTeamColor] = useState<string>('#3b82f6');
+
   useEffect(() => {
     if (profile?.id) {
       fetchGuards();
@@ -102,6 +106,53 @@ export default function AdminLeaves() {
       fetchTreQuotas();
     }
   }, [profile?.id]);
+
+  // Fetch work days when selected guard changes
+  useEffect(() => {
+    if (!selectedGuard) {
+      setGuardWorkDays(new Set());
+      return;
+    }
+    const guard = guards.find(g => g.id === selectedGuard);
+    if (!guard?.team_id) {
+      setGuardWorkDays(new Set());
+      return;
+    }
+    const fetchWorkDays = async () => {
+      try {
+        // Get team color
+        const { data: teamData } = await supabase
+          .from('teams')
+          .select('color')
+          .eq('id', guard.team_id!)
+          .single();
+        if (teamData?.color) setGuardTeamColor(teamData.color);
+
+        // Get team schedules
+        const { data: schedules } = await supabase
+          .from('team_schedules')
+          .select('shift_date, team_id');
+
+        // Get approved swaps
+        const { data: swaps } = await supabase
+          .from('swap_requests')
+          .select('requester_id, target_id, requester_shift_date, target_shift_date')
+          .eq('status', 'APPROVED')
+          .or(`requester_id.eq.${selectedGuard},target_id.eq.${selectedGuard}`);
+
+        const effectiveDates = getEffectiveDatesSet(
+          schedules || [],
+          swaps || [],
+          selectedGuard,
+          guard.team_id!
+        );
+        setGuardWorkDays(effectiveDates);
+      } catch (err) {
+        console.error('Error fetching work days:', err);
+      }
+    };
+    fetchWorkDays();
+  }, [selectedGuard, guards]);
 
   const fetchGuards = async () => {
     try {
