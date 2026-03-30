@@ -146,10 +146,12 @@ export const generateSchedulePDF = (
         },
         didParseCell: (data: any) => {
             if (data.section === 'body' && data.row.raw) {
-                if (data.row.raw[1] === 'FOLGA TRE') {
+                const teamValue = data.row.raw[1] as string;
+                const isLeave = treDates && Array.from(treDates.values()).some(label => teamValue === label.toUpperCase());
+                if (isLeave) {
                     data.cell.styles.fillColor = [220, 38, 38];
                     data.cell.styles.textColor = [255, 255, 255];
-                } else if (data.row.raw[1] === 'EXTRA') {
+                } else if (teamValue === 'EXTRA') {
                     data.cell.styles.fillColor = [184, 134, 11];
                     data.cell.styles.textColor = [255, 255, 255];
                 }
