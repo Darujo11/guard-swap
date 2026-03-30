@@ -209,8 +209,8 @@ export const generateAllGuardsSchedulePDF = (
             const workDay = guardData.workingDays.get(dateStr);
             const extra = guardData.extrasMap.get(dateStr);
             const isTre = guardData.treDates.has(dateStr);
-
-            const teamCol = isTre ? 'FOLGA TRE' : workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
+            const leaveLabel = guardData.treDates.get(dateStr);
+            const teamCol = leaveLabel ? leaveLabel.toUpperCase() : workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
 
             const observations: string[] = [];
             if (isTre) observations.push('Folga TRE');
