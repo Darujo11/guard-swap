@@ -17,6 +17,7 @@ export interface OrganizationSettings {
   swaps_label: string;
   extra_label: string;
   extras_label: string;
+  swap_same_month_only: boolean;
 }
 
 const defaultSettings: OrganizationSettings = {
