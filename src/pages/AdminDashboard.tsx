@@ -590,7 +590,7 @@ const AdminDashboard = () => {
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        <strong>Data da folga:</strong> {format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}
+                        <strong>Data do afastamento:</strong> {format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}
                       </div>
                       {leave.protocol && (
                         <div className="text-xs text-muted-foreground">

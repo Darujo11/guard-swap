@@ -64,7 +64,7 @@ export function AppLayout({
     icon: Clock,
     roles: ['admin', 'super_admin']
   }, {
-    name: 'Folgas',
+    name: 'Afastamentos',
     href: '/admin/folgas',
     icon: CalendarOff,
     roles: ['admin', 'super_admin']

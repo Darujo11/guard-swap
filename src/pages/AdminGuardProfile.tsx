@@ -1060,7 +1060,7 @@ const AdminGuardProfile = () => {
               </CardHeader>
               <CardContent>
                 {leaves.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">Nenhuma folga ou atestado registrado.</p>
+                  <p className="text-center text-muted-foreground py-8">Nenhum afastamento registrado.</p>
                 ) : (
                   <Table>
                     <TableHeader>

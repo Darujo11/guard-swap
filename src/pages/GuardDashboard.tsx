@@ -792,7 +792,7 @@ const GuardDashboard = () => {
                         doc.setFontSize(9);
                         doc.text("Gerado pelo Sistema Guard Swap", pageWidth / 2, doc.internal.pageSize.height - 10, { align: "center" });
 
-                        doc.save(`folga_tre_${protocol}.pdf`);
+                        doc.save(`afastamento_tre_${protocol}.pdf`);
                       }}
                       title="Baixar PDF"
                     >

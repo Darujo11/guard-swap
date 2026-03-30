@@ -464,7 +464,7 @@ export default function AdminLeaves() {
     doc.setFontSize(8);
     doc.text("Gerado pelo Sistema Guard Swap", pageWidth / 2, doc.internal.pageSize.height - 10, { align: "center" });
 
-    doc.save(`folga_${protocol}.pdf`);
+    doc.save(`afastamento_${protocol}.pdf`);
   };
 
   const generatePDF = () => {
