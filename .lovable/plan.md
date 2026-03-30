@@ -1,26 +1,30 @@
 
 
-## Plano: Corrigir afastamentos não aparecendo no calendário
+## Plano: Corrigir registros antigos com status PENDING
 
 ### Problema
 
-Quando o admin registra um afastamento, ele é inserido com `status = 'PENDING'` (default do banco). Porém, o calendário pessoal do segurança filtra apenas `status = 'APPROVED'`, por isso o afastamento não aparece.
+O código já insere novos afastamentos com `status: 'APPROVED'` (linha 311), mas os registros que foram criados **antes** dessa correção ainda estão com `status: 'PENDING'` no banco de dados. Por isso o PDF mostra "Pendente".
 
 ### Solução
 
-Duas correções necessárias:
+Executar uma migração SQL para atualizar todos os leaves criados por admins que ainda estão com status `PENDING` para `APPROVED`.
 
-1. **`src/pages/AdminLeaves.tsx`**: Quando o admin registra um afastamento, definir `status: 'APPROVED'` automaticamente (pois foi o próprio admin que registrou, não precisa de aprovação).
+### Alteração
 
-2. **`src/components/schedule/GuardPersonalCalendar.tsx`**: Além de filtrar `APPROVED`, também incluir `PENDING` na query de leaves para garantir que afastamentos pendentes também apareçam no calendário. Alternativamente, manter apenas `APPROVED` se a correção do item 1 resolver.
+#### Migração SQL
 
-### Abordagem escolhida
+```sql
+UPDATE leaves 
+SET status = 'APPROVED', updated_at = now() 
+WHERE status = 'PENDING' 
+  AND admin_id IS NOT NULL;
+```
 
-Aplicar o item 1: ao inserir o leave pelo admin, enviar `status: 'APPROVED'`. Isso é suficiente pois o admin é a autoridade que aprova. Afastamentos criados pelo segurança (TRE) já têm fluxo separado de aprovação.
+Isso atualiza todos os afastamentos registrados por admins (que têm `admin_id` preenchido) de PENDING para APPROVED.
 
 ### Escopo
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/AdminLeaves.tsx` | Adicionar `status: 'APPROVED'` no insert de leaves (~linha 303) |
+| Alteração | Detalhe |
+|-----------|---------|
+| Migração SQL | UPDATE leaves com admin_id de PENDING → APPROVED |
 
