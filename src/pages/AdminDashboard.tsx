@@ -208,7 +208,7 @@ const AdminDashboard = () => {
     }
     doc.text(`Segurança: ${leave.guard?.name || 'N/A'}`, 14, y); y += lineH;
     doc.text(`Equipe: ${leave.guard?.team?.name || 'N/A'}`, 14, y); y += lineH;
-    doc.text(`Data da Folga: ${format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}`, 14, y); y += lineH;
+    doc.text(`Data do Afastamento: ${format(new Date(leave.start_date + 'T00:00:00'), 'dd/MM/yyyy')}`, 14, y); y += lineH;
     doc.text(`Data da Solicitação: ${format(new Date(leave.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, 14, y); y += lineH;
     
     const statusLabel = leave.status === 'APPROVED' ? 'Aprovada' : leave.status === 'REJECTED' ? 'Rejeitada' : 'Pendente';
