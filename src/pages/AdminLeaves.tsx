@@ -15,10 +15,11 @@ import { CalendarOff, CalendarIcon, Plus, Pencil, Trash2, FileText, ChevronLeft,
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { format, differenceInDays, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { format, differenceInDays, startOfMonth, endOfMonth, addMonths, subMonths, parseISO, eachDayOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
+import { getEffectiveDatesSet } from '@/utils/effectiveSchedule';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -26,6 +27,7 @@ interface Guard {
   id: string;
   name: string;
   email: string;
+  team_id: string | null;
 }
 
 interface Leave {
