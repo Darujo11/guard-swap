@@ -921,7 +921,7 @@ export default function AdminLeaves() {
               Relatório de Afastamentos
             </CardTitle>
             <CardDescription>
-              Gere um relatório em PDF com as folgas do período selecionado
+              Gere um relatório em PDF com os afastamentos do período selecionado
             </CardDescription>
           </CardHeader>
           <CardContent>
