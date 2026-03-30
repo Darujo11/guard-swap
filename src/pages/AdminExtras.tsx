@@ -514,6 +514,7 @@ export default function AdminExtras() {
     const withGuards: Extra[] = extrasList.map((e) => ({
       ...(e as any),
       quantity: (e as any).quantity ?? 1,
+      minutes: (e as any).minutes ?? 0,
       percentage_type: (e as any).percentage_type ?? 100,
       guard: e.guard_id ? profilesMap[e.guard_id] : undefined,
     }));
