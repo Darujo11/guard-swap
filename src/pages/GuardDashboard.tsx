@@ -683,7 +683,7 @@ const GuardDashboard = () => {
                 Dia selecionado: <strong>{format(new Date(treSelectedDate + 'T00:00:00'), 'dd/MM/yyyy')}</strong>
               </span>
               <Button onClick={handleSubmitTreLeave} disabled={submittingTre}>
-                {submittingTre ? 'Enviando...' : 'Solicitar Folga'}
+                {submittingTre ? 'Enviando...' : 'Solicitar Afastamento'}
               </Button>
             </div>
           )}
