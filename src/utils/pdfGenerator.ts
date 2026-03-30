@@ -177,7 +177,7 @@ export const generateAllGuardsSchedulePDF = (
         monthLabel: string;
         workingDays: Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string; originalDate?: string }>;
         extrasMap: Map<string, { justification: string; percentage_type: number }>;
-        treDates: Set<string>;
+        treDates: Map<string, string>;
     }>,
     monthLabel: string
 ) => {
