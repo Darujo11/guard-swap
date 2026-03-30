@@ -28,7 +28,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
   const [swapRequests, setSwapRequests] = useState<any[]>([]);
   const [allTeams, setAllTeams] = useState<any[]>([]);
   const [extras, setExtras] = useState<any[]>([]);
-  const [treApprovedDates, setTreApprovedDates] = useState<Set<string>>(new Set());
+  const [leaveDates, setLeaveDates] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
