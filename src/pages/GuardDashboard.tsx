@@ -652,7 +652,7 @@ const GuardDashboard = () => {
             onClick={() => { setTreSelectedDate(null); setIsTreDialogOpen(true); }}
           >
             <Scale className="h-4 w-4" />
-            Solicitar Folga TRE (Saldo: {treQuota - treUsed})
+            Solicitar Afastamento TRE (Saldo: {treQuota - treUsed})
           </Button>
         )}
       </div>
