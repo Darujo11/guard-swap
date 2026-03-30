@@ -270,7 +270,7 @@ export default function AdminLeaves() {
       console.error('Error creating leave:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao registrar folga.',
+        description: 'Falha ao registrar afastamento.',
         variant: 'destructive',
       });
     } finally {
