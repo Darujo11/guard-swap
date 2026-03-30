@@ -1,25 +1,30 @@
 
 
-## Relatório de Alterações — 29 e 30 de Março de 2026
+## Plano: Gerar relatório de funcionalidades do sistema com prints
 
-Este não é um plano de implementação — é uma solicitação de geração de documento. Vou criar um PDF com o resumo de todas as alterações realizadas.
+### O que será feito
 
-### Conteúdo do relatório
+Criar um PDF documentando as funcionalidades do sistema para administradores, incluindo:
 
-Com base no histórico da conversa, as seguintes alterações foram realizadas:
+1. **Download e geração de escalas** — escalas individuais e completas com trocas, afastamentos, extras
+2. **Gestão de Afastamentos** — registro com tipos (atestado, férias, licença, etc.), upload de documentos, visualização no calendário
+3. **Gestão de Folgas TRE** — cadastro de cotas, solicitação pelo segurança, aprovação pelo admin
+4. **Calendário do segurança** — visualização integrada de plantões, trocas e afastamentos
 
-1. **Dropdown mantém aberto ao clicar nos toggles** — `e.preventDefault()` em "Bloquear Trocas" e "Troca só dentro do mês"
-2. **Renomeação "Registrar Nova Folga" → "Registro de Afastamento"**
-3. **Títulos dinâmicos no PDF** — Comprovante de Licença, Férias, Atestado, etc. conforme o tipo
-4. **Renomeação global "Folgas" → "Afastamentos"** — Menu, páginas, toasts, PDFs, labels
-5. **Afastamentos no calendário do segurança** — Todos os tipos aparecem em vermelho com nome do tipo
-6. **Correção de solicitações de troca pendentes** — Aparecem corretamente para o admin
-7. **Destaque de dias de trabalho nos calendários de data** — Ao registrar afastamento, dias de plantão são marcados com cor da equipe
-8. **Correção de status dos afastamentos** — Admin insere com status `APPROVED` automaticamente
-9. **Migração de dados** — Registros antigos com `PENDING` e `admin_id` atualizados para `APPROVED`
-10. **Upload de documento comprobatório** — Novo campo para anexar atestados/comprovantes, com download na lista
-11. **Forçar atualização v4.1.4** — Versão incrementada com `forceUpdate: true`
+### Abordagem
+
+1. Navegar pelas telas do sistema e capturar screenshots das funcionalidades
+2. Gerar um PDF com `reportlab` contendo texto explicativo + prints das telas
+3. Salvar em `/mnt/documents/`
+
+### Telas a capturar
+- Página de Seguranças (botão de gerar escala completa)
+- Calendário do segurança (mostrando trocas e afastamentos em vermelho)
+- Registro de Afastamento (formulário com tipos e upload)
+- Lista de Afastamentos Registrados (com botão de download de documento)
+- Gestão de Cotas TRE
+- Escala PDF gerada (exemplo)
 
 ### Formato
-PDF profissional com cabeçalho, data, e lista detalhada de alterações organizadas por categoria.
+PDF em português, linguagem simples e direta, com imagens das telas intercaladas com descrições das funcionalidades.
 
