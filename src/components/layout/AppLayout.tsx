@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign, Settings, Menu, CalendarOff, FileText, ClipboardCheck } from 'lucide-react';
+import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign, Settings, Menu, CalendarOff, FileText, ClipboardCheck, RefreshCw } from 'lucide-react';
 const logoImage = '/android-chrome-192x192.png';
 import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
 import { Button } from '@/components/ui/button';
@@ -194,6 +194,18 @@ export function AppLayout({
                     <UserCircle className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                   </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={async () => {
+                  if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (const registration of registrations) await registration.unregister();
+                  }
+                  const cacheKeys = await caches.keys();
+                  await Promise.all(cacheKeys.map(key => caches.delete(key)));
+                  window.location.reload();
+                }} className="cursor-pointer">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <span>Atualizar Sistema</span>
                 </DropdownMenuItem>
                 <div className="px-2 py-1.5 text-xs text-muted-foreground text-center">
                   Versão {APP_VERSION}
