@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { CalendarOff, CalendarIcon, Plus, Pencil, Trash2, FileText, ChevronLeft, ChevronRight, Scale, Save, Download } from 'lucide-react';
+import { CalendarOff, CalendarIcon, Plus, Pencil, Trash2, FileText, ChevronLeft, ChevronRight, Scale, Save, Download, Paperclip } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
