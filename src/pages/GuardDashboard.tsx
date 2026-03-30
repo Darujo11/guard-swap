@@ -661,9 +661,9 @@ const GuardDashboard = () => {
       <Dialog open={isTreDialogOpen} onOpenChange={(open) => { setIsTreDialogOpen(open); if (!open) setTreSelectedDate(null); }}>
         <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Solicitar Folga TRE</DialogTitle>
+            <DialogTitle>Solicitar Afastamento TRE</DialogTitle>
             <DialogDescription>
-              Selecione o dia que deseja folgar. Saldo disponível: {treQuota - treUsed} dia(s).
+              Selecione o dia do afastamento. Saldo disponível: {treQuota - treUsed} dia(s).
             </DialogDescription>
           </DialogHeader>
           {currentUser.team_id && (
