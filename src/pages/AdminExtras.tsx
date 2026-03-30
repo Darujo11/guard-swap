@@ -1043,7 +1043,7 @@ export default function AdminExtras() {
       csvContent += "Posição,Segurança,Total de Horas\n";
 
       rankingData.data.forEach((item, index) => {
-        csvContent += `${index + 1},${item.guardName},${item.totalHours}\n`;
+        csvContent += `${index + 1},${item.guardName},${formatHoursMinutes(item.totalHours, item.totalMinutes || 0)}\n`;
       });
 
       const encodedUri = encodeURI(csvContent);
