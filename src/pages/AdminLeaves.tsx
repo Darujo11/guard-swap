@@ -843,7 +843,7 @@ export default function AdminLeaves() {
               </div>
             ) : filteredLeaves.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                Nenhuma folga registrada.
+                Nenhum afastamento registrado.
               </div>
             ) : (
               <div className="overflow-x-auto">
