@@ -201,7 +201,7 @@ const GuardDashboard = () => {
       fetchTreQuota();
     } catch (error) {
       console.error('[GuardDashboard][CancelTreLeave]', error);
-      toast({ title: 'Erro', description: 'Não foi possível cancelar a folga.', variant: 'destructive' });
+      toast({ title: 'Erro', description: 'Não foi possível cancelar o afastamento.', variant: 'destructive' });
     }
   };
 
