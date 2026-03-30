@@ -148,6 +148,18 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
     return getEffectiveDatesSet(schedules, approvedSwaps, targetGuard.id, targetGuard.team_id);
   }, [schedules, approvedSwaps, selectedTarget, availableGuards]);
 
+  if (settings.swaps_blocked) {
+    return (
+      <Card className="p-8 text-center">
+        <CardContent className="flex flex-col items-center gap-4 pt-6">
+          <ShieldOff className="h-12 w-12 text-destructive" />
+          <h3 className="text-xl font-bold">Acesso Restrito</h3>
+          <p className="text-muted-foreground">Trocas bloqueadas no sistema pelo coordenador.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const getTeamForDate = (date: Date): TeamSchedule | undefined => {
     const dateStr = format(date, 'yyyy-MM-dd');
     return schedules.find(s => s.shift_date === dateStr);
