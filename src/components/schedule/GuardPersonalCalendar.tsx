@@ -230,12 +230,16 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               <span className="text-muted-foreground">Extra ({extrasMap.size})</span>
             </div>
           )}
-          {treApprovedDates.size > 0 && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#DC2626' }} />
-              <span className="text-muted-foreground">Folga TRE ({treApprovedDates.size})</span>
-            </div>
-          )}
+          {leaveDates.size > 0 && (() => {
+            const leaveTypes = new Map<string, number>();
+            leaveDates.forEach(label => leaveTypes.set(label, (leaveTypes.get(label) || 0) + 1));
+            return Array.from(leaveTypes.entries()).map(([label, count]) => (
+              <div key={label} className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#DC2626' }} />
+                <span className="text-muted-foreground">{label} ({count})</span>
+              </div>
+            ));
+          })()}
           <div className="flex items-center gap-1.5">
             <span className="text-muted-foreground font-medium">Total: {workingDays.size} plantões</span>
           </div>
