@@ -293,16 +293,18 @@ export default function AdminExtras() {
 
     const summary = guards.map(guard => {
       const guardExtras = periodExtras.filter(e => e.guard_id === guard.id);
-      const totalHours = guardExtras.reduce((sum, e) => sum + (Number(e.quantity) || 0), 0);
+      const { hours, minutes } = sumHoursMinutes(guardExtras);
       return {
         guardId: guard.id,
         guardName: guard.name,
-        totalHours
+        totalHours: hours,
+        totalMinutes: minutes,
+        totalInMinutes: hours * 60 + minutes,
       };
     });
 
     return {
-      data: summary.filter(s => s.totalHours > 0).sort((a, b) => b.totalHours - a.totalHours),
+      data: summary.filter(s => s.totalInMinutes > 0).sort((a, b) => b.totalInMinutes - a.totalInMinutes),
       startDate,
       endDate
     };
