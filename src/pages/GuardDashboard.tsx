@@ -757,7 +757,7 @@ const GuardDashboard = () => {
 
                         doc.setFontSize(18);
                         doc.setFont("helvetica", "bold");
-                        doc.text("Comprovante de Folga TRE", pageWidth / 2, 25, { align: "center" });
+                        doc.text("Comprovante de Afastamento TRE", pageWidth / 2, 25, { align: "center" });
 
                         doc.setDrawColor(41, 128, 185);
                         doc.setLineWidth(0.5);
