@@ -238,7 +238,7 @@ export default function AdminLeaves() {
     if (leaveType === 'OUTRO' && !customType.trim()) {
       toast({
         title: 'Campo obrigatório',
-        description: 'Especifique o tipo de folga.',
+        description: 'Especifique o tipo de afastamento.',
         variant: 'destructive',
       });
       return;
