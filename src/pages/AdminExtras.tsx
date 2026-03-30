@@ -740,7 +740,7 @@ export default function AdminExtras() {
   };
 
   const handleUpdate = async () => {
-    if (!editingExtra || !editGuardId || !editDate || !editJustification || editQuantity < 1) {
+    if (!editingExtra || !editGuardId || !editDate || !editJustification || (editQuantity < 1 && editMinutes < 1)) {
       toast({
         variant: "destructive",
         title: "Campos obrigatórios",
