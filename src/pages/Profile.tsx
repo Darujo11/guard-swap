@@ -266,6 +266,26 @@ export default function Profile() {
           </CardContent>
         </Card>
 
+        <div className="flex justify-center mt-4 mb-4">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const registration of registrations) {
+                  await registration.unregister();
+                }
+              }
+              const cacheKeys = await caches.keys();
+              await Promise.all(cacheKeys.map(key => caches.delete(key)));
+              window.location.reload();
+            }}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Atualizar Sistema
+          </Button>
+        </div>
+
         <Card>
           <CardHeader>
             <CardTitle>Segurança</CardTitle>
