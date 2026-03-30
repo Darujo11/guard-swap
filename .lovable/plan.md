@@ -1,47 +1,34 @@
 
 
-## Plano: Mostrar todos os afastamentos no calendário do segurança
-
-### Situação atual
-
-O calendário pessoal (`GuardPersonalCalendar.tsx`) só busca folgas do tipo `TRE` com status `APPROVED`. Outros afastamentos (Atestado, Férias, Licença, Falta, etc.) não aparecem.
+## Plano: Marcar dias de trabalho do segurança nos calendários de Data Inicial e Data Final
 
 ### O que será feito
 
-Expandir a busca de `leaves` para incluir **todos os tipos de afastamento** (não apenas TRE), e exibir cada dia de afastamento em vermelho no calendário com o nome abreviado do tipo.
+Quando o admin selecionar um segurança e abrir o calendário de "Data Inicial" ou "Data Final", os dias de trabalho (plantões) daquele segurança serão destacados visualmente (com a cor da equipe como fundo), facilitando a escolha.
 
-### Alterações em `src/components/schedule/GuardPersonalCalendar.tsx`
+### Alterações em `src/pages/AdminLeaves.tsx`
 
-1. **Estado**: Trocar `treApprovedDates` (Set de strings) por `leaveDates` (Map de string → tipo do afastamento)
-   - Tipo: `Map<string, string>` onde key = data, value = label legível (ex: "Atestado", "Férias", "TRE", "Licença-Nojo")
+1. **Interface Guard**: Adicionar `team_id` ao tipo e à query (`fetchGuards`)
 
-2. **Query** (linhas 70-77): Remover `.eq('leave_type', 'TRE')` para buscar todos os tipos. Também buscar `leave_type` e `custom_type`. Expandir datas entre `start_date` e `end_date` para cobrir afastamentos multi-dia.
+2. **Novo estado e fetch**: Quando `selectedGuard` mudar, buscar:
+   - O `team_id` e `color` da equipe do segurança selecionado
+   - Os `team_schedules` dessa equipe (todos os meses disponíveis)
+   - Os `swap_requests` aprovados envolvendo esse segurança
+   - Computar a escala efetiva com `computeEffectiveSchedule` e armazenar como `Set<string>` de datas de trabalho
 
-3. **Processamento**: Para cada leave, gerar todas as datas entre `start_date` e `end_date` e inserir no Map com o label do tipo.
+3. **Calendários**: Usar a prop `modifiers` e `modifiersClassNames` (ou `modifiersStyles`) do componente `Calendar` (react-day-picker) para aplicar um estilo visual (fundo colorido com a cor da equipe) nos dias que são plantões do segurança selecionado
 
-4. **Legenda** (linhas 213-218): Substituir "Folga TRE" por uma legenda dinâmica que agrupa por tipo de afastamento encontrado no mês.
+4. **CSS**: Adicionar classe ou inline style para destacar dias de trabalho (círculo com cor da equipe, texto claro)
 
-5. **Renderização dos dias** (linhas 244, 256-283): Substituir `isTreLeave` por verificação no `leaveDates` Map, exibir o tipo abreviado no dia (ex: "Atestado", "Férias", "TRE").
-
-6. **PDF** (`pdfGenerator.ts`): O `treApprovedDates` passado ao PDF será substituído pelo Map completo — ajustar a interface para aceitar o novo formato.
-
-### Mapeamento de tipos para labels
-
+### Fluxo
 ```text
-TRE           → "TRE"
-ATESTADO      → "Atestado"
-FERIAS        → "Férias"
-LICENCA_NOJO  → "Lic. Nojo"
-LICENCA_PATERNIDADE → "Lic. Pat."
-LICENCA_NAO_REMUNERADA → "Lic. N/R"
-FALTA_INJUSTIFICADA → "Falta"
-OUTRO         → custom_type ou "Afastamento"
+Admin seleciona segurança → fetch team_schedules + swaps → computeEffectiveSchedule → Set de datas
+Calendar recebe modifiers={{ workDay: (date) => workDaysSet.has(format(date)) }}
+modifiersStyles={{ workDay: { backgroundColor: teamColor, color: 'white', borderRadius: '50%' } }}
 ```
 
 ### Escopo
-
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/schedule/GuardPersonalCalendar.tsx` | Buscar todos os leaves, Map com tipo, legenda dinâmica, renderização por tipo |
-| `src/utils/pdfGenerator.ts` | Aceitar Map com tipo em vez de Set, exibir tipo no PDF |
+| `src/pages/AdminLeaves.tsx` | Buscar escala do segurança selecionado, destacar dias de trabalho nos 2 calendários |
 
