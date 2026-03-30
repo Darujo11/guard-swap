@@ -1,0 +1,1 @@
+ALTER TABLE organization_settings ADD COLUMN swaps_blocked boolean NOT NULL DEFAULT false;

@@ -385,6 +385,7 @@ export type Database = {
           shifts_label: string
           swap_label: string
           swap_same_month_only: boolean
+          swaps_blocked: boolean
           swaps_label: string
           team_label: string
           teams_label: string
@@ -404,6 +405,7 @@ export type Database = {
           shifts_label?: string
           swap_label?: string
           swap_same_month_only?: boolean
+          swaps_blocked?: boolean
           swaps_label?: string
           team_label?: string
           teams_label?: string
@@ -423,6 +425,7 @@ export type Database = {
           shifts_label?: string
           swap_label?: string
           swap_same_month_only?: boolean
+          swaps_blocked?: boolean
           swaps_label?: string
           team_label?: string
           teams_label?: string

@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign, Settings, Menu, CalendarOff, FileText, ClipboardCheck, RefreshCw, CalendarDays } from 'lucide-react';
+import { Users, Calendar, Shield, BarChart3, LogOut, ClipboardList, UserCircle, Clock, Crown, DollarSign, Settings, Menu, CalendarOff, FileText, ClipboardCheck, RefreshCw, CalendarDays, Ban } from 'lucide-react';
 const logoImage = '/android-chrome-192x192.png';
 import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
 import { Button } from '@/components/ui/button';
@@ -204,6 +204,17 @@ export function AppLayout({
                     <span>Troca só dentro do mês</span>
                     {settings.swap_same_month_only && (
                       <Badge variant="default" className="ml-auto text-xs px-1.5 py-0">Ativo</Badge>
+                    )}
+                  </DropdownMenuItem>
+                )}
+                {(role === 'admin' || role === 'super_admin') && (
+                  <DropdownMenuItem onSelect={() => {
+                    updateSettings({ swaps_blocked: !settings.swaps_blocked });
+                  }} className="cursor-pointer">
+                    <Ban className="mr-2 h-4 w-4" />
+                    <span>Bloquear Trocas</span>
+                    {settings.swaps_blocked && (
+                      <Badge variant="destructive" className="ml-auto text-xs px-1.5 py-0">Ativo</Badge>
                     )}
                   </DropdownMenuItem>
                 )}

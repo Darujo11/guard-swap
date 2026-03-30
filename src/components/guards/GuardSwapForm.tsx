@@ -10,7 +10,7 @@ import { TeamBadge } from '@/components/ui/team-badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile, Team } from '@/lib/types';
-import { CalendarDays, ArrowRightLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { CalendarDays, ArrowRightLeft, Calendar as CalendarIcon, ShieldOff } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -43,6 +43,8 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
   const [targetCalendarOpen, setTargetCalendarOpen] = useState(false);
   const { toast } = useToast();
   const { settings } = useOrganizationSettings();
+
+
 
   useEffect(() => {
     fetchAvailableGuards();
@@ -145,6 +147,18 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
     if (!targetGuard?.team_id) return new Set<string>();
     return getEffectiveDatesSet(schedules, approvedSwaps, targetGuard.id, targetGuard.team_id);
   }, [schedules, approvedSwaps, selectedTarget, availableGuards]);
+
+  if (settings.swaps_blocked) {
+    return (
+      <Card className="p-8 text-center">
+        <CardContent className="flex flex-col items-center gap-4 pt-6">
+          <ShieldOff className="h-12 w-12 text-destructive" />
+          <h3 className="text-xl font-bold">Acesso Restrito</h3>
+          <p className="text-muted-foreground">Trocas bloqueadas no sistema pelo coordenador.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const getTeamForDate = (date: Date): TeamSchedule | undefined => {
     const dateStr = format(date, 'yyyy-MM-dd');
