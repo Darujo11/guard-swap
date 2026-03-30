@@ -197,7 +197,8 @@ export function AppLayout({
                   </Link>
                 </DropdownMenuItem>
                 {(role === 'admin' || role === 'super_admin') && (
-                  <DropdownMenuItem onSelect={() => {
+                  <DropdownMenuItem onSelect={(e) => {
+                    e.preventDefault();
                     updateSettings({ swap_same_month_only: !settings.swap_same_month_only });
                   }} className="cursor-pointer">
                     <CalendarDays className="mr-2 h-4 w-4" />
@@ -208,7 +209,8 @@ export function AppLayout({
                   </DropdownMenuItem>
                 )}
                 {(role === 'admin' || role === 'super_admin') && (
-                  <DropdownMenuItem onSelect={() => {
+                  <DropdownMenuItem onSelect={(e) => {
+                    e.preventDefault();
                     updateSettings({ swaps_blocked: !settings.swaps_blocked });
                   }} className="cursor-pointer">
                     <Ban className="mr-2 h-4 w-4" />
