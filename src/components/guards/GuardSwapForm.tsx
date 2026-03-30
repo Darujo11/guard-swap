@@ -482,6 +482,12 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
                   onSelect={(date) => {
                     setRequesterShiftDate(date);
                     setRequesterCalendarOpen(false);
+                    // Clear target date if it's now outside the allowed month
+                    if (settings.swap_same_month_only && date && targetShiftDate) {
+                      if (date.getMonth() !== targetShiftDate.getMonth() || date.getFullYear() !== targetShiftDate.getFullYear()) {
+                        setTargetShiftDate(undefined);
+                      }
+                    }
                   }}
                   disabled={(date) => {
                     const today = new Date();
@@ -546,6 +552,11 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
                     if (date <= today || date > maxDateObj) return true;
+                    if (settings.swap_same_month_only && requesterShiftDate) {
+                      if (date.getMonth() !== requesterShiftDate.getMonth() || date.getFullYear() !== requesterShiftDate.getFullYear()) {
+                        return true;
+                      }
+                    }
                     return !isTargetDate(date);
                   }}
                   modifiers={{
