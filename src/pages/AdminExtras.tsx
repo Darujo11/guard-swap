@@ -1290,16 +1290,6 @@ export default function AdminExtras() {
     <AppLayout title="Plantões Extras" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
       <div className="space-y-6">
 
-      <Tabs defaultValue="register" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="register">Cadastro de Extras</TabsTrigger>
-          <TabsTrigger value="ranking">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Ranking de Extras
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="register" className="space-y-6">
 
       {/* Preferência no Extra */}
       <Card>
