@@ -261,7 +261,7 @@ export default function AdminLeaves() {
 
       toast({
         title: 'Sucesso',
-        description: 'Folga registrada com sucesso!',
+        description: 'Afastamento registrado com sucesso!',
       });
 
       resetForm();
