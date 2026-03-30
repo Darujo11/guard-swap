@@ -967,14 +967,13 @@ export default function AdminExtras() {
       doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 36);
 
       // Obter valores únicos de total, ordenados decrescente
-      const uniqueTotals = [...new Set(rankingData.data.map(i => i.totalHours))].sort((a, b) => b - a);
+      const uniqueTotals = [...new Set(rankingData.data.map(i => i.totalInMinutes))].sort((a, b) => b - a);
       const tableData = rankingData.data.map((item) => {
-        // Calcular posição baseada em valores únicos
-        const position = uniqueTotals.indexOf(item.totalHours) + 1;
+        const position = uniqueTotals.indexOf(item.totalInMinutes) + 1;
         return [
           `${position}º`,
           item.guardName,
-          item.totalHours.toString()
+          formatHoursMinutes(item.totalHours, item.totalMinutes || 0)
         ];
       });
 
