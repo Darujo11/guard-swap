@@ -483,7 +483,7 @@ export default function AdminLeaves() {
 
     // Title
     doc.setFontSize(18);
-    doc.text('Relatório de Folgas', 14, 20);
+    doc.text('Relatório de Afastamentos', 14, 20);
 
     // Filter info
     doc.setFontSize(10);
