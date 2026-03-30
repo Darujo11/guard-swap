@@ -35,6 +35,7 @@ const defaultSettings: OrganizationSettings = {
   extra_label: 'Extra',
   extras_label: 'Extras',
   swap_same_month_only: false,
+  swaps_blocked: false,
 };
 
 export function useOrganizationSettings() {
