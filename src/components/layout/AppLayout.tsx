@@ -207,6 +207,17 @@ export function AppLayout({
                     )}
                   </DropdownMenuItem>
                 )}
+                {(role === 'admin' || role === 'super_admin') && (
+                  <DropdownMenuItem onSelect={() => {
+                    updateSettings({ swaps_blocked: !settings.swaps_blocked });
+                  }} className="cursor-pointer">
+                    <Ban className="mr-2 h-4 w-4" />
+                    <span>Bloquear Trocas</span>
+                    {settings.swaps_blocked && (
+                      <Badge variant="destructive" className="ml-auto text-xs px-1.5 py-0">Ativo</Badge>
+                    )}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onSelect={async () => {
                   if ('serviceWorker' in navigator) {
                     const registrations = await navigator.serviceWorker.getRegistrations();
