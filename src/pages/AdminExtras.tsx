@@ -131,6 +131,7 @@ export default function AdminExtras() {
   const [extraDate, setExtraDate] = useState<Date>();
   const [justification, setJustification] = useState("");
   const [quantity, setQuantity] = useState<number | undefined>(24);
+  const [minutes, setMinutes] = useState<number>(0);
   const [percentageType, setPercentageType] = useState<number>(100);
   const [guardShiftDates, setGuardShiftDates] = useState<Date[]>([]);
   const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
