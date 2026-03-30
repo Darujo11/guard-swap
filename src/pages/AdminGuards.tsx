@@ -219,7 +219,7 @@ const AdminGuards = () => {
         supabase.from('team_schedules').select('*').in('team_id', teamIds).gte('shift_date', startOfMonth).lte('shift_date', endStr),
         supabase.from('swap_requests').select('*, requester:profiles!swap_requests_requester_id_fkey(name, team_id), target:profiles!swap_requests_target_id_fkey(name, team_id)').eq('admin_id', profile.id).eq('status', 'APPROVED').or(`requester_shift_date.gte.${startOfMonth},target_shift_date.gte.${startOfMonth}`).or(`requester_shift_date.lte.${endStr},target_shift_date.lte.${endStr}`),
         supabase.from('extras').select('*').eq('admin_id', profile.id).gte('extra_date', startOfMonth).lte('extra_date', endStr),
-        supabase.from('leaves').select('*').eq('admin_id', profile.id).eq('leave_type', 'TRE').eq('status', 'APPROVED'),
+        supabase.from('leaves').select('*').eq('admin_id', profile.id).eq('status', 'APPROVED'),
       ]);
 
       const schedules = schedulesRes.data || [];
