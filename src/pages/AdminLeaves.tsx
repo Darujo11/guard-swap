@@ -557,7 +557,7 @@ export default function AdminLeaves() {
 
     // Save
     const monthName = reportAllMonths ? 'todos' : format(reportMonth, 'yyyy-MM', { locale: ptBR });
-    doc.save(`relatorio-folgas-${monthName}.pdf`);
+    doc.save(`relatorio-afastamentos-${monthName}.pdf`);
 
     toast({
       title: 'Sucesso',
