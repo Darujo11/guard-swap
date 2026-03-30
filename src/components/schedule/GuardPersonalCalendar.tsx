@@ -4,10 +4,23 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { ChevronLeft, ChevronRight, ArrowRightLeft, Calendar as CalendarIcon, Download } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday, addDays, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { computeEffectiveSchedule, EffectiveDay } from '@/utils/effectiveSchedule';
 import { generateSchedulePDF } from '@/utils/pdfGenerator';
+
+const getLeaveLabel = (leaveType: string, customType?: string | null): string => {
+  switch (leaveType) {
+    case 'TRE': return 'TRE';
+    case 'ATESTADO': return 'Atestado';
+    case 'FERIAS': return 'Férias';
+    case 'LICENCA_NOJO': return 'Lic. Nojo';
+    case 'LICENCA_PATERNIDADE': return 'Lic. Pat.';
+    case 'LICENCA_NAO_REMUNERADA': return 'Lic. N/R';
+    case 'FALTA_INJUSTIFICADA': return 'Falta';
+    default: return customType || 'Afastamento';
+  }
+};
 
 interface GuardPersonalCalendarProps {
   guardId: string;
@@ -28,7 +41,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
   const [swapRequests, setSwapRequests] = useState<any[]>([]);
   const [allTeams, setAllTeams] = useState<any[]>([]);
   const [extras, setExtras] = useState<any[]>([]);
-  const [treApprovedDates, setTreApprovedDates] = useState<Set<string>>(new Set());
+  const [leaveDates, setLeaveDates] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -66,15 +79,14 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
           .eq('guard_id', guardId)
           .gte('extra_date', monthStart)
           .lte('extra_date', monthEnd),
-        // Buscar folgas TRE aprovadas
+        // Buscar todos os afastamentos aprovados que intersectem o mês
         supabase
           .from('leaves')
-          .select('start_date, end_date')
+          .select('start_date, end_date, leave_type, custom_type')
           .eq('guard_id', guardId)
-          .eq('leave_type', 'TRE')
           .eq('status', 'APPROVED')
-          .gte('start_date', monthStart)
-          .lte('start_date', monthEnd),
+          .lte('start_date', monthEnd)
+          .gte('end_date', monthStart),
       ]);
 
       if (schedulesRes.error) throw schedulesRes.error;
@@ -84,12 +96,20 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
       setSwapRequests(swapsRes.data || []);
       setAllTeams(teamsRes.data || []);
       setExtras(extrasRes.data || []);
-      // Build TRE approved dates set
-      const treDates = new Set<string>();
+
+      // Build leave dates map with type labels
+      const leaveMap = new Map<string, string>();
       (treLeavesRes.data || []).forEach((l: any) => {
-        treDates.add(l.start_date);
+        const label = getLeaveLabel(l.leave_type, l.custom_type);
+        let current = parseISO(l.start_date);
+        const end = parseISO(l.end_date);
+        while (current <= end) {
+          const ds = format(current, 'yyyy-MM-dd');
+          leaveMap.set(ds, label);
+          current = addDays(current, 1);
+        }
       });
-      setTreApprovedDates(treDates);
+      setLeaveDates(leaveMap);
     } catch (error) {
       console.error('[GuardPersonalCalendar] Error fetching data:', error);
     } finally {
@@ -183,7 +203,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               title="Baixar PDF"
               onClick={() => {
                 const monthLabel = format(currentMonth, 'MMMM yyyy', { locale: ptBR });
-                generateSchedulePDF(guardName || 'Segurança', teamName, monthLabel, workingDays, extrasMap, treApprovedDates);
+                generateSchedulePDF(guardName || 'Segurança', teamName, monthLabel, workingDays, extrasMap, leaveDates);
               }}
             >
               <Download className="h-4 w-4" />
@@ -210,12 +230,16 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               <span className="text-muted-foreground">Extra ({extrasMap.size})</span>
             </div>
           )}
-          {treApprovedDates.size > 0 && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#DC2626' }} />
-              <span className="text-muted-foreground">Folga TRE ({treApprovedDates.size})</span>
-            </div>
-          )}
+          {leaveDates.size > 0 && (() => {
+            const leaveTypes = new Map<string, number>();
+            leaveDates.forEach(label => leaveTypes.set(label, (leaveTypes.get(label) || 0) + 1));
+            return Array.from(leaveTypes.entries()).map(([label, count]) => (
+              <div key={label} className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#DC2626' }} />
+                <span className="text-muted-foreground">{label} ({count})</span>
+              </div>
+            ));
+          })()}
           <div className="flex items-center gap-1.5">
             <span className="text-muted-foreground font-medium">Total: {workingDays.size} plantões</span>
           </div>
@@ -241,7 +265,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               const inMonth = isSameMonth(day, currentMonth);
               const today = isToday(day);
               const extraDay = extrasMap.get(dateStr);
-              const isTreLeave = treApprovedDates.has(dateStr);
+              const leaveLabel = leaveDates.get(dateStr);
 
                return (
                 <div
@@ -253,10 +277,10 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                     ${today ? 'ring-2 ring-primary ring-offset-1' : ''}
                     ${selectionMode && selectedDate === dateStr ? 'ring-2 ring-yellow-400 ring-offset-2' : ''}
                     ${selectionMode && inMonth ? 'cursor-pointer hover:opacity-80' : ''}
-                    ${isTreLeave || workDay || extraDay ? 'text-white font-semibold' : 'text-foreground'}
+                    ${leaveLabel || workDay || extraDay ? 'text-white font-semibold' : 'text-foreground'}
                   `}
                   style={
-                    isTreLeave
+                    leaveLabel
                       ? { backgroundColor: '#DC2626' }
                       : workDay && extraDay
                         ? { background: `linear-gradient(135deg, ${workDay.teamColor} 70%, #B8860B 30%)` }
@@ -267,8 +291,8 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                             : undefined
                   }
                   title={
-                    isTreLeave
-                      ? 'Folga TRE'
+                    leaveLabel
+                      ? leaveLabel
                       : workDay && extraDay
                         ? `${workDay.teamName} + Extra ${extraDay.percentage_type}%`
                         : workDay
@@ -279,8 +303,8 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                   }
                 >
                   <span className="text-sm">{format(day, 'd')}</span>
-                  {isTreLeave ? (
-                    <span className="text-[8px] leading-tight text-white/90 font-bold">Folga TRE</span>
+                  {leaveLabel ? (
+                    <span className="text-[8px] leading-tight text-white/90 font-bold">{leaveLabel}</span>
                   ) : extraDay && !workDay ? (
                     <span className="text-[8px] leading-tight text-white/90 font-bold">Extra</span>
                   ) : workDay && workDay.isSwapped ? (
@@ -299,10 +323,10 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                       {workDay.teamName}
                     </span>
                   ) : null}
-                  {workDay?.isSwapped && !isTreLeave && (
+                  {workDay?.isSwapped && !leaveLabel && (
                     <ArrowRightLeft className="absolute top-0.5 right-0.5 h-2.5 w-2.5 text-white/80" />
                   )}
-                  {extraDay && workDay && !isTreLeave && (
+                  {extraDay && workDay && !leaveLabel && (
                     <span className="absolute bottom-0.5 right-0.5 text-[7px] text-yellow-200 font-bold">E</span>
                   )}
                 </div>

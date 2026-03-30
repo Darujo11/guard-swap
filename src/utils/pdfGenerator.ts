@@ -73,7 +73,7 @@ export const generateSchedulePDF = (
     monthLabel: string,
     workingDays: Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string; originalDate?: string }>,
     extrasMap?: Map<string, { justification: string; percentage_type: number }>,
-    treDates?: Set<string>
+    treDates?: Map<string, string>
 ) => {
     const doc = new jsPDF('l');
     const pageWidth = doc.internal.pageSize.width;
@@ -108,11 +108,12 @@ export const generateSchedulePDF = (
         const extra = extrasMap?.get(dateStr);
 
         const isTre = treDates?.has(dateStr) ?? false;
-        const teamCol = isTre ? 'FOLGA TRE' : workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
+        const leaveLabel = treDates?.get(dateStr);
+        const teamCol = leaveLabel ? leaveLabel.toUpperCase() : workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
         
         const observations: string[] = [];
-        if (isTre) {
-            observations.push('Folga TRE');
+        if (leaveLabel) {
+            observations.push(leaveLabel);
         }
         if (workDay?.isSwapped) {
             const swapDatesPart = workDay.originalDate
@@ -145,10 +146,12 @@ export const generateSchedulePDF = (
         },
         didParseCell: (data: any) => {
             if (data.section === 'body' && data.row.raw) {
-                if (data.row.raw[1] === 'FOLGA TRE') {
+                const teamValue = data.row.raw[1] as string;
+                const isLeave = treDates && Array.from(treDates.values()).some(label => teamValue === label.toUpperCase());
+                if (isLeave) {
                     data.cell.styles.fillColor = [220, 38, 38];
                     data.cell.styles.textColor = [255, 255, 255];
-                } else if (data.row.raw[1] === 'EXTRA') {
+                } else if (teamValue === 'EXTRA') {
                     data.cell.styles.fillColor = [184, 134, 11];
                     data.cell.styles.textColor = [255, 255, 255];
                 }
@@ -174,7 +177,7 @@ export const generateAllGuardsSchedulePDF = (
         monthLabel: string;
         workingDays: Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string; originalDate?: string }>;
         extrasMap: Map<string, { justification: string; percentage_type: number }>;
-        treDates: Set<string>;
+        treDates: Map<string, string>;
     }>,
     monthLabel: string
 ) => {
@@ -206,11 +209,11 @@ export const generateAllGuardsSchedulePDF = (
             const workDay = guardData.workingDays.get(dateStr);
             const extra = guardData.extrasMap.get(dateStr);
             const isTre = guardData.treDates.has(dateStr);
-
-            const teamCol = isTre ? 'FOLGA TRE' : workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
+            const leaveLabel = guardData.treDates.get(dateStr);
+            const teamCol = leaveLabel ? leaveLabel.toUpperCase() : workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
 
             const observations: string[] = [];
-            if (isTre) observations.push('Folga TRE');
+            if (leaveLabel) observations.push(leaveLabel);
             if (workDay?.isSwapped) {
                 const swapDatesPart = workDay.originalDate
                     ? (() => { const [oy, om, od] = workDay.originalDate.split('-'); return ` ${od}/${om} ↔ ${d}/${m}`; })()
@@ -236,15 +239,17 @@ export const generateAllGuardsSchedulePDF = (
                 2: { cellWidth: 'auto', fontSize: 8 },
             },
             didParseCell: (data: any) => {
-                if (data.section === 'body' && data.row.raw) {
-                    if (data.row.raw[1] === 'FOLGA TRE') {
-                        data.cell.styles.fillColor = [220, 38, 38];
-                        data.cell.styles.textColor = [255, 255, 255];
-                    } else if (data.row.raw[1] === 'EXTRA') {
-                        data.cell.styles.fillColor = [184, 134, 11];
-                        data.cell.styles.textColor = [255, 255, 255];
-                    }
+            if (data.section === 'body' && data.row.raw) {
+                const teamValue = data.row.raw[1] as string;
+                const isLeave = guardData.treDates && Array.from(guardData.treDates.values()).some(label => teamValue === label.toUpperCase());
+                if (isLeave) {
+                    data.cell.styles.fillColor = [220, 38, 38];
+                    data.cell.styles.textColor = [255, 255, 255];
+                } else if (teamValue === 'EXTRA') {
+                    data.cell.styles.fillColor = [184, 134, 11];
+                    data.cell.styles.textColor = [255, 255, 255];
                 }
+            }
             },
         });
     });
