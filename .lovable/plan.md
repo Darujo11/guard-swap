@@ -1,30 +1,24 @@
 
 
-## Plano: Gerar relatório de funcionalidades do sistema com prints
+## Plano: Gerar relatório de melhorias para o segurança
 
 ### O que será feito
 
-Criar um PDF documentando as funcionalidades do sistema para administradores, incluindo:
+Criar um PDF documentando as melhorias do sistema na perspectiva do **segurança**, com linguagem simples e acessível, cobrindo:
 
-1. **Download e geração de escalas** — escalas individuais e completas com trocas, afastamentos, extras
-2. **Gestão de Afastamentos** — registro com tipos (atestado, férias, licença, etc.), upload de documentos, visualização no calendário
-3. **Gestão de Folgas TRE** — cadastro de cotas, solicitação pelo segurança, aprovação pelo admin
-4. **Calendário do segurança** — visualização integrada de plantões, trocas e afastamentos
+1. **Minha Escala** — calendário pessoal mostrando plantões com trocas aprovadas integradas (gradiente de cores, nome do cedente, ícone de troca)
+2. **Solicitação de Trocas** — fluxo completo de solicitação, seleção de datas e segurança, aprovação pelo coordenador
+3. **Folgas TRE pelo sistema** — solicitação via calendário, visualização de cotas restantes, protocolo gerado automaticamente
+4. **Trocas somente dentro do mês** — restrição ativada pelo admin, dias fora do mês desabilitados no calendário
+5. **Plantão trocado passa a ser do segurança** — após aprovação, o dia aparece na escala do segurança e ele pode solicitar nova troca naquele dia
 
 ### Abordagem
 
-1. Navegar pelas telas do sistema e capturar screenshots das funcionalidades
-2. Gerar um PDF com `reportlab` contendo texto explicativo + prints das telas
-3. Salvar em `/mnt/documents/`
-
-### Telas a capturar
-- Página de Seguranças (botão de gerar escala completa)
-- Calendário do segurança (mostrando trocas e afastamentos em vermelho)
-- Registro de Afastamento (formulário com tipos e upload)
-- Lista de Afastamentos Registrados (com botão de download de documento)
-- Gestão de Cotas TRE
-- Escala PDF gerada (exemplo)
+- Tentar capturar screenshots das telas do preview (login, dashboard do segurança, calendário)
+- Gerar PDF com `reportlab` contendo texto explicativo simples + prints quando possível
+- Salvar em `/mnt/documents/`
 
 ### Formato
-PDF em português, linguagem simples e direta, com imagens das telas intercaladas com descrições das funcionalidades.
+
+PDF em português, ~6-8 páginas, linguagem simples e direta, organizado por funcionalidade com descrições e imagens das telas.
 
