@@ -1,21 +1,29 @@
 
 
-## Plano: Adicionar botão "Atualizar Sistema" no dropdown "Minha Conta"
+## Plano: Mover "Folgas TRE" para abaixo de "Registrar Nova Folga"
 
 ### O que será feito
 
-Adicionar um item "Atualizar Sistema" com ícone `RefreshCw` no dropdown de "Minha Conta", logo abaixo do item "Perfil", com a mesma lógica de limpar cache do SW e recarregar.
+Reordenar as seções da página de Folgas. Atualmente a ordem é:
+1. Registrar Nova Folga
+2. Folgas Registradas
+3. Folgas TRE
+4. Relatório de Folgas
+
+Nova ordem:
+1. Registrar Nova Folga
+2. **Folgas TRE**
+3. Folgas Registradas
+4. Relatório de Folgas
 
 ### Alteração
 
-#### `src/components/layout/AppLayout.tsx`
+#### `src/pages/AdminLeaves.tsx`
 
-- Importar `RefreshCw` do lucide-react
-- Após o `DropdownMenuItem` do "Perfil" (linha 197), adicionar novo `DropdownMenuItem` com ícone `RefreshCw` e texto "Atualizar Sistema"
-- Lógica `onSelect`: limpar service workers, limpar caches, `window.location.reload()`
+- Mover o bloco do Card "Folgas TRE" (linhas 813-909) para logo após o Card "Registrar Nova Folga" (após linha 706), antes do Card "Folgas Registradas"
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/layout/AppLayout.tsx` | Novo item "Atualizar Sistema" no dropdown após "Perfil" |
+| `src/pages/AdminLeaves.tsx` | Reordenar seção "Folgas TRE" para após "Registrar Nova Folga" |
 
