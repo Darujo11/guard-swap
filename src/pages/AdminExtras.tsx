@@ -872,8 +872,8 @@ export default function AdminExtras() {
       doc.setFontSize(14);
       doc.text("Resumo", 14, yPos + 10);
       doc.setFontSize(10);
-      const totalExtras = reportFilteredExtras.reduce((sum, extra) => sum + (Number(extra.quantity) || 1), 0);
-      doc.text(`Total de extras no período: ${totalExtras}`, 14, yPos + 16);
+      const { hours: totalH, minutes: totalM } = sumHoursMinutes(reportFilteredExtras);
+      doc.text(`Total de extras no período: ${formatHoursMinutes(totalH, totalM)}`, 14, yPos + 16);
 
       // Sort extras based on selected order
       const sortedExtras = [...reportFilteredExtras].sort((a, b) => {
