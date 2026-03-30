@@ -195,7 +195,7 @@ const AdminDashboard = () => {
 
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("Solicitação de Folga TRE", pageWidth / 2, 25, { align: "center" });
+    doc.text("Solicitação de Afastamento TRE", pageWidth / 2, 25, { align: "center" });
 
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
