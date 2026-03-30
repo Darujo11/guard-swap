@@ -920,7 +920,7 @@ const AdminGuardProfile = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{leaves.length}</p>
-                  <p className="text-sm text-muted-foreground">Folgas</p>
+                  <p className="text-sm text-muted-foreground">Afastamentos</p>
                 </div>
               </div>
             </CardContent>
