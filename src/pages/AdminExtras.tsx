@@ -735,6 +735,7 @@ export default function AdminExtras() {
     setEditDate(undefined);
     setEditJustification("");
     setEditQuantity(1);
+    setEditMinutes(0);
     setEditPercentageType(100);
   };
 
