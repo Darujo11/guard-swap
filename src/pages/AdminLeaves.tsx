@@ -473,7 +473,7 @@ export default function AdminLeaves() {
     if (reportLeaves.length === 0) {
       toast({
         title: 'Sem dados',
-        description: 'Não há folgas para o período/filtros selecionados.',
+        description: 'Não há afastamentos para o período/filtros selecionados.',
         variant: 'destructive',
       });
       return;
