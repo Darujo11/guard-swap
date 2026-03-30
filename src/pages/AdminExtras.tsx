@@ -704,6 +704,7 @@ export default function AdminExtras() {
       setExtraDate(undefined);
       setJustification("");
       setQuantity(24);
+      setMinutes(0);
       setPercentageType(100);
       setGuardShiftDates([]);
       
