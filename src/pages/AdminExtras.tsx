@@ -328,11 +328,13 @@ export default function AdminExtras() {
     // Calcular totais por guard
     const summary = guards.map(guard => {
       const guardExtras = baseExtras.filter(e => e.guard_id === guard.id);
-      const totalHours = guardExtras.reduce((sum, e) => sum + (Number(e.quantity) || 0), 0);
+      const { hours, minutes } = sumHoursMinutes(guardExtras);
       return {
         guardId: guard.id,
         guardName: guard.name,
-        totalHours
+        totalHours: hours,
+        totalMinutes: minutes,
+        totalInMinutes: hours * 60 + minutes,
       };
     });
     
