@@ -2185,7 +2185,7 @@ export default function AdminExtras() {
                               </TableCell>
                               <TableCell className="font-medium">{item.guardName}</TableCell>
                               <TableCell className="text-center font-bold text-lg text-emerald-600">
-                                {item.totalHours}
+                                {formatHoursMinutes(item.totalHours, item.totalMinutes || 0)}
                               </TableCell>
                             </TableRow>
                           );
