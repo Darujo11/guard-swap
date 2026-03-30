@@ -628,11 +628,11 @@ export default function AdminExtras() {
       return;
     }
 
-    if (!quantity || quantity < 1) {
+    if ((!quantity || quantity < 0) && (!minutes || minutes < 1)) {
       toast({
         variant: "destructive",
         title: "Quantidade inválida",
-        description: "A quantidade de horas deve ser maior que zero.",
+        description: "As horas e/ou minutos devem ser maiores que zero.",
       });
       return;
     }
