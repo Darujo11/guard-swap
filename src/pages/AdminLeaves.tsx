@@ -107,7 +107,7 @@ export default function AdminLeaves() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, email')
+        .select('id, name, email, team_id')
         .eq('admin_id', profile!.id)
         .eq('is_active', true)
         .order('name');
