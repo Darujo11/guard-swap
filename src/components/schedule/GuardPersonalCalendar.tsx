@@ -66,15 +66,14 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
           .eq('guard_id', guardId)
           .gte('extra_date', monthStart)
           .lte('extra_date', monthEnd),
-        // Buscar folgas TRE aprovadas
+        // Buscar todos os afastamentos aprovados que intersectem o mês
         supabase
           .from('leaves')
-          .select('start_date, end_date')
+          .select('start_date, end_date, leave_type, custom_type')
           .eq('guard_id', guardId)
-          .eq('leave_type', 'TRE')
           .eq('status', 'APPROVED')
-          .gte('start_date', monthStart)
-          .lte('start_date', monthEnd),
+          .lte('start_date', monthEnd)
+          .gte('end_date', monthStart),
       ]);
 
       if (schedulesRes.error) throw schedulesRes.error;
@@ -84,12 +83,20 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
       setSwapRequests(swapsRes.data || []);
       setAllTeams(teamsRes.data || []);
       setExtras(extrasRes.data || []);
-      // Build TRE approved dates set
-      const treDates = new Set<string>();
+
+      // Build leave dates map with type labels
+      const leaveMap = new Map<string, string>();
       (treLeavesRes.data || []).forEach((l: any) => {
-        treDates.add(l.start_date);
+        const label = getLeaveLabel(l.leave_type, l.custom_type);
+        let current = parseISO(l.start_date);
+        const end = parseISO(l.end_date);
+        while (current <= end) {
+          const ds = format(current, 'yyyy-MM-dd');
+          leaveMap.set(ds, label);
+          current = addDays(current, 1);
+        }
       });
-      setTreApprovedDates(treDates);
+      setLeaveDates(leaveMap);
     } catch (error) {
       console.error('[GuardPersonalCalendar] Error fetching data:', error);
     } finally {
