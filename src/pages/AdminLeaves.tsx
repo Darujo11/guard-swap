@@ -411,7 +411,13 @@ export default function AdminLeaves() {
     // Title
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("Comprovante de Folga", pageWidth / 2, 25, { align: "center" });
+    const getDocTitle = (type: string) => {
+      if (type.includes('LICENCA')) return "Comprovante de Licença";
+      if (type === 'FERIAS') return "Comprovante de Férias";
+      if (type === 'ATESTADO') return "Comprovante de Atestado";
+      return "Comprovante de Afastamento";
+    };
+    doc.text(getDocTitle(leave.leave_type), pageWidth / 2, 25, { align: "center" });
 
     // Separator line
     doc.setLineWidth(0.5);
@@ -432,7 +438,7 @@ export default function AdminLeaves() {
     const protocol = (leave as any).protocol || `FLG-${leave.id.slice(0, 8).toUpperCase()}`;
     addField("Protocolo", protocol);
     addField(settings.guard_label, leave.guard?.name || "Desconhecido");
-    addField("Tipo de Folga", getLeaveTypeLabel(leave.leave_type, leave.custom_type));
+    addField("Tipo de Afastamento", getLeaveTypeLabel(leave.leave_type, leave.custom_type));
     addField("Data Inicial", format(new Date(`${leave.start_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR }));
     addField("Data Final", format(new Date(`${leave.end_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR }));
     addField("Total de Dias", calculateDays(leave.start_date, leave.end_date).toString());
@@ -477,7 +483,7 @@ export default function AdminLeaves() {
 
     // Title
     doc.setFontSize(18);
-    doc.text('Relatório de Folgas', 14, 20);
+    doc.text('Relatório de Afastamentos', 14, 20);
 
     // Filter info
     doc.setFontSize(10);
@@ -573,7 +579,7 @@ export default function AdminLeaves() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarOff className="h-5 w-5" />
-              Registrar Nova Folga
+              Registro de Afastamento
             </CardTitle>
             <CardDescription>
               Registre afastamentos como atestados, faltas, licenças, etc.
