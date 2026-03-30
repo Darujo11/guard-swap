@@ -567,7 +567,7 @@ export default function AdminLeaves() {
 
   return (
     <AppLayout
-      title="Folgas"
+      title="Afastamentos"
       user={profile ? {
         name: profile.name,
         role: 'ADMIN',
