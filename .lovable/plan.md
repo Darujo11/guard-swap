@@ -1,20 +1,23 @@
 
 
-## Plano: Manter dropdown aberto ao clicar nos toggles
+## Plano: Renomear para "Registro de Afastamento" e ajustar tipo no PDF
 
-### O que será feito
+### Alterações em `src/pages/AdminLeaves.tsx`
 
-Impedir que o dropdown feche ao clicar em "Troca só dentro do mês" e "Bloquear Trocas", usando `e.preventDefault()` no `onSelect`.
+1. **Linha 576**: Renomear "Registrar Nova Folga" → "Registro de Afastamento"
 
-### Alteração
+2. **Linha 414**: Renomear "Comprovante de Folga" → usar título dinâmico baseado no tipo:
+   - Se `leave_type` contém "LICENCA", título = "Comprovante de Licença"
+   - Se `leave_type` = "FERIAS", título = "Comprovante de Férias"
+   - Se `leave_type` = "ATESTADO", título = "Comprovante de Atestado"
+   - Demais = "Comprovante de Afastamento"
 
-#### `src/components/layout/AppLayout.tsx`
+3. **Linha 435**: Renomear campo "Tipo de Folga" → "Tipo de Afastamento"
 
-- Linha 200: Mudar `onSelect={() => {` para `onSelect={(e) => { e.preventDefault();`
-- Linha 211: Mudar `onSelect={() => {` para `onSelect={(e) => { e.preventDefault();`
+4. **Linha 480**: Renomear "Relatório de Folgas" (título do PDF) → "Relatório de Afastamentos"
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/layout/AppLayout.tsx` | `e.preventDefault()` nos dois `DropdownMenuItem` de toggle |
+| `src/pages/AdminLeaves.tsx` | Renomear título do card, títulos dos PDFs e campo de tipo |
 
