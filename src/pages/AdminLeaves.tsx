@@ -305,7 +305,7 @@ export default function AdminLeaves() {
 
       toast({
         title: 'Sucesso',
-        description: 'Folga atualizada com sucesso!',
+        description: 'Afastamento atualizado com sucesso!',
       });
 
       setEditDialogOpen(false);
