@@ -705,6 +705,104 @@ export default function AdminLeaves() {
           </CardContent>
         </Card>
 
+        {/* TRE Quota Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Scale className="h-5 w-5" />
+              Folgas TRE
+            </CardTitle>
+            <CardDescription>
+              Defina a quantidade de folgas TRE por {settings.guard_label.toLowerCase()} e acompanhe o saldo
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Form to set quota */}
+            <div className="flex flex-col sm:flex-row gap-4 items-end">
+              <div className="space-y-2 flex-1">
+                <Label>{settings.guard_label}</Label>
+                <Select value={treGuard} onValueChange={(v) => {
+                  setTreGuard(v);
+                  const existing = treQuotas.find(q => q.guard_id === v);
+                  setTreDays(existing?.total_days || 0);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={`Selecione o ${settings.guard_label.toLowerCase()}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {guards.map(guard => (
+                      <SelectItem key={guard.id} value={guard.id}>
+                        {guard.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 w-32">
+                <Label>Total de Folgas</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={treDays}
+                  onChange={(e) => setTreDays(parseInt(e.target.value) || 0)}
+                />
+              </div>
+              <Button onClick={handleSaveTreQuota} disabled={treSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                {treSaving ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </div>
+
+            {/* Quota table */}
+            {(() => {
+              const treLeaves = leaves.filter(l => l.leave_type === 'TRE');
+              const guardsWithQuota = guards.map(guard => {
+                const quota = treQuotas.find(q => q.guard_id === guard.id);
+                const totalDays = quota?.total_days || 0;
+                const usedDays = treLeaves
+                  .filter(l => l.guard_id === guard.id)
+                  .reduce((sum, l) => sum + calculateDays(l.start_date, l.end_date), 0);
+                const balance = totalDays - usedDays;
+                return { ...guard, totalDays, usedDays, balance };
+              }).filter(g => g.totalDays > 0 || g.usedDays > 0);
+
+              if (guardsWithQuota.length === 0) return (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  Nenhuma cota TRE definida ainda.
+                </div>
+              );
+
+              return (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{settings.guard_label}</TableHead>
+                      <TableHead className="text-center">Total TRE</TableHead>
+                      <TableHead className="text-center">Usadas</TableHead>
+                      <TableHead className="text-center">Saldo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {guardsWithQuota.map(g => (
+                      <TableRow key={g.id}>
+                        <TableCell className="font-medium">{g.name}</TableCell>
+                        <TableCell className="text-center">{g.totalDays}</TableCell>
+                        <TableCell className="text-center">{g.usedDays}</TableCell>
+                        <TableCell className={cn(
+                          "text-center font-semibold",
+                          g.balance > 0 ? "text-green-600" : "text-destructive"
+                        )}>
+                          {g.balance}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
         {/* Leaves List */}
         <Card>
           <CardHeader>
@@ -807,104 +905,6 @@ export default function AdminLeaves() {
                 </Table>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* TRE Quota Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Scale className="h-5 w-5" />
-              Folgas TRE
-            </CardTitle>
-            <CardDescription>
-              Defina a quantidade de folgas TRE por {settings.guard_label.toLowerCase()} e acompanhe o saldo
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Form to set quota */}
-            <div className="flex flex-col sm:flex-row gap-4 items-end">
-              <div className="space-y-2 flex-1">
-                <Label>{settings.guard_label}</Label>
-                <Select value={treGuard} onValueChange={(v) => {
-                  setTreGuard(v);
-                  const existing = treQuotas.find(q => q.guard_id === v);
-                  setTreDays(existing?.total_days || 0);
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={`Selecione o ${settings.guard_label.toLowerCase()}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {guards.map(guard => (
-                      <SelectItem key={guard.id} value={guard.id}>
-                        {guard.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 w-32">
-                <Label>Total de Folgas</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={treDays}
-                  onChange={(e) => setTreDays(parseInt(e.target.value) || 0)}
-                />
-              </div>
-              <Button onClick={handleSaveTreQuota} disabled={treSaving}>
-                <Save className="h-4 w-4 mr-2" />
-                {treSaving ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </div>
-
-            {/* Quota table */}
-            {(() => {
-              const treLeaves = leaves.filter(l => l.leave_type === 'TRE');
-              const guardsWithQuota = guards.map(guard => {
-                const quota = treQuotas.find(q => q.guard_id === guard.id);
-                const totalDays = quota?.total_days || 0;
-                const usedDays = treLeaves
-                  .filter(l => l.guard_id === guard.id)
-                  .reduce((sum, l) => sum + calculateDays(l.start_date, l.end_date), 0);
-                const balance = totalDays - usedDays;
-                return { ...guard, totalDays, usedDays, balance };
-              }).filter(g => g.totalDays > 0 || g.usedDays > 0);
-
-              if (guardsWithQuota.length === 0) return (
-                <div className="text-center py-4 text-muted-foreground text-sm">
-                  Nenhuma cota TRE definida ainda.
-                </div>
-              );
-
-              return (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{settings.guard_label}</TableHead>
-                      <TableHead className="text-center">Total TRE</TableHead>
-                      <TableHead className="text-center">Usadas</TableHead>
-                      <TableHead className="text-center">Saldo</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {guardsWithQuota.map(g => (
-                      <TableRow key={g.id}>
-                        <TableCell className="font-medium">{g.name}</TableCell>
-                        <TableCell className="text-center">{g.totalDays}</TableCell>
-                        <TableCell className="text-center">{g.usedDays}</TableCell>
-                        <TableCell className={cn(
-                          "text-center font-semibold",
-                          g.balance > 0 ? "text-green-600" : "text-destructive"
-                        )}>
-                          {g.balance}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              );
-            })()}
           </CardContent>
         </Card>
 
