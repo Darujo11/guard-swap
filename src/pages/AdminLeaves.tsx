@@ -974,7 +974,7 @@ export default function AdminLeaves() {
 
               {/* Leave Type Filter */}
               <div className="space-y-2">
-                <Label>Tipo de Folga</Label>
+                <Label>Tipo de Afastamento</Label>
                 <Select value={reportLeaveType} onValueChange={setReportLeaveType}>
                   <SelectTrigger>
                     <SelectValue />
