@@ -308,6 +308,7 @@ export default function AdminLeaves() {
         start_date: format(startDate, 'yyyy-MM-dd'),
         end_date: format(endDate, 'yyyy-MM-dd'),
         notes: notes.trim() || null,
+        status: 'APPROVED',
       });
 
       if (error) throw error;
