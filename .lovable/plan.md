@@ -1,34 +1,26 @@
 
 
-## Plano: Marcar dias de trabalho do segurança nos calendários de Data Inicial e Data Final
+## Plano: Corrigir afastamentos não aparecendo no calendário
 
-### O que será feito
+### Problema
 
-Quando o admin selecionar um segurança e abrir o calendário de "Data Inicial" ou "Data Final", os dias de trabalho (plantões) daquele segurança serão destacados visualmente (com a cor da equipe como fundo), facilitando a escolha.
+Quando o admin registra um afastamento, ele é inserido com `status = 'PENDING'` (default do banco). Porém, o calendário pessoal do segurança filtra apenas `status = 'APPROVED'`, por isso o afastamento não aparece.
 
-### Alterações em `src/pages/AdminLeaves.tsx`
+### Solução
 
-1. **Interface Guard**: Adicionar `team_id` ao tipo e à query (`fetchGuards`)
+Duas correções necessárias:
 
-2. **Novo estado e fetch**: Quando `selectedGuard` mudar, buscar:
-   - O `team_id` e `color` da equipe do segurança selecionado
-   - Os `team_schedules` dessa equipe (todos os meses disponíveis)
-   - Os `swap_requests` aprovados envolvendo esse segurança
-   - Computar a escala efetiva com `computeEffectiveSchedule` e armazenar como `Set<string>` de datas de trabalho
+1. **`src/pages/AdminLeaves.tsx`**: Quando o admin registra um afastamento, definir `status: 'APPROVED'` automaticamente (pois foi o próprio admin que registrou, não precisa de aprovação).
 
-3. **Calendários**: Usar a prop `modifiers` e `modifiersClassNames` (ou `modifiersStyles`) do componente `Calendar` (react-day-picker) para aplicar um estilo visual (fundo colorido com a cor da equipe) nos dias que são plantões do segurança selecionado
+2. **`src/components/schedule/GuardPersonalCalendar.tsx`**: Além de filtrar `APPROVED`, também incluir `PENDING` na query de leaves para garantir que afastamentos pendentes também apareçam no calendário. Alternativamente, manter apenas `APPROVED` se a correção do item 1 resolver.
 
-4. **CSS**: Adicionar classe ou inline style para destacar dias de trabalho (círculo com cor da equipe, texto claro)
+### Abordagem escolhida
 
-### Fluxo
-```text
-Admin seleciona segurança → fetch team_schedules + swaps → computeEffectiveSchedule → Set de datas
-Calendar recebe modifiers={{ workDay: (date) => workDaysSet.has(format(date)) }}
-modifiersStyles={{ workDay: { backgroundColor: teamColor, color: 'white', borderRadius: '50%' } }}
-```
+Aplicar o item 1: ao inserir o leave pelo admin, enviar `status: 'APPROVED'`. Isso é suficiente pois o admin é a autoridade que aprova. Afastamentos criados pelo segurança (TRE) já têm fluxo separado de aprovação.
 
 ### Escopo
+
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/AdminLeaves.tsx` | Buscar escala do segurança selecionado, destacar dias de trabalho nos 2 calendários |
+| `src/pages/AdminLeaves.tsx` | Adicionar `status: 'APPROVED'` no insert de leaves (~linha 303) |
 
