@@ -1,20 +1,21 @@
 
 
-## Plano: Mover botão "Atualizar Sistema" para logo abaixo do card de Perfil
+## Plano: Adicionar botão "Atualizar Sistema" no dropdown "Minha Conta"
 
 ### O que será feito
 
-Mover o botão "Atualizar Sistema" de sua posição atual (abaixo do card de Segurança/senha) para logo abaixo do card "Informações do Perfil", antes do card de senha.
+Adicionar um item "Atualizar Sistema" com ícone `RefreshCw` no dropdown de "Minha Conta", logo abaixo do item "Perfil", com a mesma lógica de limpar cache do SW e recarregar.
 
 ### Alteração
 
-#### `src/pages/Profile.tsx`
+#### `src/components/layout/AppLayout.tsx`
 
-- Remover o `<div>` com o botão "Atualizar Sistema" do final da página (linhas 322-340)
-- Inserir esse mesmo botão logo após o card "Informações do Perfil" (após linha 267), antes do card "Segurança"
+- Importar `RefreshCw` do lucide-react
+- Após o `DropdownMenuItem` do "Perfil" (linha 197), adicionar novo `DropdownMenuItem` com ícone `RefreshCw` e texto "Atualizar Sistema"
+- Lógica `onSelect`: limpar service workers, limpar caches, `window.location.reload()`
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/Profile.tsx` | Reposicionar botão "Atualizar Sistema" para após o card de perfil |
+| `src/components/layout/AppLayout.tsx` | Novo item "Atualizar Sistema" no dropdown após "Perfil" |
 
