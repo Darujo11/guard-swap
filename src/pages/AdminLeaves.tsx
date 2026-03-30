@@ -39,6 +39,7 @@ interface Leave {
   start_date: string;
   end_date: string;
   notes: string | null;
+  document_url: string | null;
   created_at: string;
   guard?: Guard;
 }
