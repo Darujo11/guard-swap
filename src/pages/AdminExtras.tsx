@@ -1755,7 +1755,7 @@ export default function AdminExtras() {
                                     {item.guardName}
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-center font-semibold">{item.totalHours}h</TableCell>
+                                <TableCell className="text-center font-semibold">{formatHoursMinutes(item.totalHours, item.totalMinutes || 0)}</TableCell>
                               </TableRow>
                             </CollapsibleTrigger>
                             <CollapsibleContent asChild>
