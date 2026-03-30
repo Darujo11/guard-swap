@@ -716,7 +716,7 @@ export default function AdminLeaves() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Scale className="h-5 w-5" />
-              Folgas TRE
+              Afastamentos TRE
             </CardTitle>
             <CardDescription>
               Defina a quantidade de folgas TRE por {settings.guard_label.toLowerCase()} e acompanhe o saldo
