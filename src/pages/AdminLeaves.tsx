@@ -705,12 +705,208 @@ export default function AdminLeaves() {
           </CardContent>
         </Card>
 
+        {/* TRE Quota Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Scale className="h-5 w-5" />
+              Folgas TRE
+            </CardTitle>
+            <CardDescription>
+              Defina a quantidade de folgas TRE por {settings.guard_label.toLowerCase()} e acompanhe o saldo
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Form to set quota */}
+            <div className="flex flex-col sm:flex-row gap-4 items-end">
+              <div className="space-y-2 flex-1">
+                <Label>{settings.guard_label}</Label>
+                <Select value={treGuard} onValueChange={(v) => {
+                  setTreGuard(v);
+                  const existing = treQuotas.find(q => q.guard_id === v);
+                  setTreDays(existing?.total_days || 0);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={`Selecione o ${settings.guard_label.toLowerCase()}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {guards.map(guard => (
+                      <SelectItem key={guard.id} value={guard.id}>
+                        {guard.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 w-32">
+                <Label>Total de Folgas</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={treDays}
+                  onChange={(e) => setTreDays(parseInt(e.target.value) || 0)}
+                />
+              </div>
+              <Button onClick={handleSaveTreQuota} disabled={treSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                {treSaving ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </div>
+
+            {/* Quota table */}
+            {(() => {
+              const treLeaves = leaves.filter(l => l.leave_type === 'TRE');
+              const guardsWithQuota = guards.map(guard => {
+                const quota = treQuotas.find(q => q.guard_id === guard.id);
+                const totalDays = quota?.total_days || 0;
+                const usedDays = treLeaves
+                  .filter(l => l.guard_id === guard.id)
+                  .reduce((sum, l) => sum + calculateDays(l.start_date, l.end_date), 0);
+                const balance = totalDays - usedDays;
+                return { ...guard, totalDays, usedDays, balance };
+              }).filter(g => g.totalDays > 0 || g.usedDays > 0);
+
+              if (guardsWithQuota.length === 0) return (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  Nenhuma cota TRE definida ainda.
+                </div>
+              );
+
+              return (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{settings.guard_label}</TableHead>
+                      <TableHead className="text-center">Total TRE</TableHead>
+                      <TableHead className="text-center">Usadas</TableHead>
+                      <TableHead className="text-center">Saldo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {guardsWithQuota.map(g => (
+                      <TableRow key={g.id}>
+                        <TableCell className="font-medium">{g.name}</TableCell>
+                        <TableCell className="text-center">{g.totalDays}</TableCell>
+                        <TableCell className="text-center">{g.usedDays}</TableCell>
+                        <TableCell className={cn(
+                          "text-center font-semibold",
+                          g.balance > 0 ? "text-green-600" : "text-destructive"
+                        )}>
+                          {g.balance}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
         {/* Leaves List */}
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <CardTitle>Folgas Registradas</CardTitle>
+                <CardDescription>
+                  Lista de todos os afastamentos registrados
+                </CardDescription>
+              </div>
+              <div className="w-full sm:w-[200px]">
+                <Select value={filterGuard} onValueChange={setFilterGuard}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por segurança" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {guards.map(guard => (
+                      <SelectItem key={guard.id} value={guard.id}>
+                        {guard.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Carregando...
+              </div>
+            ) : filteredLeaves.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhuma folga registrada.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{settings.guard_label}</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Período</TableHead>
+                      <TableHead className="text-center">Dias</TableHead>
+                      <TableHead>Observações</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLeaves.map(leave => (
+                      <TableRow key={leave.id}>
+                        <TableCell className="font-medium">
+                          {leave.guard?.name || 'Desconhecido'}
+                        </TableCell>
+                        <TableCell>
+                          {getLeaveTypeLabel(leave.leave_type, leave.custom_type)}
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(`${leave.start_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}
+                          {leave.start_date !== leave.end_date && (
+                            <> - {format(new Date(`${leave.end_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}</>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {calculateDays(leave.start_date, leave.end_date)}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate">
+                          {leave.notes || '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => generateLeavePDF(leave)}
+                              title="Baixar PDF"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(leave)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeleteLeaveId(leave.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
                 <CardDescription>
                   Lista de todos os afastamentos registrados
                 </CardDescription>
