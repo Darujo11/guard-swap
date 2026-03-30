@@ -1,18 +1,25 @@
 
 
-## Plano: Forçar atualização do sistema para todos os usuários
+## Relatório de Alterações — 29 e 30 de Março de 2026
 
-### O que será feito
+Este não é um plano de implementação — é uma solicitação de geração de documento. Vou criar um PDF com o resumo de todas as alterações realizadas.
 
-Incrementar a versão da aplicação para 4.1.4 e manter `forceUpdate: true`, garantindo que todos os usuários recebam a versão mais recente com as alterações de afastamentos e upload de documentos.
+### Conteúdo do relatório
 
-### Alterações
+Com base no histórico da conversa, as seguintes alterações foram realizadas:
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/lib/version.ts` | `4.1.3` → `4.1.4`, `buildDate` → `2026-03-30` |
-| `public/version.json` | `4.1.3` → `4.1.4`, `buildDate` → `2026-03-30` |
-| `index.html` | Atualizar meta tag de versão se existir |
+1. **Dropdown mantém aberto ao clicar nos toggles** — `e.preventDefault()` em "Bloquear Trocas" e "Troca só dentro do mês"
+2. **Renomeação "Registrar Nova Folga" → "Registro de Afastamento"**
+3. **Títulos dinâmicos no PDF** — Comprovante de Licença, Férias, Atestado, etc. conforme o tipo
+4. **Renomeação global "Folgas" → "Afastamentos"** — Menu, páginas, toasts, PDFs, labels
+5. **Afastamentos no calendário do segurança** — Todos os tipos aparecem em vermelho com nome do tipo
+6. **Correção de solicitações de troca pendentes** — Aparecem corretamente para o admin
+7. **Destaque de dias de trabalho nos calendários de data** — Ao registrar afastamento, dias de plantão são marcados com cor da equipe
+8. **Correção de status dos afastamentos** — Admin insere com status `APPROVED` automaticamente
+9. **Migração de dados** — Registros antigos com `PENDING` e `admin_id` atualizados para `APPROVED`
+10. **Upload de documento comprobatório** — Novo campo para anexar atestados/comprovantes, com download na lista
+11. **Forçar atualização v4.1.4** — Versão incrementada com `forceUpdate: true`
 
-Após as alterações, será necessário publicar o projeto para que os usuários recebam a atualização.
+### Formato
+PDF profissional com cabeçalho, data, e lista detalhada de alterações organizadas por categoria.
 
