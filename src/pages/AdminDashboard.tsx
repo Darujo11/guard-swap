@@ -569,7 +569,7 @@ const AdminDashboard = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Scale className="h-5 w-5" />
-                Solicitações de Folga TRE
+                Solicitações de Afastamento TRE
               </CardTitle>
               <CardDescription>
                 {pendingTreLeaves.length} solicitação(ões) pendente(s) de aprovação
