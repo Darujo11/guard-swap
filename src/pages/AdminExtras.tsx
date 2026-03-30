@@ -1780,7 +1780,7 @@ export default function AdminExtras() {
                                             <TableCell>
                                               {format(new Date(`${extra.extra_date}T00:00:00`), "dd/MM/yyyy")}
                                             </TableCell>
-                                            <TableCell className="text-center">{extra.quantity}h</TableCell>
+                                            <TableCell className="text-center">{formatHoursMinutes(extra.quantity, extra.minutes || 0)}</TableCell>
                                             <TableCell className="text-center">
                                               <span className={cn(
                                                 "px-2 py-1 rounded-full text-xs font-medium",
