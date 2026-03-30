@@ -315,7 +315,7 @@ export default function AdminLeaves() {
       console.error('Error updating leave:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao atualizar folga.',
+        description: 'Falha ao atualizar afastamento.',
         variant: 'destructive',
       });
     } finally {
