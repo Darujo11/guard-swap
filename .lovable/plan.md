@@ -1,24 +1,52 @@
 
 
-## Plano: Gerar relatório de melhorias para o segurança
+## Plano: Adicionar campo de minutos ao cadastro de plantão extra
 
-### O que será feito
+### Problema atual
+O campo "Horas de Extras Concedido" aceita apenas números inteiros (horas). Não é possível registrar minutos (ex: 12h30min).
 
-Criar um PDF documentando as melhorias do sistema na perspectiva do **segurança**, com linguagem simples e acessível, cobrindo:
+### Solução
+Adicionar um campo de **minutos** (0-59) ao lado do campo de horas, e uma nova coluna `minutes` na tabela `extras`. A exibição será no formato `24h30min` em vez de `24h`.
 
-1. **Minha Escala** — calendário pessoal mostrando plantões com trocas aprovadas integradas (gradiente de cores, nome do cedente, ícone de troca)
-2. **Solicitação de Trocas** — fluxo completo de solicitação, seleção de datas e segurança, aprovação pelo coordenador
-3. **Folgas TRE pelo sistema** — solicitação via calendário, visualização de cotas restantes, protocolo gerado automaticamente
-4. **Trocas somente dentro do mês** — restrição ativada pelo admin, dias fora do mês desabilitados no calendário
-5. **Plantão trocado passa a ser do segurança** — após aprovação, o dia aparece na escala do segurança e ele pode solicitar nova troca naquele dia
+### Alterações
 
-### Abordagem
+#### 1. Migração SQL
+```sql
+ALTER TABLE extras ADD COLUMN minutes integer NOT NULL DEFAULT 0;
+```
 
-- Tentar capturar screenshots das telas do preview (login, dashboard do segurança, calendário)
-- Gerar PDF com `reportlab` contendo texto explicativo simples + prints quando possível
-- Salvar em `/mnt/documents/`
+#### 2. `src/pages/AdminExtras.tsx`
 
-### Formato
+**States**: Adicionar `minutes` e `editMinutes` (default 0)
 
-PDF em português, ~6-8 páginas, linguagem simples e direta, organizado por funcionalidade com descrições e imagens das telas.
+**Formulário de cadastro** (~linha 1452): Trocar o input único por dois campos lado a lado:
+- Horas (input number, min 0)
+- Minutos (input number, min 0, max 59)
+
+**Formulário de edição** (~linha 2222): Mesmo layout
+
+**Insert/Update**: Incluir `minutes` no objeto de insert e update
+
+**Validação**: Horas + minutos deve ser > 0
+
+**Exibição em tabelas e rankings**: Criar helper `formatHoursMinutes(hours, minutes)` que retorna:
+- `24h` quando minutes = 0
+- `24h30min` quando minutes > 0
+
+**Totais nos rankings**: Somar horas e minutos corretamente (acumular minutos, converter excedente em horas)
+
+**Reset**: Após submit, resetar minutos para 0
+
+#### Locais de exibição a atualizar
+- Ranking expandido (~linha 1745): `{extra.quantity}h` → `formatHoursMinutes()`
+- Detalhes tabela (~linha 1913): `{extra.quantity || 1}` → formato com minutos
+- Ranking total (~linha 1720): `{item.totalHours}h` → formato com total convertido
+- Gráficos: tooltip com formato correto
+- PDF export: incluir minutos
+
+### Escopo
+| Alteração | Detalhe |
+|-----------|---------|
+| Migração SQL | Coluna `minutes` na tabela `extras` |
+| `src/pages/AdminExtras.tsx` | Campo minutos nos formulários, helper de formatação, totais com minutos |
 
