@@ -908,7 +908,13 @@ export default function AdminLeaves() {
           </CardContent>
         </Card>
 
-
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Relatório de Folgas
+            </CardTitle>
+            <CardDescription>
               Gere um relatório em PDF com as folgas do período selecionado
             </CardDescription>
           </CardHeader>
