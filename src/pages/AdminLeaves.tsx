@@ -704,7 +704,7 @@ export default function AdminLeaves() {
               <div className="flex justify-end">
                 <Button type="submit" disabled={submitting}>
                   <Plus className="h-4 w-4 mr-2" />
-                  {submitting ? 'Registrando...' : 'Registrar Folga'}
+                  {submitting ? 'Registrando...' : 'Registrar Afastamento'}
                 </Button>
               </div>
             </form>
