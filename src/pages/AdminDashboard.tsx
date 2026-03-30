@@ -219,7 +219,7 @@ const AdminDashboard = () => {
     doc.setFontSize(8);
     doc.text('Gerado pelo Sistema Guard Swap', pageWidth / 2, doc.internal.pageSize.height - 10, { align: 'center' });
 
-    doc.save(`folga-tre-${leave.protocol || leave.id}.pdf`);
+    doc.save(`afastamento-tre-${leave.protocol || leave.id}.pdf`);
   };
 
   const openDecisionDialog = (request: SwapRequest, action: 'APPROVED' | 'REJECTED') => {
