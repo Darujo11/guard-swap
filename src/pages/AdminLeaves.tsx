@@ -82,7 +82,7 @@ export default function AdminLeaves() {
 
   // TRE Quota state
   const [treGuard, setTreGuard] = useState<string>('');
-  const [treDays, setTreDays] = useState<number>(0);
+  const [treDays, setTreDays] = useState<string>('');
   const [treQuotas, setTreQuotas] = useState<Array<{ guard_id: string; total_days: number }>>([]);
   const [treSaving, setTreSaving] = useState(false);
 
