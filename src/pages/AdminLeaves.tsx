@@ -952,6 +952,7 @@ export default function AdminLeaves() {
                       <TableHead>Período</TableHead>
                       <TableHead className="text-center">Dias</TableHead>
                       <TableHead>Observações</TableHead>
+                      <TableHead className="text-center">Doc</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
