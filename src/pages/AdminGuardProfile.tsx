@@ -569,7 +569,7 @@ const AdminGuardProfile = () => {
     yPos += 6;
     doc.text(`Total de Extras: ${extras.length}`, 14, yPos);
     yPos += 6;
-    doc.text(`Total de Folgas/Atestados: ${leaves.length}`, 14, yPos);
+    doc.text(`Total de Afastamentos: ${leaves.length}`, 14, yPos);
     yPos += 6;
     doc.text(`Observações Positivas: ${notes.filter(n => n.note_type === 'positive').length}`, 14, yPos);
     yPos += 6;
