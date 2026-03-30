@@ -271,8 +271,10 @@ const AdminGuards = () => {
         const guardTreLeaves = treLeaves.filter(l => l.guard_id === guard.id);
         const treDates = new Set<string>();
         guardTreLeaves.forEach(l => {
-          const start = new Date(l.start_date);
-          const end = new Date(l.end_date);
+          const [sy, sm, sd] = l.start_date.split('-').map(Number);
+          const [ey, em, ed] = l.end_date.split('-').map(Number);
+          const start = new Date(sy, sm - 1, sd);
+          const end = new Date(ey, em - 1, ed);
           for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
             const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             if (dateStr >= startOfMonth && dateStr <= endStr) {
