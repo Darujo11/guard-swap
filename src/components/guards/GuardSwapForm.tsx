@@ -44,17 +44,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
   const { toast } = useToast();
   const { settings } = useOrganizationSettings();
 
-  if (settings.swaps_blocked) {
-    return (
-      <Card className="p-8 text-center">
-        <CardContent className="flex flex-col items-center gap-4 pt-6">
-          <ShieldOff className="h-12 w-12 text-destructive" />
-          <h3 className="text-xl font-bold">Acesso Restrito</h3>
-          <p className="text-muted-foreground">Trocas bloqueadas no sistema pelo coordenador.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+
 
   useEffect(() => {
     fetchAvailableGuards();
