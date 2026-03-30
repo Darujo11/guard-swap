@@ -1,25 +1,20 @@
 
 
-## Plano: Botão de atualização no Login e no Perfil
+## Plano: Mover botão "Atualizar Sistema" para logo abaixo do card de Perfil
 
 ### O que será feito
 
-Adicionar um botão "Atualizar Sistema" em ambas as páginas que força o reload da aplicação limpando o cache do Service Worker.
+Mover o botão "Atualizar Sistema" de sua posição atual (abaixo do card de Segurança/senha) para logo abaixo do card "Informações do Perfil", antes do card de senha.
 
-### Alterações
+### Alteração
 
-#### 1. `src/pages/Login.tsx`
+#### `src/pages/Profile.tsx`
 
-- Adicionar botão "Atualizar" (ícone `RefreshCw`) próximo à versão no rodapé
-- Ao clicar: limpar caches do SW (`caches.keys()` + `caches.delete()`) e fazer `window.location.reload()`
-
-#### 2. `src/pages/Profile.tsx`
-
-- Adicionar botão "Atualizar Sistema" com a mesma lógica, posicionado no final da página ou próximo à versão
+- Remover o `<div>` com o botão "Atualizar Sistema" do final da página (linhas 322-340)
+- Inserir esse mesmo botão logo após o card "Informações do Perfil" (após linha 267), antes do card "Segurança"
 
 ### Escopo
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/Login.tsx` | Botão "Atualizar" no rodapé ao lado da versão |
-| `src/pages/Profile.tsx` | Botão "Atualizar Sistema" na página de perfil |
+| `src/pages/Profile.tsx` | Reposicionar botão "Atualizar Sistema" para após o card de perfil |
 
