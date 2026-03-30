@@ -15,10 +15,11 @@ import { CalendarOff, CalendarIcon, Plus, Pencil, Trash2, FileText, ChevronLeft,
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { format, differenceInDays, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import { format, differenceInDays, startOfMonth, endOfMonth, addMonths, subMonths, parseISO, eachDayOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
+import { getEffectiveDatesSet } from '@/utils/effectiveSchedule';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -26,6 +27,7 @@ interface Guard {
   id: string;
   name: string;
   email: string;
+  team_id: string | null;
 }
 
 interface Leave {
@@ -93,6 +95,10 @@ export default function AdminLeaves() {
   const [reportGuardFilter, setReportGuardFilter] = useState<string>('all');
   const [reportSortBy, setReportSortBy] = useState<string>('name');
 
+  // Work days for selected guard (highlighted in calendars)
+  const [guardWorkDays, setGuardWorkDays] = useState<Set<string>>(new Set());
+  const [guardTeamColor, setGuardTeamColor] = useState<string>('#3b82f6');
+
   useEffect(() => {
     if (profile?.id) {
       fetchGuards();
@@ -101,11 +107,58 @@ export default function AdminLeaves() {
     }
   }, [profile?.id]);
 
+  // Fetch work days when selected guard changes
+  useEffect(() => {
+    if (!selectedGuard) {
+      setGuardWorkDays(new Set());
+      return;
+    }
+    const guard = guards.find(g => g.id === selectedGuard);
+    if (!guard?.team_id) {
+      setGuardWorkDays(new Set());
+      return;
+    }
+    const fetchWorkDays = async () => {
+      try {
+        // Get team color
+        const { data: teamData } = await supabase
+          .from('teams')
+          .select('color')
+          .eq('id', guard.team_id!)
+          .single();
+        if (teamData?.color) setGuardTeamColor(teamData.color);
+
+        // Get team schedules
+        const { data: schedules } = await supabase
+          .from('team_schedules')
+          .select('shift_date, team_id');
+
+        // Get approved swaps
+        const { data: swaps } = await supabase
+          .from('swap_requests')
+          .select('requester_id, target_id, requester_shift_date, target_shift_date')
+          .eq('status', 'APPROVED')
+          .or(`requester_id.eq.${selectedGuard},target_id.eq.${selectedGuard}`);
+
+        const effectiveDates = getEffectiveDatesSet(
+          schedules || [],
+          swaps || [],
+          selectedGuard,
+          guard.team_id!
+        );
+        setGuardWorkDays(effectiveDates);
+      } catch (err) {
+        console.error('Error fetching work days:', err);
+      }
+    };
+    fetchWorkDays();
+  }, [selectedGuard, guards]);
+
   const fetchGuards = async () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, name, email')
+        .select('id, name, email, team_id')
         .eq('admin_id', profile!.id)
         .eq('is_active', true)
         .order('name');
@@ -137,7 +190,7 @@ export default function AdminLeaves() {
       const guardIds = [...new Set((data || []).map(l => l.guard_id))];
       const { data: guardsData } = await supabase
         .from('profiles')
-        .select('id, name, email')
+        .select('id, name, email, team_id')
         .in('id', guardIds);
 
       const guardsMap = new Map((guardsData || []).map(g => [g.id, g]));
@@ -656,6 +709,8 @@ export default function AdminLeaves() {
                         onSelect={setStartDate}
                         locale={ptBR}
                         className="pointer-events-auto"
+                        modifiers={{ workDay: (date: Date) => guardWorkDays.has(format(date, 'yyyy-MM-dd')) }}
+                        modifiersStyles={{ workDay: { backgroundColor: guardTeamColor, color: 'white', borderRadius: '50%' } }}
                       />
                     </PopoverContent>
                   </Popover>
@@ -684,6 +739,8 @@ export default function AdminLeaves() {
                         onSelect={setEndDate}
                         locale={ptBR}
                         className="pointer-events-auto"
+                        modifiers={{ workDay: (date: Date) => guardWorkDays.has(format(date, 'yyyy-MM-dd')) }}
+                        modifiersStyles={{ workDay: { backgroundColor: guardTeamColor, color: 'white', borderRadius: '50%' } }}
                       />
                     </PopoverContent>
                   </Popover>
