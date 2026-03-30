@@ -100,10 +100,23 @@ interface Extra {
   month_reference: string;
   justification: string;
   quantity: number;
+  minutes: number;
   percentage_type: number;
   created_at: string;
   guard?: Profile;
 }
+
+const formatHoursMinutes = (hours: number, minutes: number) => {
+  if (minutes > 0) return `${hours}h${String(minutes).padStart(2, '0')}min`;
+  return `${hours}h`;
+};
+
+const sumHoursMinutes = (items: { quantity: number; minutes: number }[]) => {
+  let totalMinutes = items.reduce((sum, e) => sum + (Number(e.quantity) || 0) * 60 + (Number(e.minutes) || 0), 0);
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  return { hours, minutes: mins, totalMinutes };
+};
 
 export default function AdminExtras() {
   const navigate = useNavigate();
@@ -118,6 +131,7 @@ export default function AdminExtras() {
   const [extraDate, setExtraDate] = useState<Date>();
   const [justification, setJustification] = useState("");
   const [quantity, setQuantity] = useState<number | undefined>(24);
+  const [minutes, setMinutes] = useState<number>(0);
   const [percentageType, setPercentageType] = useState<number>(100);
   const [guardShiftDates, setGuardShiftDates] = useState<Date[]>([]);
   const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
@@ -144,6 +158,7 @@ export default function AdminExtras() {
   const [editDate, setEditDate] = useState<Date>();
   const [editJustification, setEditJustification] = useState("");
   const [editQuantity, setEditQuantity] = useState<number>(1);
+  const [editMinutes, setEditMinutes] = useState<number>(0);
   const [editPercentageType, setEditPercentageType] = useState<number>(100);
   
   // Delete confirmation state
@@ -249,16 +264,18 @@ export default function AdminExtras() {
 
     const summary = guards.map(guard => {
       const guardExtras = periodExtras.filter(e => e.guard_id === guard.id);
-      const totalHours = guardExtras.reduce((sum, e) => sum + (Number(e.quantity) || 0), 0);
+      const { hours, minutes } = sumHoursMinutes(guardExtras);
       return {
         guardId: guard.id,
         guardName: guard.name,
-        totalHours
+        totalHours: hours,
+        totalMinutes: minutes,
+        totalInMinutes: hours * 60 + minutes,
       };
     });
 
     return {
-      data: summary.filter(s => s.totalHours > 0).sort((a, b) => b.totalHours - a.totalHours),
+      data: summary.filter(s => s.totalInMinutes > 0).sort((a, b) => b.totalInMinutes - a.totalInMinutes),
       startDate,
       endDate
     };
@@ -276,16 +293,18 @@ export default function AdminExtras() {
 
     const summary = guards.map(guard => {
       const guardExtras = periodExtras.filter(e => e.guard_id === guard.id);
-      const totalHours = guardExtras.reduce((sum, e) => sum + (Number(e.quantity) || 0), 0);
+      const { hours, minutes } = sumHoursMinutes(guardExtras);
       return {
         guardId: guard.id,
         guardName: guard.name,
-        totalHours
+        totalHours: hours,
+        totalMinutes: minutes,
+        totalInMinutes: hours * 60 + minutes,
       };
     });
 
     return {
-      data: summary.filter(s => s.totalHours > 0).sort((a, b) => b.totalHours - a.totalHours),
+      data: summary.filter(s => s.totalInMinutes > 0).sort((a, b) => b.totalInMinutes - a.totalInMinutes),
       startDate,
       endDate
     };
@@ -313,15 +332,17 @@ export default function AdminExtras() {
     // Calcular totais por guard
     const summary = guards.map(guard => {
       const guardExtras = baseExtras.filter(e => e.guard_id === guard.id);
-      const totalHours = guardExtras.reduce((sum, e) => sum + (Number(e.quantity) || 0), 0);
+      const { hours, minutes } = sumHoursMinutes(guardExtras);
       return {
         guardId: guard.id,
         guardName: guard.name,
-        totalHours
+        totalHours: hours,
+        totalMinutes: minutes,
+        totalInMinutes: hours * 60 + minutes,
       };
     });
     
-    return summary.filter(s => s.totalHours > 0).sort((a, b) => b.totalHours - a.totalHours);
+    return summary.filter(s => s.totalInMinutes > 0).sort((a, b) => b.totalInMinutes - a.totalInMinutes);
   }, [guards, extras, rankingDate, rankingAllMonths, rankingPercentageFilter]);
 
   // Keep combined ranking for backward compatibility (PDF export, etc.)
@@ -336,16 +357,18 @@ export default function AdminExtras() {
 
     const summary = guards.map(guard => {
       const guardExtras = periodExtras.filter(e => e.guard_id === guard.id);
-      const totalHours = guardExtras.reduce((sum, e) => sum + (Number(e.quantity) || 0), 0);
+      const { hours, minutes } = sumHoursMinutes(guardExtras);
       return {
         guardId: guard.id,
         guardName: guard.name,
-        totalHours
+        totalHours: hours,
+        totalMinutes: minutes,
+        totalInMinutes: hours * 60 + minutes,
       };
     });
 
     return {
-      data: summary.sort((a, b) => b.totalHours - a.totalHours),
+      data: summary.sort((a, b) => b.totalInMinutes - a.totalInMinutes),
       startDate,
       endDate
     };
@@ -499,6 +522,7 @@ export default function AdminExtras() {
     const withGuards: Extra[] = extrasList.map((e) => ({
       ...(e as any),
       quantity: (e as any).quantity ?? 1,
+      minutes: (e as any).minutes ?? 0,
       percentage_type: (e as any).percentage_type ?? 100,
       guard: e.guard_id ? profilesMap[e.guard_id] : undefined,
     }));
@@ -612,11 +636,11 @@ export default function AdminExtras() {
       return;
     }
 
-    if (!quantity || quantity < 1) {
+    if ((!quantity || quantity < 0) && (!minutes || minutes < 1)) {
       toast({
         variant: "destructive",
         title: "Quantidade inválida",
-        description: "A quantidade de horas deve ser maior que zero.",
+        description: "As horas e/ou minutos devem ser maiores que zero.",
       });
       return;
     }
@@ -660,7 +684,8 @@ export default function AdminExtras() {
         extra_date: extraDateFormatted,
         month_reference: format(startOfMonth(extraDate), "yyyy-MM-dd"),
         justification: justification.trim(),
-        quantity,
+        quantity: quantity || 0,
+        minutes: minutes || 0,
         percentage_type: percentageType,
         created_by: profile.id,
         admin_id: profile.id,
@@ -687,6 +712,7 @@ export default function AdminExtras() {
       setExtraDate(undefined);
       setJustification("");
       setQuantity(24);
+      setMinutes(0);
       setPercentageType(100);
       setGuardShiftDates([]);
       
@@ -707,6 +733,7 @@ export default function AdminExtras() {
     setEditDate(new Date(`${extra.extra_date}T00:00:00`));
     setEditJustification(extra.justification);
     setEditQuantity(extra.quantity);
+    setEditMinutes(extra.minutes || 0);
     setEditPercentageType(extra.percentage_type || 100);
   };
 
@@ -716,11 +743,12 @@ export default function AdminExtras() {
     setEditDate(undefined);
     setEditJustification("");
     setEditQuantity(1);
+    setEditMinutes(0);
     setEditPercentageType(100);
   };
 
   const handleUpdate = async () => {
-    if (!editingExtra || !editGuardId || !editDate || !editJustification || editQuantity < 1) {
+    if (!editingExtra || !editGuardId || !editDate || !editJustification || (editQuantity < 1 && editMinutes < 1)) {
       toast({
         variant: "destructive",
         title: "Campos obrigatórios",
@@ -761,6 +789,7 @@ export default function AdminExtras() {
         month_reference: format(startOfMonth(editDate), "yyyy-MM-dd"),
         justification: editJustification,
         quantity: editQuantity,
+        minutes: editMinutes,
         percentage_type: editPercentageType,
       })
       .eq("id", editingExtra.id);
@@ -843,8 +872,8 @@ export default function AdminExtras() {
       doc.setFontSize(14);
       doc.text("Resumo", 14, yPos + 10);
       doc.setFontSize(10);
-      const totalExtras = reportFilteredExtras.reduce((sum, extra) => sum + (Number(extra.quantity) || 1), 0);
-      doc.text(`Total de extras no período: ${totalExtras}`, 14, yPos + 16);
+      const { hours: totalH, minutes: totalM } = sumHoursMinutes(reportFilteredExtras);
+      doc.text(`Total de extras no período: ${formatHoursMinutes(totalH, totalM)}`, 14, yPos + 16);
 
       // Sort extras based on selected order
       const sortedExtras = [...reportFilteredExtras].sort((a, b) => {
@@ -859,7 +888,7 @@ export default function AdminExtras() {
 
       const tableData = sortedExtras.map(extra => [
         extra.guard?.name || "Desconhecido",
-        (extra.quantity || 1).toString(),
+        formatHoursMinutes(extra.quantity || 1, extra.minutes || 0),
         `${extra.percentage_type || 100}%`,
         format(new Date(`${extra.extra_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR }),
         extra.justification,
@@ -938,14 +967,13 @@ export default function AdminExtras() {
       doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 36);
 
       // Obter valores únicos de total, ordenados decrescente
-      const uniqueTotals = [...new Set(rankingData.data.map(i => i.totalHours))].sort((a, b) => b - a);
+      const uniqueTotals = [...new Set(rankingData.data.map(i => i.totalInMinutes))].sort((a, b) => b - a);
       const tableData = rankingData.data.map((item) => {
-        // Calcular posição baseada em valores únicos
-        const position = uniqueTotals.indexOf(item.totalHours) + 1;
+        const position = uniqueTotals.indexOf(item.totalInMinutes) + 1;
         return [
           `${position}º`,
           item.guardName,
-          item.totalHours.toString()
+          formatHoursMinutes(item.totalHours, item.totalMinutes || 0)
         ];
       });
 
@@ -1015,7 +1043,7 @@ export default function AdminExtras() {
       csvContent += "Posição,Segurança,Total de Horas\n";
 
       rankingData.data.forEach((item, index) => {
-        csvContent += `${index + 1},${item.guardName},${item.totalHours}\n`;
+        csvContent += `${index + 1},${item.guardName},${formatHoursMinutes(item.totalHours, item.totalMinutes || 0)}\n`;
       });
 
       const encodedUri = encodeURI(csvContent);
@@ -1450,15 +1478,32 @@ export default function AdminExtras() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="quantity">Horas de Extras Concedido *</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="1"
-                  value={quantity ?? ''}
-                  onChange={(e) => setQuantity(e.target.value ? parseInt(e.target.value) : undefined)}
-                  placeholder="Informe as horas"
-                />
+                <Label>Horas e Minutos de Extras Concedido *</Label>
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1">
+                    <Input
+                      id="quantity"
+                      type="number"
+                      min="0"
+                      value={quantity ?? ''}
+                      onChange={(e) => setQuantity(e.target.value ? parseInt(e.target.value) : undefined)}
+                      placeholder="Horas"
+                    />
+                  </div>
+                  <span className="text-sm text-muted-foreground">h</span>
+                  <div className="w-24">
+                    <Input
+                      id="minutes"
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={minutes}
+                      onChange={(e) => setMinutes(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
+                      placeholder="Min"
+                    />
+                  </div>
+                  <span className="text-sm text-muted-foreground">min</span>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -1717,7 +1762,7 @@ export default function AdminExtras() {
                                     {item.guardName}
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-center font-semibold">{item.totalHours}h</TableCell>
+                                <TableCell className="text-center font-semibold">{formatHoursMinutes(item.totalHours, item.totalMinutes || 0)}</TableCell>
                               </TableRow>
                             </CollapsibleTrigger>
                             <CollapsibleContent asChild>
@@ -1742,7 +1787,7 @@ export default function AdminExtras() {
                                             <TableCell>
                                               {format(new Date(`${extra.extra_date}T00:00:00`), "dd/MM/yyyy")}
                                             </TableCell>
-                                            <TableCell className="text-center">{extra.quantity}h</TableCell>
+                                            <TableCell className="text-center">{formatHoursMinutes(extra.quantity, extra.minutes || 0)}</TableCell>
                                             <TableCell className="text-center">
                                               <span className={cn(
                                                 "px-2 py-1 rounded-full text-xs font-medium",
@@ -1910,7 +1955,7 @@ export default function AdminExtras() {
                   {detailsExtras.map((extra) => (
                     <TableRow key={extra.id}>
                       <TableCell className="font-medium">{extra.guard?.name || "Desconhecido"}</TableCell>
-                      <TableCell className="text-center">{extra.quantity || 1}</TableCell>
+                      <TableCell className="text-center">{formatHoursMinutes(extra.quantity || 1, extra.minutes || 0)}</TableCell>
                       <TableCell className="text-center">
                         <span className={cn(
                           "px-2 py-1 rounded-full text-xs font-medium",
@@ -2045,10 +2090,9 @@ export default function AdminExtras() {
                       <TableBody>
                         {(() => {
                           // Obter valores únicos de total, ordenados decrescente
-                          const uniqueTotals = [...new Set(rankingSummary50.data.map(i => i.totalHours))].sort((a, b) => b - a);
+                          const uniqueTotals = [...new Set(rankingSummary50.data.map(i => i.totalInMinutes))].sort((a, b) => b - a);
                           return rankingSummary50.data.map((item) => {
-                          // Calcular posição baseada em valores únicos
-                          const position = uniqueTotals.indexOf(item.totalHours) + 1;
+                          const position = uniqueTotals.indexOf(item.totalInMinutes) + 1;
                           return (
                             <TableRow key={item.guardId}>
                               <TableCell className="font-bold text-lg">
@@ -2059,7 +2103,7 @@ export default function AdminExtras() {
                               </TableCell>
                               <TableCell className="font-medium">{item.guardName}</TableCell>
                               <TableCell className="text-center font-bold text-lg text-amber-600">
-                                {item.totalHours}
+                                {formatHoursMinutes(item.totalHours, item.totalMinutes || 0)}
                               </TableCell>
                             </TableRow>
                           );
@@ -2129,10 +2173,9 @@ export default function AdminExtras() {
                       <TableBody>
                         {(() => {
                           // Obter valores únicos de total, ordenados decrescente
-                          const uniqueTotals = [...new Set(rankingSummary100.data.map(i => i.totalHours))].sort((a, b) => b - a);
+                          const uniqueTotals = [...new Set(rankingSummary100.data.map(i => i.totalInMinutes))].sort((a, b) => b - a);
                           return rankingSummary100.data.map((item) => {
-                          // Calcular posição baseada em valores únicos
-                          const position = uniqueTotals.indexOf(item.totalHours) + 1;
+                          const position = uniqueTotals.indexOf(item.totalInMinutes) + 1;
                           return (
                             <TableRow key={item.guardId}>
                               <TableCell className="font-bold text-lg">
@@ -2143,7 +2186,7 @@ export default function AdminExtras() {
                               </TableCell>
                               <TableCell className="font-medium">{item.guardName}</TableCell>
                               <TableCell className="text-center font-bold text-lg text-emerald-600">
-                                {item.totalHours}
+                                {formatHoursMinutes(item.totalHours, item.totalMinutes || 0)}
                               </TableCell>
                             </TableRow>
                           );
@@ -2220,14 +2263,30 @@ export default function AdminExtras() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-quantity">Horas de Extras Concedido *</Label>
-                <Input
-                  id="edit-quantity"
-                  type="number"
-                  min="1"
-                  value={editQuantity}
-                  onChange={(e) => setEditQuantity(parseInt(e.target.value) || 1)}
-                />
+                <Label>Horas e Minutos de Extras Concedido *</Label>
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1">
+                    <Input
+                      id="edit-quantity"
+                      type="number"
+                      min="0"
+                      value={editQuantity}
+                      onChange={(e) => setEditQuantity(parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <span className="text-sm text-muted-foreground">h</span>
+                  <div className="w-24">
+                    <Input
+                      id="edit-minutes"
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={editMinutes}
+                      onChange={(e) => setEditMinutes(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
+                    />
+                  </div>
+                  <span className="text-sm text-muted-foreground">min</span>
+                </div>
               </div>
             </div>
 
