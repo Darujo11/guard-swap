@@ -336,7 +336,7 @@ export default function AdminLeaves() {
 
       toast({
         title: 'Sucesso',
-        description: 'Folga excluída com sucesso!',
+        description: 'Afastamento excluído com sucesso!',
       });
 
       setDeleteLeaveId(null);
