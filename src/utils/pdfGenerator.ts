@@ -213,7 +213,7 @@ export const generateAllGuardsSchedulePDF = (
             const teamCol = leaveLabel ? leaveLabel.toUpperCase() : workDay ? workDay.teamName : (extra ? 'EXTRA' : '');
 
             const observations: string[] = [];
-            if (isTre) observations.push('Folga TRE');
+            if (leaveLabel) observations.push(leaveLabel);
             if (workDay?.isSwapped) {
                 const swapDatesPart = workDay.originalDate
                     ? (() => { const [oy, om, od] = workDay.originalDate.split('-'); return ` ${od}/${om} ↔ ${d}/${m}`; })()
