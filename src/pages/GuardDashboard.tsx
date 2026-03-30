@@ -194,7 +194,7 @@ const GuardDashboard = () => {
     try {
       const { error } = await supabase.from('leaves').delete().eq('id', cancelLeaveId);
       if (error) throw error;
-      toast({ title: 'Folga cancelada', description: 'Informe ao Coordenador que cancelou a troca.' });
+      toast({ title: 'Afastamento cancelado', description: 'Informe ao Coordenador que cancelou a troca.' });
       setCancelDialogOpen(false);
       setCancelLeaveId(null);
       setCancelConfirmText('');
