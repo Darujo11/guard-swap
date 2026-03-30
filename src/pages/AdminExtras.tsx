@@ -888,7 +888,7 @@ export default function AdminExtras() {
 
       const tableData = sortedExtras.map(extra => [
         extra.guard?.name || "Desconhecido",
-        (extra.quantity || 1).toString(),
+        formatHoursMinutes(extra.quantity || 1, extra.minutes || 0),
         `${extra.percentage_type || 100}%`,
         format(new Date(`${extra.extra_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR }),
         extra.justification,
