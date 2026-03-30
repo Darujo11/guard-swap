@@ -725,6 +725,7 @@ export default function AdminExtras() {
     setEditDate(new Date(`${extra.extra_date}T00:00:00`));
     setEditJustification(extra.justification);
     setEditQuantity(extra.quantity);
+    setEditMinutes(extra.minutes || 0);
     setEditPercentageType(extra.percentage_type || 100);
   };
 
