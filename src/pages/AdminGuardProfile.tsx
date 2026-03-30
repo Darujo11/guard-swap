@@ -960,7 +960,7 @@ const AdminGuardProfile = () => {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="swaps">Trocas</TabsTrigger>
             <TabsTrigger value="extras">Extras</TabsTrigger>
-            <TabsTrigger value="leaves">Folgas</TabsTrigger>
+            <TabsTrigger value="leaves">Afastamentos</TabsTrigger>
             <TabsTrigger value="notes">Observações</TabsTrigger>
           </TabsList>
 
