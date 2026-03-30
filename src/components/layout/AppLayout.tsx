@@ -39,7 +39,8 @@ export function AppLayout({
   } = useSwapNotifications();
   const location = useLocation();
   const {
-    settings
+    settings,
+    updateSettings
   } = useOrganizationSettings();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigation = [{

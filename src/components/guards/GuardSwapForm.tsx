@@ -216,6 +216,17 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
       return false;
     }
 
+    if (settings.swap_same_month_only) {
+      if (requesterDate.getMonth() !== targetDate.getMonth() || requesterDate.getFullYear() !== targetDate.getFullYear()) {
+        toast({
+          title: 'Troca não permitida',
+          description: 'As trocas só são permitidas dentro do mesmo mês.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+    }
+
     return true;
   };
 

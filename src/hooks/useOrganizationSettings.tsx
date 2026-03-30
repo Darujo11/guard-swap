@@ -33,6 +33,7 @@ const defaultSettings: OrganizationSettings = {
   swaps_label: 'Trocas',
   extra_label: 'Extra',
   extras_label: 'Extras',
+  swap_same_month_only: false,
 };
 
 export function useOrganizationSettings() {
