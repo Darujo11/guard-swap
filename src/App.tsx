@@ -190,7 +190,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </HashRouter>
-      </ServiceWorkerProvider>
+      </MaybeServiceWorker>
     </TooltipProvider>
   </QueryClientProvider>
 );
