@@ -285,29 +285,28 @@ const Login = () => {
       </Dialog>
       
       {/* Footer with Version and Credits */}
-      <div className="absolute bottom-4 left-0 right-0 z-10 text-center space-y-1">
-        <span className="text-xs text-muted-foreground/70">
-          Versão {APP_VERSION}
-        </span>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={async () => {
-            if ('serviceWorker' in navigator) {
-              const registrations = await navigator.serviceWorker.getRegistrations();
-              for (const registration of registrations) {
-                await registration.unregister();
+      <div className="absolute bottom-4 left-0 right-0 z-10 flex flex-col items-center gap-1">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground/70">
+          <span>v{APP_VERSION}</span>
+          <span>·</span>
+          <button
+            onClick={async () => {
+              if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const registration of registrations) {
+                  await registration.unregister();
+                }
               }
-            }
-            const cacheKeys = await caches.keys();
-            await Promise.all(cacheKeys.map(key => caches.delete(key)));
-            window.location.reload();
-          }}
-        >
-          <RefreshCw className="h-4 w-4" />
-          Atualizar Sistema
-        </Button>
+              const cacheKeys = await caches.keys();
+              await Promise.all(cacheKeys.map(key => caches.delete(key)));
+              window.location.reload();
+            }}
+            className="inline-flex items-center gap-1 hover:text-primary transition-colors"
+          >
+            <RefreshCw className="h-3 w-3" />
+            Atualizar Sistema
+          </button>
+        </div>
         <div className="text-xs text-muted-foreground/70">
           Feito com ❤️ por{' '}
           <a 
