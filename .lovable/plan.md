@@ -1,29 +1,15 @@
 
 
-## Plano: Corrigir erro de hooks no useServiceWorker
+## Plano: Botão de atualização mais visível na página de Login
 
-### Problema
-
-O erro `Rendered more hooks than during the previous render` está ocorrendo no `useServiceWorker.tsx`. Isso acontece porque o módulo `virtual:pwa-register/react` pode se comportar de forma inconsistente no contexto do preview (iframe), causando uma diferença na quantidade de hooks entre renders.
-
-### Solução
-
-Adicionar uma guarda no `useServiceWorker` para detectar se está rodando dentro de um iframe ou em domínio de preview do Lovable. Nesses casos, pular o registro do SW e retornar valores padrão sem chamar `useRegisterSW`, evitando o erro de hooks.
-
-A abordagem será separar em dois componentes/hooks: um que detecta o contexto e outro que executa, garantindo que a quantidade de hooks seja sempre a mesma.
+### Contexto
+Já existe um pequeno ícone de refresh no rodapé da tela de login, mas é discreto. Vamos adicionar um botão mais visível e acessível.
 
 ### Alteração
 
 | Arquivo | Detalhe |
 |---------|---------|
-| `src/hooks/useServiceWorker.tsx` | Mover `useRegisterSW` para um componente interno sempre chamado, mas com lógica condicional dentro dos callbacks. Garantir ordem fixa de hooks. |
+| `src/pages/Login.tsx` | Substituir o ícone pequeno de refresh no footer por um botão com texto "Atualizar Sistema" visível, com ícone RefreshCw + texto, usando estilo `outline` para destaque sem competir com o botão de login |
 
-### Abordagem técnica
-
-Criar dois hooks separados — `useServiceWorkerProd` (com `useRegisterSW`) e `useServiceWorkerNoop` (retorna valores dummy). Um wrapper no topo decide qual chamar baseado em detecção de iframe/preview, **mas** como não se pode chamar hooks condicionalmente, a solução será:
-
-1. Sempre chamar `useRegisterSW` mas ignorar seus efeitos quando em preview
-2. Ou mover a detecção para o `ServiceWorkerProvider` no `App.tsx` e renderizar condicionalmente o provider
-
-A opção 2 é mais limpa: no `App.tsx`, verificar se está em iframe/preview e só renderizar o `ServiceWorkerProvider` nesse caso. Isso evita o problema de hooks completamente.
+O botão executará a mesma lógica existente: desregistrar Service Workers, limpar caches e forçar reload.
 
