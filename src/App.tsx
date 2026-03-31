@@ -55,7 +55,7 @@ function MaybeServiceWorker({ children }: { children: React.ReactNode }) {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      {isPreview ? <React.Fragment> : <ServiceWorkerProvider>}
+      <MaybeServiceWorker>
         <Toaster />
         <Sonner />
         <HashRouter>
