@@ -286,30 +286,28 @@ const Login = () => {
       
       {/* Footer with Version and Credits */}
       <div className="absolute bottom-4 left-0 right-0 z-10 text-center space-y-1">
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-xs text-muted-foreground/70">
-            Versão {APP_VERSION}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            title="Atualizar Sistema"
-            onClick={async () => {
-              if ('serviceWorker' in navigator) {
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                for (const registration of registrations) {
-                  await registration.unregister();
-                }
+        <span className="text-xs text-muted-foreground/70">
+          Versão {APP_VERSION}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={async () => {
+            if ('serviceWorker' in navigator) {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              for (const registration of registrations) {
+                await registration.unregister();
               }
-              const cacheKeys = await caches.keys();
-              await Promise.all(cacheKeys.map(key => caches.delete(key)));
-              window.location.reload();
-            }}
-          >
-            <RefreshCw className="h-3.5 w-3.5 text-muted-foreground/70" />
-          </Button>
-        </div>
+            }
+            const cacheKeys = await caches.keys();
+            await Promise.all(cacheKeys.map(key => caches.delete(key)));
+            window.location.reload();
+          }}
+        >
+          <RefreshCw className="h-4 w-4" />
+          Atualizar Sistema
+        </Button>
         <div className="text-xs text-muted-foreground/70">
           Feito com ❤️ por{' '}
           <a 
