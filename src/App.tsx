@@ -50,7 +50,7 @@ function ServiceWorkerProvider({ children }: { children: React.ReactNode }) {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <ServiceWorkerProvider>
+      {isPreview ? <React.Fragment> : <ServiceWorkerProvider>}
         <Toaster />
         <Sonner />
         <HashRouter>
