@@ -31,6 +31,17 @@ import EvaluationHistory from "./pages/EvaluationHistory";
 
 const queryClient = new QueryClient();
 
+const isPreview = (() => {
+  try {
+    return window.self !== window.top || 
+      window.location.hostname.includes('id-preview--') ||
+      window.location.hostname.includes('lovableproject.com') ||
+      window.location.hostname.includes('lovable.app');
+  } catch {
+    return true;
+  }
+})();
+
 function ServiceWorkerProvider({ children }: { children: React.ReactNode }) {
   useServiceWorker();
   return <>{children}</>;
