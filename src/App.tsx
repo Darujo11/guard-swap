@@ -47,6 +47,11 @@ function ServiceWorkerProvider({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function MaybeServiceWorker({ children }: { children: React.ReactNode }) {
+  if (isPreview) return <>{children}</>;
+  return <ServiceWorkerProvider>{children}</ServiceWorkerProvider>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
