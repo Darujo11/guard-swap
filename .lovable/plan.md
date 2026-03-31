@@ -1,52 +1,63 @@
 
 
-## Plano: Adicionar campo de minutos ao cadastro de plantão extra
+## Plano: Forçar atualização automática para todos os usuários
 
-### Problema atual
-O campo "Horas de Extras Concedido" aceita apenas números inteiros (horas). Não é possível registrar minutos (ex: 12h30min).
+### Problema
+
+O Service Worker atual só verifica atualizações **uma vez por dia à meia-noite**. Mesmo com `skipWaiting: true` e `clientsClaim: true` no Workbox, o SW antigo fica em cache e o usuário precisa fechar todas as abas ou esperar até meia-noite para receber a nova versão. Além disso, o toast de atualização pode ser **dispensado** pelo usuário sem atualizar.
 
 ### Solução
-Adicionar um campo de **minutos** (0-59) ao lado do campo de horas, e uma nova coluna `minutes` na tabela `extras`. A exibição será no formato `24h30min` em vez de `24h`.
+
+Três melhorias combinadas:
+
+#### 1. Verificar atualizações com frequência (a cada 15 minutos)
+Trocar a verificação de "1x à meia-noite" para a cada 15 minutos, garantindo que o usuário receba a nova versão rapidamente.
+
+#### 2. Polling do `version.json` com atualização forçada
+Adicionar um mecanismo independente que consulta `/version.json` a cada 5 minutos. Se a versão remota for diferente da `APP_VERSION` local **e** `forceUpdate: true`, força reload automático (sem perguntar ao usuário).
+
+#### 3. Toast não dispensável para atualizações normais
+Quando `forceUpdate: false`, mostrar toast sem botão de fechar — apenas o botão "Atualizar".
 
 ### Alterações
 
-#### 1. Migração SQL
-```sql
-ALTER TABLE extras ADD COLUMN minutes integer NOT NULL DEFAULT 0;
+| Arquivo | O que muda |
+|---------|-----------|
+| `src/hooks/useServiceWorker.tsx` | Intervalo de verificação do SW de 24h → 15min. Adicionar polling de `version.json` a cada 5min com reload forçado quando `forceUpdate: true`. |
+| `src/lib/version.ts` | Exportar `APP_VERSION` (já existe, sem mudança) |
+| `public/version.json` | Incrementar versão para `4.1.5` |
+| `src/lib/version.ts` | Incrementar para `4.1.5` |
+
+### Fluxo
+
+```text
+App inicia → useServiceWorker:
+  1. Registra SW com verificação a cada 15min
+  2. Inicia polling de /version.json a cada 5min (cache-busted com ?t=timestamp)
+     → Se versão remota ≠ APP_VERSION e forceUpdate=true:
+        → Limpa caches + unregister SW + location.reload()
+     → Se versão remota ≠ APP_VERSION e forceUpdate=false:
+        → Toast "Nova versão disponível" (não dispensável)
+  3. SW detecta mudança → needRefresh → toast ou auto-reload
 ```
 
-#### 2. `src/pages/AdminExtras.tsx`
+### Detalhe técnico do polling
 
-**States**: Adicionar `minutes` e `editMinutes` (default 0)
+```typescript
+// Fetch com cache-bust para evitar cache do SW/CDN
+const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
+const data = await res.json();
+if (data.version !== APP_VERSION) {
+  if (data.forceUpdate) {
+    // Limpa tudo e recarrega
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map(r => r.unregister()));
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+    window.location.reload();
+  }
+}
+```
 
-**Formulário de cadastro** (~linha 1452): Trocar o input único por dois campos lado a lado:
-- Horas (input number, min 0)
-- Minutos (input number, min 0, max 59)
-
-**Formulário de edição** (~linha 2222): Mesmo layout
-
-**Insert/Update**: Incluir `minutes` no objeto de insert e update
-
-**Validação**: Horas + minutos deve ser > 0
-
-**Exibição em tabelas e rankings**: Criar helper `formatHoursMinutes(hours, minutes)` que retorna:
-- `24h` quando minutes = 0
-- `24h30min` quando minutes > 0
-
-**Totais nos rankings**: Somar horas e minutos corretamente (acumular minutos, converter excedente em horas)
-
-**Reset**: Após submit, resetar minutos para 0
-
-#### Locais de exibição a atualizar
-- Ranking expandido (~linha 1745): `{extra.quantity}h` → `formatHoursMinutes()`
-- Detalhes tabela (~linha 1913): `{extra.quantity || 1}` → formato com minutos
-- Ranking total (~linha 1720): `{item.totalHours}h` → formato com total convertido
-- Gráficos: tooltip com formato correto
-- PDF export: incluir minutos
-
-### Escopo
-| Alteração | Detalhe |
-|-----------|---------|
-| Migração SQL | Coluna `minutes` na tabela `extras` |
-| `src/pages/AdminExtras.tsx` | Campo minutos nos formulários, helper de formatação, totais com minutos |
+Isso resolve o problema pois mesmo que o SW esteja cacheando a app antiga, o `version.json` está configurado como `NetworkOnly` no Workbox e o fetch usa `cache: 'no-store'`, garantindo que sempre busca a versão real do servidor.
 
