@@ -1,15 +1,23 @@
 
 
-## Plano: Botão de atualização mais visível na página de Login
-
-### Contexto
-Já existe um pequeno ícone de refresh no rodapé da tela de login, mas é discreto. Vamos adicionar um botão mais visível e acessível.
+## Plano: Melhorar visual do botão Atualizar Sistema no Login
 
 ### Alteração
 
 | Arquivo | Detalhe |
 |---------|---------|
-| `src/pages/Login.tsx` | Substituir o ícone pequeno de refresh no footer por um botão com texto "Atualizar Sistema" visível, com ícone RefreshCw + texto, usando estilo `outline` para destaque sem competir com o botão de login |
+| `src/pages/Login.tsx` | Redesenhar o footer: versão e botão em linha, botão com estilo `ghost` e cor suave, integrado ao rodapé de forma elegante sem parecer um botão "solto" |
 
-O botão executará a mesma lógica existente: desregistrar Service Workers, limpar caches e forçar reload.
+### Design
+
+O footer será reorganizado com layout `flex` centralizado:
+- Versão e botão de atualizar na mesma linha, separados por um ponto
+- Botão estilizado como link discreto com ícone pequeno (ghost, texto `muted-foreground`)
+- Créditos na linha de baixo
+- Tudo compacto e harmonioso com o visual da página
+
+```text
+       v4.1.6 · 🔄 Atualizar Sistema
+    Feito com ❤️ por VentureWise - Fabio Ventura
+```
 
