@@ -1,39 +1,32 @@
 
 
-## Plano: Corrigir datas erradas no Dashboard do Admin (pendentes)
+## Plano: Corrigir escala de abril/2026
 
-### Problema
+### Diagnóstico
 
-No `AdminDashboard.tsx`, a função `formatDate` usa `new Date(dateString)` para datas no formato `"2026-04-15"`. O JavaScript interpreta isso como **UTC meia-noite**, e no fuso UTC-3 (Brasil) isso vira o **dia anterior** (14/04 em vez de 15/04).
+A rotação 24/72 segue o padrão A→B→C→D. Março termina corretamente (28:C, 29:D, 30:A, 31:B), então abril deveria começar com C. Porém 4 dias estão errados:
 
-Na página `AdminSwaps.tsx`, já existe o helper `parseDateOnly` que faz o parse correto (split manual da string), por isso lá as datas aparecem certas.
+```text
+Dia  | Atual     | Correto
+-----|-----------|--------
+ 01  | Equipe A  | Equipe C
+ 03  | Equipe C  | Equipe A
+ 04  | Equipe A  | Equipe B
+ 27  | Equipe B  | Equipe A
+```
+
+Os demais dias (2, 5-26, 28-30) estão corretos.
 
 ### Solução
 
-Alterar a função `formatDate` no `AdminDashboard.tsx` (linha 352-358) para usar parse local igual ao `AdminSwaps.tsx`:
+Executar 4 UPDATEs na tabela `team_schedules` para corrigir o `team_id` dos dias errados:
 
-```typescript
-const formatDate = (dateString: string) => {
-  // Para datas no formato YYYY-MM-DD, fazer parse local para evitar day-shift por timezone
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-    const [year, month, day] = dateString.split('-').map(Number);
-    return new Date(year, month - 1, day).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  }
-  return new Date(dateString).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-};
-```
+| ID do registro | Data | De → Para |
+|---|---|---|
+| `78a16319-...` | 01/04 | Equipe A → Equipe C |
+| `f66a0ab5-...` | 03/04 | Equipe C → Equipe A |
+| `ca68f06b-...` | 04/04 | Equipe A → Equipe B |
+| `0442fe9c-...` | 27/04 | Equipe B → Equipe A |
 
-A verificação com regex garante que timestamps completos (como `created_at`) continuem funcionando normalmente, enquanto datas puras (`requester_shift_date`, `target_shift_date`) são parseadas sem erro de timezone.
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/AdminDashboard.tsx` | Corrigir `formatDate` para parse local em datas YYYY-MM-DD |
+Isso será feito via ferramenta de INSERT/UPDATE do Supabase (operação de dados, não migração de schema).
 
