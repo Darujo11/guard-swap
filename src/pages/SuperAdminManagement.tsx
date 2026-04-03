@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, UserPlus, CheckCircle, XCircle, Pencil, Trash2, Ban, CheckCircle2 } from 'lucide-react';
+import { Plus, UserPlus, CheckCircle, XCircle, Pencil, Trash2, Ban, CheckCircle2, Eye } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
