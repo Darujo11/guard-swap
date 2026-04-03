@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Shield, CheckCircle, Loader2 } from 'lucide-react';
@@ -10,32 +13,43 @@ export default function CreateSuperAdmin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [form, setForm] = useState({
+    phone: '22992242189',
+    password: '123456',
+    name: 'Super Admin',
+    email: '22992242189@guardshift.com'
+  });
 
-  const createSuperAdmin = async () => {
+  const handleSubmit = async () => {
+    if (!form.phone || !form.password || !form.name) {
+      toast({ title: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
+      return;
+    }
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-super-admin-phone', {
         body: {
-          phone: '22992242189',
-          password: '123456',
-          name: 'Super Admin',
-          email: '22992242189@guardshift.com'
+          phone: form.phone,
+          password: form.password,
+          name: form.name,
+          email: form.email || undefined,
+          mode: 'upsert'
         }
       });
 
       if (error) throw error;
 
       toast({
-        title: 'Super Admin criado!',
-        description: 'O super admin foi criado com sucesso.',
+        title: 'Super Admin salvo!',
+        description: 'O super admin foi criado/atualizado com sucesso.',
       });
 
       setSuccess(true);
     } catch (error: any) {
-      console.error('Error creating super admin:', error);
+      console.error('Error saving super admin:', error);
       toast({
-        title: 'Erro ao criar super admin',
-        description: error.message || 'Ocorreu um erro ao criar o super admin.',
+        title: 'Erro ao salvar super admin',
+        description: error.message || 'Ocorreu um erro.',
         variant: 'destructive',
       });
     } finally {
@@ -51,54 +65,60 @@ export default function CreateSuperAdmin() {
             <Shield className="h-6 w-6 text-primary-foreground" />
           </div>
           <div>
-            <CardTitle className="text-2xl">Criar Super Admin</CardTitle>
+            <CardTitle className="text-2xl">Super Admin</CardTitle>
             <CardDescription>
-              Configure o super administrador do sistema
+              Criar ou atualizar o super administrador do sistema
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {!success ? (
             <>
-              <div className="space-y-3 rounded-lg bg-muted p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">WhatsApp:</span>
-                  <span className="font-medium">22992242189</span>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="sa-name">Nome *</Label>
+                  <Input
+                    id="sa-name"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    placeholder="Nome do super admin"
+                  />
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Senha:</span>
-                  <span className="font-medium">123456</span>
+                <div className="space-y-2">
+                  <Label htmlFor="sa-phone">WhatsApp *</Label>
+                  <Input
+                    id="sa-phone"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    placeholder="Ex: 22992242189"
+                  />
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Permissões:</span>
-                  <span className="font-medium text-primary">Acesso Total</span>
+                <div className="space-y-2">
+                  <Label htmlFor="sa-email">Email (opcional)</Label>
+                  <Input
+                    id="sa-email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder="email@exemplo.com"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Se vazio, será gerado automaticamente a partir do WhatsApp.
+                  </p>
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-semibold text-sm">Funcionalidades do Super Admin:</h3>
-                <ul className="space-y-1 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    Visualizar todos os dados do sistema
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    Criar e gerenciar planos de assinatura
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    Criar e gerenciar administradores
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    Gerenciar todas as assinaturas
-                  </li>
-                </ul>
+                <div className="space-y-2">
+                  <Label htmlFor="sa-password">Senha *</Label>
+                  <PasswordInput
+                    id="sa-password"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    placeholder="Senha do super admin"
+                  />
+                </div>
               </div>
 
               <Button
-                onClick={createSuperAdmin}
+                onClick={handleSubmit}
                 disabled={loading}
                 className="w-full"
                 size="lg"
@@ -106,10 +126,10 @@ export default function CreateSuperAdmin() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Criando Super Admin...
+                    Salvando...
                   </>
                 ) : (
-                  'Criar Super Admin'
+                  'Criar / Atualizar Super Admin'
                 )}
               </Button>
             </>
@@ -119,17 +139,26 @@ export default function CreateSuperAdmin() {
                 <CheckCircle className="h-6 w-6 text-success" />
               </div>
               <div>
-                <h3 className="font-semibold">Super Admin Criado!</h3>
+                <h3 className="font-semibold">Super Admin Salvo!</h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   Você pode agora fazer login com as credenciais fornecidas.
                 </p>
               </div>
-              <Button
-                onClick={() => navigate('/login')}
-                className="w-full"
-              >
-                Ir para Login
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setSuccess(false)}
+                  className="flex-1"
+                >
+                  Editar Novamente
+                </Button>
+                <Button
+                  onClick={() => navigate('/login')}
+                  className="flex-1"
+                >
+                  Ir para Login
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

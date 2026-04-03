@@ -83,6 +83,10 @@ export function AppLayout({
     href: '/super-admin/administradores',
     icon: Crown
   }, {
+    name: 'Relatórios',
+    href: '/super-admin/relatorios',
+    icon: BarChart3
+  }, {
     name: 'Meu Perfil',
     href: '/perfil',
     icon: Settings

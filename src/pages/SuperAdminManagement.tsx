@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, UserPlus, CheckCircle, XCircle, Pencil, Trash2, Ban, CheckCircle2 } from 'lucide-react';
+import { Plus, UserPlus, CheckCircle, XCircle, Pencil, Trash2, Ban, CheckCircle2, Eye } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -56,6 +56,8 @@ export default function SuperAdminManagement() {
   const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
   const [isAssignPlanOpen, setIsAssignPlanOpen] = useState(false);
   const [isEditAdminOpen, setIsEditAdminOpen] = useState(false);
+  const [isGuardsOpen, setIsGuardsOpen] = useState(false);
+  const [adminGuards, setAdminGuards] = useState<any[]>([]);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [adminForm, setAdminForm] = useState({
     name: '',
@@ -492,7 +494,24 @@ export default function SuperAdminManagement() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
+                      <div className="flex gap-2 justify-end flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            setSelectedAdmin(admin);
+                            const { data } = await supabase
+                              .from('profiles')
+                              .select('*, team:teams(name, color)')
+                              .eq('admin_id', admin.id)
+                              .order('name');
+                            setAdminGuards(data || []);
+                            setIsGuardsOpen(true);
+                          }}
+                          title="Ver Seguranças"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -618,6 +637,48 @@ export default function SuperAdminManagement() {
                 Atribuir Plano
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Guards Dialog */}
+        <Dialog open={isGuardsOpen} onOpenChange={setIsGuardsOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Seguranças de {selectedAdmin?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2">
+              {adminGuards.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">Nenhum segurança encontrado.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Equipe</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {adminGuards.map((g: any) => (
+                      <TableRow key={g.id}>
+                        <TableCell className="font-medium">{g.name}</TableCell>
+                        <TableCell>
+                          {g.team ? (
+                            <Badge style={{ backgroundColor: g.team.color, color: '#fff' }}>{g.team.name}</Badge>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={g.is_active ? 'default' : 'destructive'}>
+                            {g.is_active ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+              <p className="text-xs text-muted-foreground text-center">Total: {adminGuards.length} seguranças</p>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
