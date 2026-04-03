@@ -1,30 +1,33 @@
 
 
-## Plano: Adicionar edição e exclusão na tabela de cotas TRE
+## Plano: Mostrar trocas pendentes de aprovação no topo (mobile)
 
-### Contexto
-A lista de "Afastamentos Registrados" já possui botões de editar e apagar funcionais. Porém a tabela de **saldos TRE** (dentro do card "Afastamentos TRE") só exibe os dados sem opção de editar ou excluir.
+### Problema
+No celular, as trocas que precisam de aprovação do admin ficam misturadas na listagem por mês, sem destaque. O admin precisa ver primeiro as que requerem ação.
 
-### Alterações
+### Solução
+Adicionar um card "Aguardando Aprovação" antes da listagem por mês, visível apenas no mobile (classe `md:hidden`), que mostra as solicitações com status `ACCEPTED` (aceitas pelo segurança, aguardando aprovação do admin). Cada item terá os mesmos botões de Aprovar/Rejeitar.
+
+### Alteração
 
 | Arquivo | Detalhe |
 |---------|---------|
-| `src/pages/AdminLeaves.tsx` | Adicionar coluna "Ações" na tabela de cotas TRE com botões Editar e Excluir |
+| `src/pages/AdminSwaps.tsx` | Filtrar `filteredAndSortedRequests` com status `ACCEPTED` em um `pendingApproval` memo. Renderizar um card destacado antes do `sortedMonthKeys.map(...)`, visível apenas em telas pequenas (`md:hidden`), listando essas trocas com botões de ação. |
 
-### Funcionalidades
-
-1. **Botão Editar (lápis)**: Ao clicar, preenche o formulário acima com os dados da cota (seleciona o segurança, preenche total e já tiradas), permitindo re-salvar
-2. **Botão Excluir (lixeira)**: Abre confirmação e deleta o registro da tabela `guard_tre_quotas`
-
-### Tabela atualizada
+### Estrutura do card (mobile only)
 
 ```text
-Segurança      | Total TRE | Já Tiradas | Saldo | Ações
-Carlos Almeida |    21     |     8      |  13   | ✏️ 🗑️
+┌──────────────────────────────┐
+│ ⚠️ Aguardando Sua Aprovação  │
+│ 2 solicitações               │
+├──────────────────────────────┤
+│ Carlos → Junior              │
+│ 15/04 → 18/04    [✓] [✗]   │
+├──────────────────────────────┤
+│ Dinarte → Flavio             │
+│ 20/04 → 22/04    [✓] [✗]   │
+└──────────────────────────────┘
 ```
 
-### Detalhes técnicos
-- Botão editar: seta `treGuard`, `treDays` e `trePreUsed` com os valores da linha clicada
-- Botão excluir: usa `AlertDialog` para confirmação, depois executa `DELETE` na tabela `guard_tre_quotas` e atualiza o estado
-- Reutiliza o mesmo padrão visual dos botões de ação da lista de afastamentos
+Este card aparece apenas quando há solicitações aceitas aguardando aprovação do admin, e somente em telas mobile. No desktop o layout continua igual.
 
