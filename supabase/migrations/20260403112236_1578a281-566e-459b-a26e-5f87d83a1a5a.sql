@@ -1,0 +1,9 @@
+DELETE FROM public.leaves WHERE id IN (
+  '344151c4-a6b7-4c0a-b643-cd2d773b2f2e',
+  '87bb0225-35ff-4405-9734-074e8dd42f93',
+  'cd7e27fd-2c68-4263-9efd-4dae1927c430',
+  'd0e5d409-5d09-4e6a-98cb-778873c88544',
+  '8ab1fba2-e17d-44ee-9605-288ec8346198',
+  'e5de7e01-9e12-46ae-b3c9-523e64dc73e3',
+  '9371ecd1-8376-4b15-91b8-44a186586b95'
+);
