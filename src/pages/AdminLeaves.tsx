@@ -79,6 +79,7 @@ export default function AdminLeaves() {
 
   // Delete dialog state
   const [deleteLeaveId, setDeleteLeaveId] = useState<string | null>(null);
+  const [deleteTreQuotaGuardId, setDeleteTreQuotaGuardId] = useState<string | null>(null);
 
   // Filter state
   const [filterGuard, setFilterGuard] = useState<string>('all');
