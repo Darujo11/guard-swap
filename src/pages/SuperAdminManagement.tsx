@@ -56,6 +56,8 @@ export default function SuperAdminManagement() {
   const [isCreateAdminOpen, setIsCreateAdminOpen] = useState(false);
   const [isAssignPlanOpen, setIsAssignPlanOpen] = useState(false);
   const [isEditAdminOpen, setIsEditAdminOpen] = useState(false);
+  const [isGuardsOpen, setIsGuardsOpen] = useState(false);
+  const [adminGuards, setAdminGuards] = useState<any[]>([]);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [adminForm, setAdminForm] = useState({
     name: '',
