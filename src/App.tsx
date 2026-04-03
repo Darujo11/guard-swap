@@ -23,6 +23,7 @@ import AdminLeaves from "./pages/AdminLeaves";
 import SuperAdminPlans from "./pages/SuperAdminPlans";
 import SuperAdminManagement from "./pages/SuperAdminManagement";
 import SuperAdminResetPassword from "./pages/SuperAdminResetPassword";
+import SuperAdminReports from "./pages/SuperAdminReports";
 import GuardDashboard from "./pages/GuardDashboard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
