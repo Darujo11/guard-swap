@@ -158,7 +158,7 @@ const GuardDashboard = () => {
       const [quotaRes, leavesRes] = await Promise.all([
         supabase
           .from('guard_tre_quotas')
-          .select('total_days')
+          .select('total_days, pre_used_days')
           .eq('guard_id', currentUser.id)
           .maybeSingle(),
         supabase
@@ -168,16 +168,17 @@ const GuardDashboard = () => {
           .eq('leave_type', 'TRE'),
       ]);
       const total = quotaRes.data?.total_days || 0;
+      const preUsed = (quotaRes.data as any)?.pre_used_days || 0;
       setTreQuota(total);
       const leaves = (leavesRes.data || []).filter((l: any) => l.status !== 'REJECTED');
       setTreLeaves(leaves.map((l: any) => ({ id: l.id, start_date: l.start_date, status: l.status || 'PENDING', protocol: l.protocol || null, created_at: l.created_at || '' })));
-      const used = leaves.filter((l: any) => l.status !== 'REJECTED').reduce((sum: number, l: any) => {
+      const systemUsed = leaves.filter((l: any) => l.status !== 'REJECTED').reduce((sum: number, l: any) => {
         const start = new Date(l.start_date);
         const end = new Date(l.end_date);
         const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
         return sum + days;
       }, 0);
-      setTreUsed(used);
+      setTreUsed(preUsed + systemUsed);
     } catch (error) {
       console.error('[GuardDashboard][FetchTreQuota]', error);
     }

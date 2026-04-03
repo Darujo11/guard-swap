@@ -86,7 +86,8 @@ export default function AdminLeaves() {
   // TRE Quota state
   const [treGuard, setTreGuard] = useState<string>('');
   const [treDays, setTreDays] = useState<string>('');
-  const [treQuotas, setTreQuotas] = useState<Array<{ guard_id: string; total_days: number }>>([]);
+  const [trePreUsed, setTrePreUsed] = useState<string>('');
+  const [treQuotas, setTreQuotas] = useState<Array<{ guard_id: string; total_days: number; pre_used_days: number }>>([]);
   const [treSaving, setTreSaving] = useState(false);
 
   // Report state
@@ -217,10 +218,10 @@ export default function AdminLeaves() {
     try {
       const { data, error } = await supabase
         .from('guard_tre_quotas')
-        .select('guard_id, total_days')
+        .select('guard_id, total_days, pre_used_days')
         .eq('admin_id', profile!.id);
       if (error) throw error;
-      setTreQuotas(data || []);
+      setTreQuotas((data || []).map(d => ({ ...d, pre_used_days: (d as any).pre_used_days ?? 0 })));
     } catch (error) {
       console.error('Error fetching TRE quotas:', error);
     }
@@ -234,22 +235,25 @@ export default function AdminLeaves() {
     try {
       setTreSaving(true);
       const existing = treQuotas.find(q => q.guard_id === treGuard);
+      const totalDaysVal = parseInt(treDays) || 0;
+      const preUsedVal = parseInt(trePreUsed) || 0;
       if (existing) {
         const { error } = await supabase
           .from('guard_tre_quotas')
-          .update({ total_days: parseInt(treDays) || 0, updated_at: new Date().toISOString() })
+          .update({ total_days: totalDaysVal, pre_used_days: preUsedVal, updated_at: new Date().toISOString() } as any)
           .eq('guard_id', treGuard)
           .eq('admin_id', profile!.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('guard_tre_quotas')
-          .insert({ guard_id: treGuard, admin_id: profile!.id, total_days: parseInt(treDays) || 0 });
+          .insert({ guard_id: treGuard, admin_id: profile!.id, total_days: totalDaysVal, pre_used_days: preUsedVal } as any);
         if (error) throw error;
       }
       toast({ title: 'Sucesso', description: 'Cota TRE salva com sucesso!' });
       setTreGuard('');
       setTreDays('');
+      setTrePreUsed('');
       fetchTreQuotas();
     } catch (error) {
       console.error('Error saving TRE quota:', error);
@@ -828,6 +832,7 @@ export default function AdminLeaves() {
                   setTreGuard(v);
                   const existing = treQuotas.find(q => q.guard_id === v);
                   setTreDays(existing ? String(existing.total_days) : '');
+                  setTrePreUsed(existing ? String(existing.pre_used_days || 0) : '');
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder={`Selecione o ${settings.guard_label.toLowerCase()}`} />
@@ -841,13 +846,23 @@ export default function AdminLeaves() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2 w-32">
+              <div className="space-y-2 w-36">
                 <Label>Total de Afastamentos</Label>
                 <Input
                   type="number"
                   min={0}
                   value={treDays}
                   onChange={(e) => setTreDays(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 w-44">
+                <Label>Já tiradas (retroativo)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={trePreUsed}
+                  onChange={(e) => setTrePreUsed(e.target.value)}
+                  placeholder="0"
                 />
               </div>
               <Button onClick={handleSaveTreQuota} disabled={treSaving}>
@@ -862,12 +877,14 @@ export default function AdminLeaves() {
               const guardsWithQuota = guards.map(guard => {
                 const quota = treQuotas.find(q => q.guard_id === guard.id);
                 const totalDays = quota?.total_days || 0;
-                const usedDays = treLeaves
+                const preUsedDays = quota?.pre_used_days || 0;
+                const systemDays = treLeaves
                   .filter(l => l.guard_id === guard.id)
                   .reduce((sum, l) => sum + calculateDays(l.start_date, l.end_date), 0);
-                const balance = totalDays - usedDays;
-                return { ...guard, totalDays, usedDays, balance };
-              }).filter(g => g.totalDays > 0 || g.usedDays > 0);
+                const totalUsed = preUsedDays + systemDays;
+                const balance = totalDays - totalUsed;
+                return { ...guard, totalDays, preUsedDays, systemDays, totalUsed, balance };
+              }).filter(g => g.totalDays > 0 || g.totalUsed > 0);
 
               if (guardsWithQuota.length === 0) return (
                 <div className="text-center py-4 text-muted-foreground text-sm">
@@ -881,7 +898,9 @@ export default function AdminLeaves() {
                     <TableRow>
                       <TableHead>{settings.guard_label}</TableHead>
                       <TableHead className="text-center">Total TRE</TableHead>
-                      <TableHead className="text-center">Usadas</TableHead>
+                      <TableHead className="text-center">Retroativas</TableHead>
+                      <TableHead className="text-center">No Sistema</TableHead>
+                      <TableHead className="text-center">Total Usadas</TableHead>
                       <TableHead className="text-center">Saldo</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -890,7 +909,9 @@ export default function AdminLeaves() {
                       <TableRow key={g.id}>
                         <TableCell className="font-medium">{g.name}</TableCell>
                         <TableCell className="text-center">{g.totalDays}</TableCell>
-                        <TableCell className="text-center">{g.usedDays}</TableCell>
+                        <TableCell className="text-center text-muted-foreground">{g.preUsedDays}</TableCell>
+                        <TableCell className="text-center text-muted-foreground">{g.systemDays}</TableCell>
+                        <TableCell className="text-center font-medium">{g.totalUsed}</TableCell>
                         <TableCell className={cn(
                           "text-center font-semibold",
                           g.balance > 0 ? "text-green-600" : "text-destructive"

@@ -1,0 +1,1 @@
+ALTER TABLE public.guard_tre_quotas ADD COLUMN pre_used_days integer NOT NULL DEFAULT 0;

@@ -262,6 +262,7 @@ export type Database = {
           created_at: string
           guard_id: string
           id: string
+          pre_used_days: number
           total_days: number
           updated_at: string
         }
@@ -270,6 +271,7 @@ export type Database = {
           created_at?: string
           guard_id: string
           id?: string
+          pre_used_days?: number
           total_days?: number
           updated_at?: string
         }
@@ -278,6 +280,7 @@ export type Database = {
           created_at?: string
           guard_id?: string
           id?: string
+          pre_used_days?: number
           total_days?: number
           updated_at?: string
         }
