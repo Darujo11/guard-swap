@@ -898,9 +898,7 @@ export default function AdminLeaves() {
                     <TableRow>
                       <TableHead>{settings.guard_label}</TableHead>
                       <TableHead className="text-center">Total TRE</TableHead>
-                      <TableHead className="text-center">Retroativas</TableHead>
-                      <TableHead className="text-center">No Sistema</TableHead>
-                      <TableHead className="text-center">Total Usadas</TableHead>
+                      <TableHead className="text-center">Já Tiradas</TableHead>
                       <TableHead className="text-center">Saldo</TableHead>
                     </TableRow>
                   </TableHeader>
