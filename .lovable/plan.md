@@ -1,30 +1,30 @@
 
 
-## Plano: Limpar registros TRE de teste e simplificar tabela
+## Plano: Adicionar edição e exclusão na tabela de cotas TRE
 
-### Problema
-Os registros TRE no sistema (7 registros) foram inseridos como teste. O usuário quer zerá-los para que apenas as "Já tiradas (retroativo)" sejam contabilizadas.
+### Contexto
+A lista de "Afastamentos Registrados" já possui botões de editar e apagar funcionais. Porém a tabela de **saldos TRE** (dentro do card "Afastamentos TRE") só exibe os dados sem opção de editar ou excluir.
 
 ### Alterações
 
-| Componente | Detalhe |
-|------------|---------|
-| **Banco de dados** | Deletar os 7 registros TRE de teste da tabela `leaves` (Carlos Almeida: 2, Dinarte: 3, Flavio Godim: 1, Verneque: 1) |
-| **AdminLeaves.tsx** | Remover colunas "Retroativas" e "No Sistema" da tabela de saldos. Manter apenas: Segurança, Total TRE, Já Tiradas, Saldo. O "Já Tiradas" será o `pre_used_days` + dias no sistema |
+| Arquivo | Detalhe |
+|---------|---------|
+| `src/pages/AdminLeaves.tsx` | Adicionar coluna "Ações" na tabela de cotas TRE com botões Editar e Excluir |
 
-### Tabela simplificada
+### Funcionalidades
+
+1. **Botão Editar (lápis)**: Ao clicar, preenche o formulário acima com os dados da cota (seleciona o segurança, preenche total e já tiradas), permitindo re-salvar
+2. **Botão Excluir (lixeira)**: Abre confirmação e deleta o registro da tabela `guard_tre_quotas`
+
+### Tabela atualizada
 
 ```text
-Segurança      | Total TRE | Já Tiradas | Saldo
-Carlos Almeida |    21     |     8      |  13
+Segurança      | Total TRE | Já Tiradas | Saldo | Ações
+Carlos Almeida |    21     |     8      |  13   | ✏️ 🗑️
 ```
 
-### Registros a deletar
-
-| Segurança | Datas |
-|-----------|-------|
-| Carlos Almeida | 2026-02-24, 2026-03-24 |
-| Dinarte | 2026-01-03, 2026-01-07, 2026-01-11 |
-| Flavio Godim | 2026-01-22 |
-| Verneque | 2026-02-14 |
+### Detalhes técnicos
+- Botão editar: seta `treGuard`, `treDays` e `trePreUsed` com os valores da linha clicada
+- Botão excluir: usa `AlertDialog` para confirmação, depois executa `DELETE` na tabela `guard_tre_quotas` e atualiza o estado
+- Reutiliza o mesmo padrão visual dos botões de ação da lista de afastamentos
 
