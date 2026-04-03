@@ -253,6 +253,7 @@ export default function AdminLeaves() {
       toast({ title: 'Sucesso', description: 'Cota TRE salva com sucesso!' });
       setTreGuard('');
       setTreDays('');
+      setTrePreUsed('');
       fetchTreQuotas();
     } catch (error) {
       console.error('Error saving TRE quota:', error);
