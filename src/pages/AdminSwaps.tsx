@@ -845,6 +845,13 @@ const AdminSwaps = () => {
   // Ordenar as chaves dos meses (mais recente primeiro)
   const sortedMonthKeys = Object.keys(groupedByMonth).sort((a, b) => b.localeCompare(a));
 
+  // Solicitações aguardando aprovação do admin (aceitas pelo segurança)
+  const pendingApproval = useMemo(() => {
+    return filteredAndSortedRequests.filter(
+      (r) => r.status === 'ACCEPTED' && r.target_confirmation
+    );
+  }, [filteredAndSortedRequests]);
+
   if (loading) {
     return (
       <AppLayout title="Gerenciar Trocas" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
