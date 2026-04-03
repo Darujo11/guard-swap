@@ -494,7 +494,24 @@ export default function SuperAdminManagement() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
+                      <div className="flex gap-2 justify-end flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            setSelectedAdmin(admin);
+                            const { data } = await supabase
+                              .from('profiles')
+                              .select('*, team:teams(name, color)')
+                              .eq('admin_id', admin.id)
+                              .order('name');
+                            setAdminGuards(data || []);
+                            setIsGuardsOpen(true);
+                          }}
+                          title="Ver Seguranças"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
