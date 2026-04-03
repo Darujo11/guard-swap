@@ -79,6 +79,7 @@ export default function AdminLeaves() {
 
   // Delete dialog state
   const [deleteLeaveId, setDeleteLeaveId] = useState<string | null>(null);
+  const [deleteTreQuotaGuardId, setDeleteTreQuotaGuardId] = useState<string | null>(null);
 
   // Filter state
   const [filterGuard, setFilterGuard] = useState<string>('all');
@@ -260,6 +261,34 @@ export default function AdminLeaves() {
       toast({ title: 'Erro', description: 'Falha ao salvar cota TRE.', variant: 'destructive' });
     } finally {
       setTreSaving(false);
+    }
+  };
+
+  const handleEditTreQuota = (guardId: string) => {
+    const quota = treQuotas.find(q => q.guard_id === guardId);
+    if (quota) {
+      setTreGuard(guardId);
+      setTreDays(String(quota.total_days));
+      setTrePreUsed(quota.pre_used_days ? String(quota.pre_used_days) : '');
+    }
+  };
+
+  const handleDeleteTreQuota = async () => {
+    if (!deleteTreQuotaGuardId || !profile) return;
+    try {
+      const { error } = await supabase
+        .from('guard_tre_quotas')
+        .delete()
+        .eq('guard_id', deleteTreQuotaGuardId)
+        .eq('admin_id', profile.id);
+      if (error) throw error;
+      toast({ title: 'Sucesso', description: 'Cota TRE excluída com sucesso!' });
+      setDeleteTreQuotaGuardId(null);
+      fetchTreQuotas();
+    } catch (error) {
+      console.error('Error deleting TRE quota:', error);
+      toast({ title: 'Erro', description: 'Falha ao excluir cota TRE.', variant: 'destructive' });
+      setDeleteTreQuotaGuardId(null);
     }
   };
 
@@ -900,6 +929,7 @@ export default function AdminLeaves() {
                       <TableHead className="text-center">Total TRE</TableHead>
                       <TableHead className="text-center">Já Tiradas</TableHead>
                       <TableHead className="text-center">Saldo</TableHead>
+                      <TableHead className="text-center">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -913,6 +943,16 @@ export default function AdminLeaves() {
                           g.balance > 0 ? "text-green-600" : "text-destructive"
                         )}>
                           {g.balance}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditTreQuota(g.id)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteTreQuotaGuardId(g.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1304,6 +1344,24 @@ export default function AdminLeaves() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete TRE Quota Confirmation */}
+      <AlertDialog open={!!deleteTreQuotaGuardId} onOpenChange={() => setDeleteTreQuotaGuardId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Cota TRE</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta cota TRE? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTreQuota} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
