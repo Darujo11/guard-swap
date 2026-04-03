@@ -846,13 +846,23 @@ export default function AdminLeaves() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2 w-32">
+              <div className="space-y-2 w-36">
                 <Label>Total de Afastamentos</Label>
                 <Input
                   type="number"
                   min={0}
                   value={treDays}
                   onChange={(e) => setTreDays(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 w-44">
+                <Label>Já tiradas (retroativo)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={trePreUsed}
+                  onChange={(e) => setTrePreUsed(e.target.value)}
+                  placeholder="0"
                 />
               </div>
               <Button onClick={handleSaveTreQuota} disabled={treSaving}>
