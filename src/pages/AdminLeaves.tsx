@@ -930,6 +930,7 @@ export default function AdminLeaves() {
                       <TableHead className="text-center">Já Tiradas</TableHead>
                       <TableHead className="text-center">Saldo</TableHead>
                       <TableHead className="text-center">Ações</TableHead>
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
                     {guardsWithQuota.map(g => (
