@@ -235,17 +235,19 @@ export default function AdminLeaves() {
     try {
       setTreSaving(true);
       const existing = treQuotas.find(q => q.guard_id === treGuard);
+      const totalDaysVal = parseInt(treDays) || 0;
+      const preUsedVal = parseInt(trePreUsed) || 0;
       if (existing) {
         const { error } = await supabase
           .from('guard_tre_quotas')
-          .update({ total_days: parseInt(treDays) || 0, updated_at: new Date().toISOString() })
+          .update({ total_days: totalDaysVal, pre_used_days: preUsedVal, updated_at: new Date().toISOString() } as any)
           .eq('guard_id', treGuard)
           .eq('admin_id', profile!.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('guard_tre_quotas')
-          .insert({ guard_id: treGuard, admin_id: profile!.id, total_days: parseInt(treDays) || 0 });
+          .insert({ guard_id: treGuard, admin_id: profile!.id, total_days: totalDaysVal, pre_used_days: preUsedVal } as any);
         if (error) throw error;
       }
       toast({ title: 'Sucesso', description: 'Cota TRE salva com sucesso!' });
