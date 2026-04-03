@@ -218,10 +218,10 @@ export default function AdminLeaves() {
     try {
       const { data, error } = await supabase
         .from('guard_tre_quotas')
-        .select('guard_id, total_days')
+        .select('guard_id, total_days, pre_used_days')
         .eq('admin_id', profile!.id);
       if (error) throw error;
-      setTreQuotas(data || []);
+      setTreQuotas((data || []).map(d => ({ ...d, pre_used_days: (d as any).pre_used_days ?? 0 })));
     } catch (error) {
       console.error('Error fetching TRE quotas:', error);
     }
