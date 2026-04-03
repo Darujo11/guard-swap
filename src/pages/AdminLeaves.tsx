@@ -264,6 +264,34 @@ export default function AdminLeaves() {
     }
   };
 
+  const handleEditTreQuota = (guardId: string) => {
+    const quota = treQuotas.find(q => q.guard_id === guardId);
+    if (quota) {
+      setTreGuard(guardId);
+      setTreDays(String(quota.total_days));
+      setTrePreUsed(quota.pre_used_days ? String(quota.pre_used_days) : '');
+    }
+  };
+
+  const handleDeleteTreQuota = async () => {
+    if (!deleteTreQuotaGuardId || !profile) return;
+    try {
+      const { error } = await supabase
+        .from('guard_tre_quotas')
+        .delete()
+        .eq('guard_id', deleteTreQuotaGuardId)
+        .eq('admin_id', profile.id);
+      if (error) throw error;
+      toast({ title: 'Sucesso', description: 'Cota TRE excluída com sucesso!' });
+      setDeleteTreQuotaGuardId(null);
+      fetchTreQuotas();
+    } catch (error) {
+      console.error('Error deleting TRE quota:', error);
+      toast({ title: 'Erro', description: 'Falha ao excluir cota TRE.', variant: 'destructive' });
+      setDeleteTreQuotaGuardId(null);
+    }
+  };
+
   // Document file state
   const [documentFile, setDocumentFile] = useState<File | null>(null);
 
