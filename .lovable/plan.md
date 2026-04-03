@@ -1,32 +1,38 @@
 
 
-## Plano: Corrigir escala de abril/2026
+## Plano: Registrar folgas TRE retroativas (pré-sistema)
 
-### Diagnóstico
-
-A rotação 24/72 segue o padrão A→B→C→D. Março termina corretamente (28:C, 29:D, 30:A, 31:B), então abril deveria começar com C. Porém 4 dias estão errados:
-
-```text
-Dia  | Atual     | Correto
------|-----------|--------
- 01  | Equipe A  | Equipe C
- 03  | Equipe C  | Equipe A
- 04  | Equipe A  | Equipe B
- 27  | Equipe B  | Equipe A
-```
-
-Os demais dias (2, 5-26, 28-30) estão corretos.
+### Problema
+O sistema só conta como "usadas" as folgas TRE registradas dentro do sistema. Folgas tiradas antes da implantação não são contabilizadas. O admin precisa informar quantas já foram usadas historicamente.
 
 ### Solução
+Adicionar um campo "Folgas já tiradas" (`pre_used_days`) na tabela `guard_tre_quotas` para registrar o uso histórico. A tabela de saldos passará a somar esse valor com as folgas registradas no sistema.
 
-Executar 4 UPDATEs na tabela `team_schedules` para corrigir o `team_id` dos dias errados:
+### Alterações
 
-| ID do registro | Data | De → Para |
-|---|---|---|
-| `78a16319-...` | 01/04 | Equipe A → Equipe C |
-| `f66a0ab5-...` | 03/04 | Equipe C → Equipe A |
-| `ca68f06b-...` | 04/04 | Equipe A → Equipe B |
-| `0442fe9c-...` | 27/04 | Equipe B → Equipe A |
+| Componente | Detalhe |
+|------------|---------|
+| **Migração DB** | Adicionar coluna `pre_used_days integer NOT NULL DEFAULT 0` à tabela `guard_tre_quotas` |
+| **AdminLeaves.tsx** | Adicionar campo "Já tiradas (retroativo)" ao formulário de cotas TRE, salvar/carregar o novo campo |
+| **AdminLeaves.tsx** | Na tabela de saldos, a coluna "Usadas" passa a ser `pre_used_days + dias registrados no sistema`. Adicionar sub-colunas ou tooltip para distinguir retroativas vs sistema |
+| **GuardDashboard.tsx** | Incluir `pre_used_days` no cálculo de TRE usadas do segurança |
 
-Isso será feito via ferramenta de INSERT/UPDATE do Supabase (operação de dados, não migração de schema).
+### Fluxo do formulário
+
+```text
+[Segurança ▼]  [Total de Afastamentos: 21]  [Já tiradas (antes do sistema): 8]  [Salvar]
+```
+
+### Tabela de saldos (atualizada)
+
+```text
+Segurança     | Total TRE | Retroativas | No Sistema | Total Usadas | Saldo
+Carlos Almeida|    21     |      8      |     2      |     10       |  11
+```
+
+### Detalhes técnicos
+- A coluna `pre_used_days` terá default 0, sem impacto nos dados existentes
+- O cálculo de saldo será: `total_days - pre_used_days - dias_no_sistema`
+- O state `treQuotas` passará a incluir `pre_used_days`
+- Novo campo no formulário ao lado de "Total de Afastamentos"
 
