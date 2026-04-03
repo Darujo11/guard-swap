@@ -639,6 +639,48 @@ export default function SuperAdminManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Guards Dialog */}
+        <Dialog open={isGuardsOpen} onOpenChange={setIsGuardsOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Seguranças de {selectedAdmin?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2">
+              {adminGuards.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">Nenhum segurança encontrado.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Equipe</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {adminGuards.map((g: any) => (
+                      <TableRow key={g.id}>
+                        <TableCell className="font-medium">{g.name}</TableCell>
+                        <TableCell>
+                          {g.team ? (
+                            <Badge style={{ backgroundColor: g.team.color, color: '#fff' }}>{g.team.name}</Badge>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={g.is_active ? 'default' : 'destructive'}>
+                            {g.is_active ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+              <p className="text-xs text-muted-foreground text-center">Total: {adminGuards.length} seguranças</p>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
