@@ -1349,6 +1349,24 @@ export default function AdminLeaves() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delete TRE Quota Confirmation */}
+      <AlertDialog open={!!deleteTreQuotaGuardId} onOpenChange={() => setDeleteTreQuotaGuardId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Cota TRE</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta cota TRE? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTreQuota} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
