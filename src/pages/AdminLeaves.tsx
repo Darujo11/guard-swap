@@ -877,12 +877,14 @@ export default function AdminLeaves() {
               const guardsWithQuota = guards.map(guard => {
                 const quota = treQuotas.find(q => q.guard_id === guard.id);
                 const totalDays = quota?.total_days || 0;
-                const usedDays = treLeaves
+                const preUsedDays = quota?.pre_used_days || 0;
+                const systemDays = treLeaves
                   .filter(l => l.guard_id === guard.id)
                   .reduce((sum, l) => sum + calculateDays(l.start_date, l.end_date), 0);
-                const balance = totalDays - usedDays;
-                return { ...guard, totalDays, usedDays, balance };
-              }).filter(g => g.totalDays > 0 || g.usedDays > 0);
+                const totalUsed = preUsedDays + systemDays;
+                const balance = totalDays - totalUsed;
+                return { ...guard, totalDays, preUsedDays, systemDays, totalUsed, balance };
+              }).filter(g => g.totalDays > 0 || g.totalUsed > 0);
 
               if (guardsWithQuota.length === 0) return (
                 <div className="text-center py-4 text-muted-foreground text-sm">
@@ -896,7 +898,9 @@ export default function AdminLeaves() {
                     <TableRow>
                       <TableHead>{settings.guard_label}</TableHead>
                       <TableHead className="text-center">Total TRE</TableHead>
-                      <TableHead className="text-center">Usadas</TableHead>
+                      <TableHead className="text-center">Retroativas</TableHead>
+                      <TableHead className="text-center">No Sistema</TableHead>
+                      <TableHead className="text-center">Total Usadas</TableHead>
                       <TableHead className="text-center">Saldo</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -905,7 +909,9 @@ export default function AdminLeaves() {
                       <TableRow key={g.id}>
                         <TableCell className="font-medium">{g.name}</TableCell>
                         <TableCell className="text-center">{g.totalDays}</TableCell>
-                        <TableCell className="text-center">{g.usedDays}</TableCell>
+                        <TableCell className="text-center text-muted-foreground">{g.preUsedDays}</TableCell>
+                        <TableCell className="text-center text-muted-foreground">{g.systemDays}</TableCell>
+                        <TableCell className="text-center font-medium">{g.totalUsed}</TableCell>
                         <TableCell className={cn(
                           "text-center font-semibold",
                           g.balance > 0 ? "text-green-600" : "text-destructive"
