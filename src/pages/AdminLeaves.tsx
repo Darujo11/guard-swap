@@ -898,9 +898,7 @@ export default function AdminLeaves() {
                     <TableRow>
                       <TableHead>{settings.guard_label}</TableHead>
                       <TableHead className="text-center">Total TRE</TableHead>
-                      <TableHead className="text-center">Retroativas</TableHead>
-                      <TableHead className="text-center">No Sistema</TableHead>
-                      <TableHead className="text-center">Total Usadas</TableHead>
+                      <TableHead className="text-center">Já Tiradas</TableHead>
                       <TableHead className="text-center">Saldo</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -909,8 +907,6 @@ export default function AdminLeaves() {
                       <TableRow key={g.id}>
                         <TableCell className="font-medium">{g.name}</TableCell>
                         <TableCell className="text-center">{g.totalDays}</TableCell>
-                        <TableCell className="text-center text-muted-foreground">{g.preUsedDays}</TableCell>
-                        <TableCell className="text-center text-muted-foreground">{g.systemDays}</TableCell>
                         <TableCell className="text-center font-medium">{g.totalUsed}</TableCell>
                         <TableCell className={cn(
                           "text-center font-semibold",
