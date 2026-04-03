@@ -832,7 +832,7 @@ export default function AdminLeaves() {
                   setTreGuard(v);
                   const existing = treQuotas.find(q => q.guard_id === v);
                   setTreDays(existing ? String(existing.total_days) : '');
-                  setTrePreUsed(existing ? String(existing.pre_used_days || 0) : '');
+                  setTrePreUsed(existing && existing.pre_used_days ? String(existing.pre_used_days) : '');
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder={`Selecione o ${settings.guard_label.toLowerCase()}`} />
