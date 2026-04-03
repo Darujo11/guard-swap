@@ -148,6 +148,14 @@ const App = () => (
               }
             />
             <Route
+              path="/super-admin/relatorios"
+              element={
+                <ProtectedRoute allowedRoles={['super_admin']}>
+                  <SuperAdminReports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/super-admin/resetar-senha"
               element={
                 <ProtectedRoute allowedRoles={['super_admin']}>
