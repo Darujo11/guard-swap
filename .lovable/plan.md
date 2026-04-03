@@ -1,16 +1,30 @@
 
 
-## Plano: Deixar campo "Já tiradas (retroativo)" em branco por padrão
+## Plano: Limpar registros TRE de teste e simplificar tabela
 
-### Alteração
+### Problema
+Os registros TRE no sistema (7 registros) foram inseridos como teste. O usuário quer zerá-los para que apenas as "Já tiradas (retroativo)" sejam contabilizadas.
 
-| Arquivo | Detalhe |
-|---------|---------|
-| `src/pages/AdminLeaves.tsx` | Quando selecionar um segurança que tem `pre_used_days = 0`, mostrar o campo vazio em vez de "0". Manter o placeholder "0" para indicar o valor padrão. |
+### Alterações
 
-### Detalhe técnico
+| Componente | Detalhe |
+|------------|---------|
+| **Banco de dados** | Deletar os 7 registros TRE de teste da tabela `leaves` (Carlos Almeida: 2, Dinarte: 3, Flavio Godim: 1, Verneque: 1) |
+| **AdminLeaves.tsx** | Remover colunas "Retroativas" e "No Sistema" da tabela de saldos. Manter apenas: Segurança, Total TRE, Já Tiradas, Saldo. O "Já Tiradas" será o `pre_used_days` + dias no sistema |
 
-Linha 835: mudar de `String(existing.pre_used_days || 0)` para `existing.pre_used_days ? String(existing.pre_used_days) : ''`
+### Tabela simplificada
 
-Isso faz com que o campo fique em branco quando o valor é 0, mostrando apenas o placeholder.
+```text
+Segurança      | Total TRE | Já Tiradas | Saldo
+Carlos Almeida |    21     |     8      |  13
+```
+
+### Registros a deletar
+
+| Segurança | Datas |
+|-----------|-------|
+| Carlos Almeida | 2026-02-24, 2026-03-24 |
+| Dinarte | 2026-01-03, 2026-01-07, 2026-01-11 |
+| Flavio Godim | 2026-01-22 |
+| Verneque | 2026-02-14 |
 
