@@ -287,34 +287,42 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                     ${today ? 'ring-2 ring-primary ring-offset-1' : ''}
                     ${selectionMode && selectedDate === dateStr ? 'ring-2 ring-yellow-400 ring-offset-2' : ''}
                     ${selectionMode && inMonth ? 'cursor-pointer hover:opacity-80' : ''}
-                    ${leaveLabel || workDay || extraDay ? 'text-white font-semibold' : 'text-foreground'}
+                    ${leaveLabel || (workDay && !workDay.isGivenAway) || extraDay ? 'text-white font-semibold' : workDay?.isGivenAway ? 'text-gray-700 font-semibold' : 'text-foreground'}
                   `}
                   style={
                     leaveLabel
                       ? { backgroundColor: '#DC2626' }
-                      : workDay && extraDay
-                        ? { background: `linear-gradient(135deg, ${workDay.teamColor} 70%, #B8860B 30%)` }
-                        : workDay
-                          ? (workDay.isSwapped && workDay.originalTeamColor ? { background: `linear-gradient(135deg, ${workDay.teamColor} 90%, ${workDay.originalTeamColor} 10%)` } : { backgroundColor: workDay.teamColor })
-                          : extraDay
-                            ? { backgroundColor: '#B8860B' }
-                            : undefined
+                      : workDay?.isGivenAway
+                        ? { backgroundColor: '#D1D5DB' }
+                        : workDay && extraDay
+                          ? { background: `linear-gradient(135deg, ${workDay.teamColor} 70%, #B8860B 30%)` }
+                          : workDay
+                            ? (workDay.isSwapped && workDay.originalTeamColor ? { background: `linear-gradient(135deg, ${workDay.teamColor} 90%, ${workDay.originalTeamColor} 10%)` } : { backgroundColor: workDay.teamColor })
+                            : extraDay
+                              ? { backgroundColor: '#B8860B' }
+                              : undefined
                   }
                   title={
                     leaveLabel
                       ? leaveLabel
-                      : workDay && extraDay
-                        ? `${workDay.teamName} + Extra ${extraDay.percentage_type}%`
-                        : workDay
-                          ? `${workDay.teamName}${workDay.isSwapped ? ` (troca com ${workDay.originalOwnerName || ''})` : ''}`
-                          : extraDay
-                            ? `Extra ${extraDay.percentage_type}% — ${extraDay.justification}`
-                            : undefined
+                      : workDay?.isGivenAway
+                        ? `Cedido para ${workDay.coveredByName || ''}`
+                        : workDay && extraDay
+                          ? `${workDay.teamName} + Extra ${extraDay.percentage_type}%`
+                          : workDay
+                            ? `${workDay.teamName}${workDay.isSwapped ? ` (troca com ${workDay.originalOwnerName || ''})` : ''}`
+                            : extraDay
+                              ? `Extra ${extraDay.percentage_type}% — ${extraDay.justification}`
+                              : undefined
                   }
                 >
                   <span className="text-sm">{format(day, 'd')}</span>
                   {leaveLabel ? (
                     <span className="text-[8px] leading-tight text-white/90 font-bold">{leaveLabel}</span>
+                  ) : workDay?.isGivenAway ? (
+                    <span className="text-[8px] leading-tight text-gray-600 truncate max-w-full px-0.5">
+                      {workDay.coveredByName?.split(' ')[0] || 'Cedido'}
+                    </span>
                   ) : extraDay && !workDay ? (
                     <span className="text-[8px] leading-tight text-white/90 font-bold">Extra</span>
                   ) : workDay && workDay.isSwapped ? (
