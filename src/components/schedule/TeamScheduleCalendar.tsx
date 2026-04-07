@@ -76,8 +76,9 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
   const fetchSchedules = async () => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
+    const adminId = getAdminId();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("team_schedules")
       .select(`
         *,
@@ -85,6 +86,12 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
       `)
       .gte("shift_date", format(start, "yyyy-MM-dd"))
       .lte("shift_date", format(end, "yyyy-MM-dd"));
+
+    if (adminId) {
+      query = query.eq("admin_id", adminId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       toast({
@@ -220,11 +227,16 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
   };
 
   const generatePattern24_72 = async () => {
-    if (teams.length === 0) {
+    // Sort teams by name to get A, B, C, D order
+    const sortedTeams = [...teams]
+      .filter(t => t.name.match(/^Equipe\s+[A-Da-d]$/i))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (sortedTeams.length === 0) {
       toast({
         variant: "destructive",
         title: "Nenhuma equipe disponível",
-        description: "Por favor, crie equipes antes de gerar o padrão.",
+        description: "Por favor, crie equipes (Equipe A, B, C, D) antes de gerar o padrão.",
       });
       return;
     }
@@ -232,7 +244,8 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
     setLoading(true);
 
     const start = startOfMonth(currentMonth);
-    const end = addDays(endOfMonth(currentMonth), 365); // Generate for next year
+    const end = addDays(endOfMonth(currentMonth), 365);
+    const adminId = getAdminId();
 
     // Delete existing schedules in the period
     await supabase
@@ -241,35 +254,23 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
       .gte("shift_date", format(start, "yyyy-MM-dd"))
       .lte("shift_date", format(end, "yyyy-MM-dd"));
 
-    // Generate pattern for all teams with offset
-    const schedulesToInsert = [];
+    // Use fixed anchor: Jan 1, 2026 = Team A (index 0)
+    const anchor = new Date(2026, 0, 1); // 2026-01-01
+    const schedulesToInsert: { team_id: string; shift_date: string; admin_id: string | null }[] = [];
     
-    teams.forEach((team, teamIndex) => {
-      let currentDate = addDays(start, teamIndex); // Offset each team by 1 day
-      let isWorkDay = true;
-      let consecutiveDays = 0;
+    let currentDate = start;
+    while (currentDate <= end) {
+      const daysSinceAnchor = Math.floor((currentDate.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24));
+      const teamIndex = ((daysSinceAnchor % sortedTeams.length) + sortedTeams.length) % sortedTeams.length;
+      
+      schedulesToInsert.push({
+        team_id: sortedTeams[teamIndex].id,
+        shift_date: format(currentDate, "yyyy-MM-dd"),
+        admin_id: adminId,
+      });
 
-      while (currentDate <= end) {
-        if (isWorkDay) {
-          schedulesToInsert.push({
-            team_id: team.id,
-            shift_date: format(currentDate, "yyyy-MM-dd"),
-          });
-          consecutiveDays++;
-          if (consecutiveDays >= 1) {
-            isWorkDay = false;
-            consecutiveDays = 0;
-          }
-        } else {
-          consecutiveDays++;
-          if (consecutiveDays >= 3) {
-            isWorkDay = true;
-            consecutiveDays = 0;
-          }
-        }
-        currentDate = addDays(currentDate, 1);
-      }
-    });
+      currentDate = addDays(currentDate, 1);
+    }
 
     // Insert new schedules in batches
     const batchSize = 100;
