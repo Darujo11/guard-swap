@@ -163,6 +163,10 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
     return Array.from(workingDays.values()).filter(d => d.isSwapped).length;
   }, [workingDays]);
 
+  const givenAwayCount = useMemo(() => {
+    return Array.from(workingDays.values()).filter(d => d.isGivenAway).length;
+  }, [workingDays]);
+
   // Legenda dinâmica: todas as equipes que aparecem no calendário
   const legendTeams = useMemo(() => {
     const teamsMap = new Map<string, { color: string; name: string }>();
