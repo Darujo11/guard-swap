@@ -228,6 +228,12 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               <span className="text-muted-foreground">Troca ({swappedCount})</span>
             </div>
           )}
+          {givenAwayCount > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#D1D5DB' }} />
+              <span className="text-muted-foreground">Cedido ({givenAwayCount})</span>
+            </div>
+          )}
           {extrasMap.size > 0 && (
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#B8860B' }} />
