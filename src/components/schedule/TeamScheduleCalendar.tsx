@@ -39,21 +39,26 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [selectedTeam, setSelectedTeam] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [calendarLoading, setCalendarLoading] = useState(false);
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
 
   const getAdminId = () => {
     if (!profile) return null;
-    // For admins, their admin_id is null, so use their own id
-    // For guards, use their admin_id field
     return profile.admin_id || profile.id;
   };
 
   useEffect(() => {
+    if (authLoading || !profile) return;
     fetchTeams();
-    fetchSchedules();
     fetchProfiles();
-  }, [currentMonth]);
+  }, [authLoading, profile?.id]);
+
+  useEffect(() => {
+    if (authLoading || !profile) return;
+    setCalendarLoading(true);
+    fetchSchedules().finally(() => setCalendarLoading(false));
+  }, [currentMonth, authLoading, profile?.id, profile?.admin_id]);
 
   const fetchTeams = async () => {
     const { data, error } = await supabase
