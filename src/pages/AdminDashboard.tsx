@@ -244,20 +244,6 @@ const AdminDashboard = () => {
 
       if (error) throw error;
 
-      // Atualizar escala de plantões após aprovação
-      if (decisionDialog.action === 'APPROVED' && decisionDialog.request) {
-        try {
-          await swapTeamSchedules(
-            decisionDialog.request.requester_id,
-            decisionDialog.request.target_id,
-            decisionDialog.request.requester_shift_date,
-            decisionDialog.request.target_shift_date
-          );
-        } catch (scheduleError) {
-          console.error('[AdminDashboard] Erro ao atualizar escala:', scheduleError);
-        }
-      }
-
       // Registrar no log de auditoria
       await supabase.from('audit_logs').insert({
         entity_type: 'swap_request',
