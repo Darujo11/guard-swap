@@ -449,7 +449,11 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
           </div>
 
           {/* Calendar */}
-          {renderCalendar()}
+          {calendarLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          ) : renderCalendar()}
 
           {/* Legend with team members */}
           <div className="space-y-3">
