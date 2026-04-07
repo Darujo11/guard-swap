@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { SwapRequest } from '@/lib/types';
-import { swapTeamSchedules } from '@/utils/swapScheduleUpdate';
+
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
@@ -243,20 +243,6 @@ const AdminDashboard = () => {
         .eq('id', decisionDialog.request.id);
 
       if (error) throw error;
-
-      // Atualizar escala de plantões após aprovação
-      if (decisionDialog.action === 'APPROVED' && decisionDialog.request) {
-        try {
-          await swapTeamSchedules(
-            decisionDialog.request.requester_id,
-            decisionDialog.request.target_id,
-            decisionDialog.request.requester_shift_date,
-            decisionDialog.request.target_shift_date
-          );
-        } catch (scheduleError) {
-          console.error('[AdminDashboard] Erro ao atualizar escala:', scheduleError);
-        }
-      }
 
       // Registrar no log de auditoria
       await supabase.from('audit_logs').insert({

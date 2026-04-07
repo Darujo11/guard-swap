@@ -17,7 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { SwapRequest, Profile, Team } from '@/lib/types';
 import { SWAP_STATUS_CONFIG } from '@/lib/constants';
-import { swapTeamSchedules } from '@/utils/swapScheduleUpdate';
+
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import logoImage from '@/assets/logo-camara.png';
@@ -252,25 +252,6 @@ const AdminSwaps = () => {
         .eq('id', selectedRequest.id);
 
       if (error) throw error;
-
-      // Atualizar escala de plantões após aprovação
-      if (decisionAction === 'approve') {
-        try {
-          await swapTeamSchedules(
-            selectedRequest.requester_id,
-            selectedRequest.target_id,
-            selectedRequest.requester_shift_date,
-            selectedRequest.target_shift_date
-          );
-        } catch (scheduleError) {
-          console.error('[AdminSwaps] Erro ao atualizar escala:', scheduleError);
-          toast({
-            title: '⚠️ Troca aprovada, mas escala não atualizada',
-            description: 'A troca foi aprovada mas houve erro ao atualizar o calendário.',
-            variant: 'destructive',
-          });
-        }
-      }
 
       // Create audit log
       await supabase.from('audit_logs').insert({
