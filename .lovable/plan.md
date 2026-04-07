@@ -1,64 +1,61 @@
 
-## Plano: Corrigir abril para seguir março
+## Plano: Corrigir calendário que fica em branco ao trocar de mês
 
 ### Diagnóstico
-- O problema restante está nos dados de abril já gravados em `team_schedules`.
-- A continuidade correta de março é:
-```text
-31/03 = Equipe B
-01/04 = Equipe C
-02/04 = Equipe D
-03/04 = Equipe A
-04/04 = Equipe B
-... seguindo C → D → A → B
-```
-- Hoje abril está quebrado em 6 datas:
-  - `12/04`
-  - `14/04`
-  - `19/04`
-  - `21/04`
-  - `24/04`
-  - `29/04`
-- Essas datas formam 3 pares típicos de trocas antigas que foram refletidas na escala-base:
-  - `12 ↔ 29`
-  - `14 ↔ 21`
-  - `19 ↔ 24`
+- Não parece ser um crash de JavaScript.
+- O problema veio da última mudança no `TeamScheduleCalendar`: ao trocar o mês, a busca passa a filtrar `team_schedules` por `admin_id`.
+- Os registros antigos de escala ainda estão com `admin_id = null`, então a consulta volta vazia e o calendário parece “em branco”.
+- Além disso, a navegação do mês usa `addDays(±30)`, o que não representa mudança real de mês e pode causar saltos incorretos.
 
-### O que vou fazer
-1. Corrigir os dados de abril no banco
-   - Recalcular `2026-04-01` até `2026-04-30` pela rotação fixa, continuando a lógica de março.
-   - Aplicar a correção por `shift_date`, para deixar o mês inteiro consistente e não depender dos `id`s atuais.
+### O que vou corrigir
+1. **Corrigir os dados antigos no banco**
+   - Preencher `team_schedules.admin_id` com o `admin_id` da equipe correspondente (`teams.admin_id`) em todos os registros legados que hoje estão nulos.
 
-2. Blindar o calendário do admin
-   - Ajustar `TeamScheduleCalendar` para carregar apenas as escalas das equipes da organização atual.
-   - Hoje ele busca o mês inteiro sem filtrar por equipe/admin, o que é arriscado para multi-admin.
+2. **Blindar o carregamento do calendário**
+   - Ajustar `src/components/schedule/TeamScheduleCalendar.tsx` para só buscar escalas depois que o `profile` estiver carregado.
+   - Incluir `profile`/estado de auth nas dependências do `useEffect`, para evitar a primeira busca sem escopo.
 
-3. Blindar a geração manual de padrão
-   - Revisar `generatePattern24_72()` em `TeamScheduleCalendar`.
-   - Hoje ele reinicia o ciclo a partir do mês aberto, o que pode quebrar a continuidade com março.
-   - Vou alinhar essa geração com a mesma regra fixa da rotação, ou remover esse atalho se ele estiver conflitante com a regra oficial.
+3. **Corrigir a troca de mês**
+   - Substituir `addDays(currentMonth, ±30)` por navegação real com `addMonths` e `subMonths`.
 
-4. Manter trocas apenas em “Minha Escala”
-   - Preservar a lógica já aprovada: trocas aprovadas continuam aparecendo só no calendário pessoal via `computeEffectiveSchedule`.
-   - O calendário de equipes permanece como escala-base pura.
+4. **Melhorar a percepção visual**
+   - Adicionar estado de carregamento do calendário ao mudar de mês, para não parecer tela vazia enquanto busca os dados.
+
+5. **Revisar escopo das ações**
+   - Garantir que leituras e operações de geração/remoção de escala nesse componente continuem limitadas à organização do admin atual.
 
 ### Arquivos envolvidos
 - `src/components/schedule/TeamScheduleCalendar.tsx`
-- `src/pages/AdminSchedule.tsx`
-- `src/utils/swapScheduleUpdate.ts` (limpeza opcional de legado)
+- `supabase/migrations/...sql`
 
-### Resultado esperado para abril
-```text
-01 C  02 D  03 A  04 B
-05 C  06 D  07 A  08 B
-09 C  10 D  11 A  12 B
-13 C  14 D  15 A  16 B
-17 C  18 D  19 A  20 B
-21 C  22 D  23 A  24 B
-25 C  26 D  27 A  28 B
-29 C  30 D
+### Detalhe técnico
+SQL de correção:
+```sql
+update public.team_schedules ts
+set admin_id = t.admin_id
+from public.teams t
+where ts.team_id = t.id
+  and ts.admin_id is null
+  and t.admin_id is not null;
 ```
 
-### Observação técnica
-- Não precisa mudança de estrutura no banco.
-- É uma correção de dados em `team_schedules` + ajuste no frontend para não voltar a quebrar.
+Ajuste no componente:
+```ts
+const { profile, loading: authLoading } = useAuth();
+
+useEffect(() => {
+  if (authLoading || !profile) return;
+  // carregar dados do mês com escopo correto
+}, [currentMonth, authLoading, profile?.id, profile?.admin_id]);
+```
+
+Navegação:
+```ts
+setCurrentMonth(prev => subMonths(prev, 1));
+setCurrentMonth(prev => addMonths(prev, 1));
+```
+
+### Resultado esperado
+- Ao trocar para abril, maio, junho etc., a escala continua aparecendo normalmente.
+- O calendário passa a navegar mês a mês corretamente.
+- O problema não volta a acontecer por causa de registros antigos com `admin_id` vazio.
