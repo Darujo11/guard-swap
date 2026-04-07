@@ -413,7 +413,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentMonth(addDays(currentMonth, 30))}
+                onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
