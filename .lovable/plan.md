@@ -1,89 +1,31 @@
 
 
-## Plano: Atualizar Super Admin + Relatórios Completos por Admin
+## Plano: Remover reflexo de trocas no Calendário de Escalas
 
-### Contexto
-O super admin já existe no sistema com funcionalidades de gerenciar planos e administradores. O usuário quer:
-1. Atualizar os dados do super admin atual (credenciais/nome)
-2. Poder visualizar e gerenciar os seguranças de cada admin
-3. Gerar relatórios completos por admin (trocas, extras, afastamentos, seguranças)
+### Problema
+Quando uma troca é aprovada, o sistema chama `swapTeamSchedules()` que altera os `team_id` na tabela `team_schedules`, quebrando a rotação A→B→C→D no calendário de escalas. O usuário quer que trocas apareçam apenas no calendário pessoal ("Minha Escala"), que já usa a lógica de escala efetiva (`computeEffectiveSchedule`).
 
-### Parte 1: Atualizar dados do Super Admin
+### Solução
 
-| Arquivo | Detalhe |
-|---------|---------|
-| `src/pages/CreateSuperAdmin.tsx` | Transformar em formulário editável com campos: nome, email/whatsapp, senha. Detectar se super admin já existe e mostrar formulário de atualização em vez de criação |
-| `supabase/functions/create-super-admin-phone/index.ts` | Adicionar suporte a modo "update" para atualizar email, senha e nome do super admin existente |
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/AdminDashboard.tsx` | Remover a chamada a `swapTeamSchedules()` após aprovar troca (linhas ~248-254) |
+| `src/pages/AdminSwaps.tsx` | Remover a chamada a `swapTeamSchedules()` após aprovar troca (linhas ~257-263) |
+| `src/utils/swapScheduleUpdate.ts` | Pode ser mantido ou removido (ficará sem uso) |
 
-### Parte 2: Ver seguranças de cada admin
+### Correção dos dados de abril
 
-| Arquivo | Detalhe |
-|---------|---------|
-| `src/pages/SuperAdminManagement.tsx` | Adicionar botão "Ver Seguranças" em cada admin na tabela. Ao clicar, abre dialog/seção mostrando todos os seguranças daquele admin com nome, equipe e status |
+Os dados de abril na tabela `team_schedules` podem já estar corrompidos por trocas anteriores. Será necessário:
 
-### Parte 3: Nova página de Relatórios do Super Admin
+1. Consultar os dados atuais de abril para verificar se a rotação A→B→C→D está quebrada
+2. Se estiver, regenerar abril seguindo o padrão de março (continuando a rotação do último dia de março)
 
-| Arquivo | Detalhe |
-|---------|---------|
-| `src/pages/SuperAdminReports.tsx` | **Nova página** com seletor de admin e período, mostrando resumo completo |
-| `src/components/layout/AppLayout.tsx` | Adicionar link "Relatórios" na navegação do super admin |
-| `src/App.tsx` | Registrar rota `/super-admin/relatorios` |
+Isso pode ser feito via migração SQL que:
+- Identifica o `team_id` do dia 31/03 (ou último dia de março)
+- Recalcula abril inteiro seguindo a rotação correta
 
-### Funcionalidades da página de Relatórios
-
-```text
-┌─────────────────────────────────────────────┐
-│ Relatórios por Administrador                │
-├─────────────────────────────────────────────┤
-│ [Selecionar Admin ▼]  [Período: Abril 2026]│
-├─────────────────────────────────────────────┤
-│ 📊 Resumo                                   │
-│ Seguranças: 12  |  Equipes: 4               │
-│ Trocas: 8       |  Extras: 45h              │
-│ Afastamentos: 3                             │
-├─────────────────────────────────────────────┤
-│ 🔄 Trocas (tabela com todas as trocas)      │
-│ Solicitante | Alvo | Datas | Status         │
-├─────────────────────────────────────────────┤
-│ ⏰ Extras (tabela com todos os extras)       │
-│ Segurança | Data | Horas | Justificativa    │
-├─────────────────────────────────────────────┤
-│ 📅 Afastamentos                              │
-│ Segurança | Tipo | Período | Status         │
-├─────────────────────────────────────────────┤
-│ 👥 Seguranças                                │
-│ Nome | Equipe | Status | Desde              │
-├─────────────────────────────────────────────┤
-│        [📄 Gerar Relatório PDF]             │
-└─────────────────────────────────────────────┘
-```
-
-O PDF consolidado incluirá todas as seções acima com:
-- Logo da organização
-- Cabeçalho com nome do admin e período selecionado
-- Tabelas formatadas para cada categoria
-- Totalizadores e resumos
-
-### Dados consultados por admin
-
-Todas as queries filtram por `admin_id` do admin selecionado:
-- `profiles` (seguranças do admin)
-- `teams` (equipes do admin)
-- `swap_requests` (trocas)
-- `extras` (horas extras)
-- `leaves` (afastamentos)
-- `guard_tre_quotas` (cotas TRE)
-- `evaluations` (avaliações, se houver)
-
-### Navegação atualizada do Super Admin
-
-```text
-Planos | Administradores | Relatórios | Resetar Senha | Meu Perfil
-```
-
-### Detalhes técnicos
-- RLS já permite super_admin acessar todas as tabelas (políticas existentes)
-- PDF gerado client-side usando a mesma abordagem do `pdfGenerator.ts` existente
-- Seletor de período com mês/ano ou intervalo de datas
-- Dados carregados sob demanda ao selecionar admin
+### Impacto
+- O calendário de escalas (admin) volta a mostrar a rotação pura A→B→C→D
+- O calendário pessoal do segurança ("Minha Escala") continua mostrando os dias reais com trocas, via `computeEffectiveSchedule`
+- Trocas futuras não afetarão mais a tabela `team_schedules`
 
