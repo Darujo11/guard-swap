@@ -10,6 +10,8 @@ export interface EffectiveDay {
   originalTeamName?: string;
   originalOwnerName?: string;
   originalDate?: string;
+  isGivenAway?: boolean;
+  coveredByName?: string;
 }
 
 /**
