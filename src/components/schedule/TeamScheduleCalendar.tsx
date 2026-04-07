@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Team } from "@/lib/types";
-import { format, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
+import { format, addDays, addMonths, subMonths, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus, Trash2, Palette } from "lucide-react";
 
@@ -39,21 +39,26 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [selectedTeam, setSelectedTeam] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [calendarLoading, setCalendarLoading] = useState(false);
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
 
   const getAdminId = () => {
     if (!profile) return null;
-    // For admins, their admin_id is null, so use their own id
-    // For guards, use their admin_id field
     return profile.admin_id || profile.id;
   };
 
   useEffect(() => {
+    if (authLoading || !profile) return;
     fetchTeams();
-    fetchSchedules();
     fetchProfiles();
-  }, [currentMonth]);
+  }, [authLoading, profile?.id]);
+
+  useEffect(() => {
+    if (authLoading || !profile) return;
+    setCalendarLoading(true);
+    fetchSchedules().finally(() => setCalendarLoading(false));
+  }, [currentMonth, authLoading, profile?.id, profile?.admin_id]);
 
   const fetchTeams = async () => {
     const { data, error } = await supabase
@@ -398,7 +403,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentMonth(addDays(currentMonth, -30))}
+                onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -408,7 +413,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentMonth(addDays(currentMonth, 30))}
+                onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -444,7 +449,11 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
           </div>
 
           {/* Calendar */}
-          {renderCalendar()}
+          {calendarLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          ) : renderCalendar()}
 
           {/* Legend with team members */}
           <div className="space-y-3">
