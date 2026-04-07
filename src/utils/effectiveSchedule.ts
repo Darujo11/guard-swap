@@ -10,6 +10,8 @@ export interface EffectiveDay {
   originalTeamName?: string;
   originalOwnerName?: string;
   originalDate?: string;
+  isGivenAway?: boolean;
+  coveredByName?: string;
 }
 
 /**
@@ -61,7 +63,17 @@ export function computeEffectiveSchedule(
     const isTarget = swap.target_id === guardId;
 
     if (isRequester) {
-      days.delete(swap.requester_shift_date);
+      // Mark the given-away day in grey
+      days.set(swap.requester_shift_date, {
+        date: swap.requester_shift_date,
+        teamId: guardTeamId,
+        teamColor: guardTeamColor,
+        teamName: guardTeamName,
+        isSwapped: false,
+        isGivenAway: true,
+        coveredByName: swap.target?.name,
+      });
+      // Add the received day
       const otherTeamId = swap.target?.team_id;
       const otherTeam = otherTeamId ? allTeams.find(t => t.id === otherTeamId) : null;
       days.set(swap.target_shift_date, {
@@ -76,7 +88,17 @@ export function computeEffectiveSchedule(
         originalDate: swap.requester_shift_date,
       });
     } else if (isTarget) {
-      days.delete(swap.target_shift_date);
+      // Mark the given-away day in grey
+      days.set(swap.target_shift_date, {
+        date: swap.target_shift_date,
+        teamId: guardTeamId,
+        teamColor: guardTeamColor,
+        teamName: guardTeamName,
+        isSwapped: false,
+        isGivenAway: true,
+        coveredByName: swap.requester?.name,
+      });
+      // Add the received day
       const otherTeamId = swap.requester?.team_id;
       const otherTeam = otherTeamId ? allTeams.find(t => t.id === otherTeamId) : null;
       days.set(swap.requester_shift_date, {
