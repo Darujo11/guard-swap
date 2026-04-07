@@ -76,8 +76,9 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
   const fetchSchedules = async () => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
+    const adminId = getAdminId();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("team_schedules")
       .select(`
         *,
@@ -85,6 +86,12 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
       `)
       .gte("shift_date", format(start, "yyyy-MM-dd"))
       .lte("shift_date", format(end, "yyyy-MM-dd"));
+
+    if (adminId) {
+      query = query.eq("admin_id", adminId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       toast({
