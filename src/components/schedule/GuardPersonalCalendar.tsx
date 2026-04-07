@@ -251,7 +251,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
             ));
           })()}
           <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground font-medium">Total: {workingDays.size} plantões</span>
+            <span className="text-muted-foreground font-medium">Total: {workingDays.size - givenAwayCount} plantões</span>
           </div>
         </div>
       </CardHeader>
