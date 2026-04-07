@@ -1,31 +1,64 @@
 
+## Plano: Corrigir abril para seguir março
 
-## Plano: Remover reflexo de trocas no Calendário de Escalas
+### Diagnóstico
+- O problema restante está nos dados de abril já gravados em `team_schedules`.
+- A continuidade correta de março é:
+```text
+31/03 = Equipe B
+01/04 = Equipe C
+02/04 = Equipe D
+03/04 = Equipe A
+04/04 = Equipe B
+... seguindo C → D → A → B
+```
+- Hoje abril está quebrado em 6 datas:
+  - `12/04`
+  - `14/04`
+  - `19/04`
+  - `21/04`
+  - `24/04`
+  - `29/04`
+- Essas datas formam 3 pares típicos de trocas antigas que foram refletidas na escala-base:
+  - `12 ↔ 29`
+  - `14 ↔ 21`
+  - `19 ↔ 24`
 
-### Problema
-Quando uma troca é aprovada, o sistema chama `swapTeamSchedules()` que altera os `team_id` na tabela `team_schedules`, quebrando a rotação A→B→C→D no calendário de escalas. O usuário quer que trocas apareçam apenas no calendário pessoal ("Minha Escala"), que já usa a lógica de escala efetiva (`computeEffectiveSchedule`).
+### O que vou fazer
+1. Corrigir os dados de abril no banco
+   - Recalcular `2026-04-01` até `2026-04-30` pela rotação fixa, continuando a lógica de março.
+   - Aplicar a correção por `shift_date`, para deixar o mês inteiro consistente e não depender dos `id`s atuais.
 
-### Solução
+2. Blindar o calendário do admin
+   - Ajustar `TeamScheduleCalendar` para carregar apenas as escalas das equipes da organização atual.
+   - Hoje ele busca o mês inteiro sem filtrar por equipe/admin, o que é arriscado para multi-admin.
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/AdminDashboard.tsx` | Remover a chamada a `swapTeamSchedules()` após aprovar troca (linhas ~248-254) |
-| `src/pages/AdminSwaps.tsx` | Remover a chamada a `swapTeamSchedules()` após aprovar troca (linhas ~257-263) |
-| `src/utils/swapScheduleUpdate.ts` | Pode ser mantido ou removido (ficará sem uso) |
+3. Blindar a geração manual de padrão
+   - Revisar `generatePattern24_72()` em `TeamScheduleCalendar`.
+   - Hoje ele reinicia o ciclo a partir do mês aberto, o que pode quebrar a continuidade com março.
+   - Vou alinhar essa geração com a mesma regra fixa da rotação, ou remover esse atalho se ele estiver conflitante com a regra oficial.
 
-### Correção dos dados de abril
+4. Manter trocas apenas em “Minha Escala”
+   - Preservar a lógica já aprovada: trocas aprovadas continuam aparecendo só no calendário pessoal via `computeEffectiveSchedule`.
+   - O calendário de equipes permanece como escala-base pura.
 
-Os dados de abril na tabela `team_schedules` podem já estar corrompidos por trocas anteriores. Será necessário:
+### Arquivos envolvidos
+- `src/components/schedule/TeamScheduleCalendar.tsx`
+- `src/pages/AdminSchedule.tsx`
+- `src/utils/swapScheduleUpdate.ts` (limpeza opcional de legado)
 
-1. Consultar os dados atuais de abril para verificar se a rotação A→B→C→D está quebrada
-2. Se estiver, regenerar abril seguindo o padrão de março (continuando a rotação do último dia de março)
+### Resultado esperado para abril
+```text
+01 C  02 D  03 A  04 B
+05 C  06 D  07 A  08 B
+09 C  10 D  11 A  12 B
+13 C  14 D  15 A  16 B
+17 C  18 D  19 A  20 B
+21 C  22 D  23 A  24 B
+25 C  26 D  27 A  28 B
+29 C  30 D
+```
 
-Isso pode ser feito via migração SQL que:
-- Identifica o `team_id` do dia 31/03 (ou último dia de março)
-- Recalcula abril inteiro seguindo a rotação correta
-
-### Impacto
-- O calendário de escalas (admin) volta a mostrar a rotação pura A→B→C→D
-- O calendário pessoal do segurança ("Minha Escala") continua mostrando os dias reais com trocas, via `computeEffectiveSchedule`
-- Trocas futuras não afetarão mais a tabela `team_schedules`
-
+### Observação técnica
+- Não precisa mudança de estrutura no banco.
+- É uma correção de dados em `team_schedules` + ajuste no frontend para não voltar a quebrar.
