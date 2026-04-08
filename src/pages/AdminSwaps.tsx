@@ -239,11 +239,12 @@ const AdminSwaps = () => {
 
       if (!adminProfile) throw new Error('Perfil do admin não encontrado');
 
-      const updateData = {
+      const updateData: Record<string, any> = {
         status: decisionAction === 'approve' ? 'APPROVED' : 'REJECTED',
         admin_approved: decisionAction === 'approve',
         admin_approved_by: adminProfile.id,
-        admin_approved_at: new Date().toISOString()
+        admin_approved_at: new Date().toISOString(),
+        ...(decisionAction === 'approve' ? { target_confirmation: true } : {}),
       };
 
       const { error } = await supabase
@@ -1195,7 +1196,7 @@ const AdminSwaps = () => {
                                 Protocolo: {request.id.slice(0, 8)}
                               </Badge>
                               <StatusBadge status={request.status} />
-                              {!request.target_confirmation && request.status !== 'PENDING' && (
+                              {!request.target_confirmation && request.status === 'ACCEPTED' && (
                                 <Badge variant="outline" className="text-warning border-warning">
                                   Aguardando Ciência
                                 </Badge>
