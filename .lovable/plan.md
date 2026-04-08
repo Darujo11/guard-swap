@@ -1,47 +1,30 @@
 
 
-## Plano: Sistema de Lembrete de Troca via WhatsApp (1 dia antes)
+## Plano: Criar o job pg_cron para disparar o lembrete diário
 
-### Visão geral
-Criar uma edge function que roda diariamente (via pg_cron) e envia lembretes WhatsApp para seguranças que têm trocas aprovadas no dia seguinte. A mensagem inclui o nome do colega, as datas da troca e o protocolo (ID da troca).
+### O que falta
+A migração anterior habilitou as extensões `pg_cron` e `pg_net`, mas o job que agenda a chamada diária à edge function `notify-swap-reminder` não foi criado.
 
-### Componentes
+### Solução
+Executar via SQL (insert tool, não migração — contém dados específicos do projeto):
 
-**1. Edge Function `notify-swap-reminder/index.ts`**
-- Busca todas as `swap_requests` com `status = 'APPROVED'` onde `requester_shift_date` ou `target_shift_date` é igual a amanhã
-- Para cada troca encontrada, envia WhatsApp para o segurança que vai cobrir aquele plantão
-- Usa a API Evolution (mesmo padrão das funções existentes como `notify-tre-leave`)
-- Mensagem exemplo:
-```text
-Bom dia João! 🔔 Lembrete: Não se esqueça do seu plantão de amanhã (15/04/2026) em virtude da troca com Maria Santos. Troca: seu dia 12/04 ↔ dia 15/04. Protocolo: abc12345.
+```sql
+SELECT cron.schedule(
+  'notify-swap-reminder-daily',
+  '0 11 * * *',  -- 08:00 Brasília (UTC-3)
+  $$
+  SELECT net.http_post(
+    url:='https://wyoysecfbmmidjiofymg.supabase.co/functions/v1/notify-swap-reminder',
+    headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5b3lzZWNmYm1taWRqaW9meW1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNzc2MjEsImV4cCI6MjA3Mzc1MzYyMX0.os1MBrbPse2DekdQzEe_mgIqFdqPkfWwcf9rQZsoVIg"}'::jsonb,
+    body:='{}'::jsonb
+  ) AS request_id;
+  $$
+);
 ```
 
-**2. Configuração pg_cron + pg_net**
-- Habilitar as extensões `pg_cron` e `pg_net` via migração
-- Criar um job que roda todos os dias às 08:00 (horário de Brasília = 11:00 UTC) chamando a edge function
+### Também: Deploy da edge function
+Fazer deploy da `notify-swap-reminder` para que esteja disponível quando o cron disparar.
 
-**3. Configuração em `supabase/config.toml`**
-- Adicionar `[functions.notify-swap-reminder]` com `verify_jwt = false` (chamado pelo cron)
-
-### Lógica da edge function
-
-```text
-1. Calcular data de amanhã (fuso Brasília)
-2. SELECT swap_requests WHERE status='APPROVED'
-   AND (requester_shift_date = amanhã OR target_shift_date = amanhã)
-3. Para cada troca:
-   - Se requester_shift_date = amanhã → enviar para requester (com nome do target)
-   - Se target_shift_date = amanhã → enviar para target (com nome do requester)
-4. Buscar telefone do guard em profiles
-5. Enviar via Evolution API (sendText)
-6. Logar resultado
-```
-
-### Arquivos alterados/criados
-- `supabase/functions/notify-swap-reminder/index.ts` — nova edge function
-- `supabase/config.toml` — adicionar config da nova função
-- Migração SQL — habilitar pg_cron/pg_net e criar o job diário
-
-### Secret existente
-O token da Evolution API já está configurado como `tokenevolutiondainstancia` nos secrets do Supabase.
+### Resultado
+- Todos os dias às 08:00 (Brasília), o sistema busca trocas aprovadas para o dia seguinte e envia lembretes via WhatsApp.
 
