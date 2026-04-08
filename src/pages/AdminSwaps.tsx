@@ -239,11 +239,12 @@ const AdminSwaps = () => {
 
       if (!adminProfile) throw new Error('Perfil do admin não encontrado');
 
-      const updateData = {
+      const updateData: Record<string, any> = {
         status: decisionAction === 'approve' ? 'APPROVED' : 'REJECTED',
         admin_approved: decisionAction === 'approve',
         admin_approved_by: adminProfile.id,
-        admin_approved_at: new Date().toISOString()
+        admin_approved_at: new Date().toISOString(),
+        ...(decisionAction === 'approve' ? { target_confirmation: true } : {}),
       };
 
       const { error } = await supabase
