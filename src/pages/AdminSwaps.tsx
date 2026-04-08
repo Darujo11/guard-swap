@@ -1196,7 +1196,7 @@ const AdminSwaps = () => {
                                 Protocolo: {request.id.slice(0, 8)}
                               </Badge>
                               <StatusBadge status={request.status} />
-                              {!request.target_confirmation && request.status !== 'PENDING' && (
+                              {!request.target_confirmation && request.status === 'ACCEPTED' && (
                                 <Badge variant="outline" className="text-warning border-warning">
                                   Aguardando Ciência
                                 </Badge>
