@@ -25,6 +25,11 @@ export const useAuth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Safety timeout: never stay in loading state longer than 10s
+    const safetyTimeout = setTimeout(() => {
+      setAuthState(prev => prev.loading ? { ...prev, loading: false } : prev);
+    }, 10000);
+
     // Set up auth state listener (avoid async work inside callback)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
@@ -74,15 +79,28 @@ export const useAuth = () => {
     // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const role = await getUserRole(session.user.id);
-        const profile = await getUserProfile(session.user.id);
-        setAuthState({
-          user: session.user,
-          session,
-          role,
-          profile,
-          loading: false,
-        });
+        try {
+          const [role, profile] = await Promise.all([
+            getUserRole(session.user.id),
+            getUserProfile(session.user.id),
+          ]);
+          setAuthState({
+            user: session.user,
+            session,
+            role,
+            profile,
+            loading: false,
+          });
+        } catch (e) {
+          console.error('[Auth] Failed to fetch role/profile on init', e);
+          setAuthState({
+            user: session.user,
+            session,
+            role: null,
+            profile: null,
+            loading: false,
+          });
+        }
       } else {
         setAuthState({
           user: null,
@@ -92,16 +110,27 @@ export const useAuth = () => {
           loading: false,
         });
       }
+    }).catch((e) => {
+      console.error('[Auth] getSession failed', e);
+      setAuthState({ user: null, session: null, role: null, profile: null, loading: false });
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(safetyTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const getUserRole = async (userId: string): Promise<UserRole | null> => {
-    const { data: roles } = await supabase
+    const { data: roles, error } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId);
+
+    if (error) {
+      console.error('[Auth] getUserRole error', error);
+      return null;
+    }
 
     if (roles && roles.length > 0) {
       // Prioridade: super_admin > admin > guard
@@ -113,11 +142,17 @@ export const useAuth = () => {
   };
 
   const getUserProfile = async (userId: string): Promise<Profile | null> => {
-    const { data: profile } = await supabase
+    // Use maybeSingle to avoid throwing when profile doesn't exist (orphan auth users)
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
+
+    if (error) {
+      console.error('[Auth] getUserProfile error', error);
+      return null;
+    }
 
     return profile || null;
   };
