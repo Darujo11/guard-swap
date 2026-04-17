@@ -77,7 +77,21 @@ export const useAuth = () => {
     });
 
     // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error: sessionError }) => {
+      if (sessionError) {
+        console.error('[Auth] getSession error - clearing tokens', sessionError);
+        try {
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key) continue;
+            if (key.startsWith('sb-') || key.startsWith('supabase.auth.')) keysToRemove.push(key);
+          }
+          keysToRemove.forEach((k) => localStorage.removeItem(k));
+        } catch {}
+        setAuthState({ user: null, session: null, role: null, profile: null, loading: false });
+        return;
+      }
       if (session?.user) {
         try {
           const [role, profile] = await Promise.all([
