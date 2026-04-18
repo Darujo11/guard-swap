@@ -25,13 +25,37 @@ export const useAuth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Safety timeout: never stay in loading state longer than 10s
+    // Safety timeout: never stay in loading state longer than 5s
     const safetyTimeout = setTimeout(() => {
       setAuthState(prev => prev.loading ? { ...prev, loading: false } : prev);
-    }, 10000);
+    }, 5000);
+
+    const clearSupabaseTokens = () => {
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key) continue;
+          if (key.startsWith('sb-') || key.startsWith('supabase.auth.')) keysToRemove.push(key);
+        }
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+      } catch {}
+    };
 
     // Set up auth state listener (avoid async work inside callback)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Handle token refresh failures explicitly
+      if (event === 'TOKEN_REFRESHED' && !session) {
+        console.warn('[Auth] Token refresh produced no session - clearing tokens');
+        clearSupabaseTokens();
+        setAuthState({ user: null, session: null, role: null, profile: null, loading: false });
+        return;
+      }
+      if (event === 'SIGNED_OUT') {
+        clearSupabaseTokens();
+        setAuthState({ user: null, session: null, role: null, profile: null, loading: false });
+        return;
+      }
       if (session?.user) {
         // Set base state and fetch role/profile asynchronously to avoid deadlocks
         setAuthState(prev => ({
@@ -79,16 +103,10 @@ export const useAuth = () => {
     // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session }, error: sessionError }) => {
       if (sessionError) {
+        const errMsg = (sessionError as any)?.message?.toLowerCase() || '';
+        const isRefreshError = errMsg.includes('refresh') || errMsg.includes('token');
         console.error('[Auth] getSession error - clearing tokens', sessionError);
-        try {
-          const keysToRemove: string[] = [];
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (!key) continue;
-            if (key.startsWith('sb-') || key.startsWith('supabase.auth.')) keysToRemove.push(key);
-          }
-          keysToRemove.forEach((k) => localStorage.removeItem(k));
-        } catch {}
+        clearSupabaseTokens();
         setAuthState({ user: null, session: null, role: null, profile: null, loading: false });
         return;
       }
