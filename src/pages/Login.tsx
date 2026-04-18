@@ -69,46 +69,32 @@ const Login = () => {
       const raw = email.trim();
       const isPhone = /^\d+$/.test(raw);
 
+      let loginEmail = raw;
       if (isPhone) {
         const digits = raw.replace(/\D/g, '');
-        const e164 = digits.startsWith('55') ? `+${digits}` : `+55${digits}`;
-
-        let signedIn = false;
-        try {
-          const { data, error } = await supabase.auth.signInWithPassword({
-            phone: e164,
-            password,
-          });
-          if (!error && data.user) {
-            await redirectUser(data.user.id);
-            signedIn = true;
-          }
-        } catch (err) {
-          // If phone login is disabled, we will fallback to email alias below
-        }
-
-        if (!signedIn) {
-          const alias = `${digits}@guardshift.com`;
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email: alias,
-            password,
-          });
-          if (error) throw error;
-          if (data.user) await redirectUser(data.user.id);
-        }
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: raw,
-          password,
-        });
-        if (error) throw error;
-        if (data.user) await redirectUser(data.user.id);
+        loginEmail = `${digits}@guardshift.com`;
       }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password,
+      });
+      if (error) throw error;
+      if (data.user) await redirectUser(data.user.id);
     } catch (error: any) {
       console.error('Login error:', error);
+      const msg = (error?.message || '').toLowerCase();
+      let description = 'Credenciais inválidas. Verifique seu WhatsApp/Email e senha.';
+      if (msg.includes('failed to fetch') || msg.includes('network')) {
+        description = 'Falha de conexão. Verifique sua internet e tente novamente.';
+      } else if (msg.includes('invalid login') || msg.includes('invalid_credentials')) {
+        description = 'WhatsApp/Email ou senha incorretos.';
+      } else if (error?.message) {
+        description = error.message;
+      }
       toast({
         title: 'Erro no login',
-        description: error.message || 'Credenciais inválidas. Verifique seu WhatsApp/Email e senha.',
+        description,
         variant: 'destructive',
       });
     } finally {
