@@ -31,6 +31,20 @@ interface TeamScheduleCalendarProps {
   readOnly?: boolean;
 }
 
+const TEAM_FIXED_COLORS: Record<string, string> = {
+  A: "#3b82f6",
+  B: "#10b981",
+  C: "#f59e0b",
+  D: "#ef4444",
+};
+
+const getTeamCalendarColor = (teamName?: string | null, fallback?: string | null) => {
+  const normalized = (teamName || "").trim().toUpperCase();
+  const match = normalized.match(/^EQUIPE\s+([A-D])$/) || normalized.match(/^([A-D])$/);
+  if (match?.[1] && TEAM_FIXED_COLORS[match[1]]) return TEAM_FIXED_COLORS[match[1]];
+  return fallback || "#3b82f6";
+};
+
 export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [schedules, setSchedules] = useState<TeamSchedule[]>([]);
@@ -140,7 +154,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
 
   const getTeamColorStyle = (color: string): React.CSSProperties => {
     return {
-      backgroundColor: color + '20', // 20 = 12.5% opacity in hex
+      background: `linear-gradient(180deg, ${color}2e 0%, ${color}1a 100%)`,
       borderColor: color,
       color: color,
     };
@@ -330,20 +344,21 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
 
   const renderDay = (date: Date) => {
     const team = getTeamForDate(date);
+    const teamColor = team ? getTeamCalendarColor(team.name, team.color) : undefined;
     
     return (
       <div
         onClick={() => !readOnly && handleDateClick(date)}
-        style={team ? getTeamColorStyle(team.color || '#3b82f6') : {}}
+        style={team ? getTeamColorStyle(teamColor || '#3b82f6') : {}}
         className={`
-          relative w-full h-full min-h-[50px] md:min-h-[60px] p-1 md:p-2 ${!readOnly ? 'cursor-pointer' : ''}
+          relative w-full h-full min-h-[50px] md:min-h-[60px] p-1 md:p-2 bg-muted/25 ${!readOnly ? 'cursor-pointer' : ''}
           border rounded md:border-2 md:rounded-md
-          ${!readOnly ? 'hover:ring-1 md:hover:ring-2 hover:ring-primary' : ''}
-          transition-all
+          ${!readOnly ? 'hover:ring-1 md:hover:ring-2 hover:ring-primary/70 hover:shadow-lg hover:-translate-y-0.5 hover:scale-[1.02]' : ''}
+          transition-all duration-200
           ${!team ? 'bg-background border-border' : ''}
         `}
       >
-        <div className="text-xs md:text-sm font-medium">
+        <div className="text-xs md:text-sm font-medium inline-flex items-center justify-center min-w-5 h-5 px-1 rounded bg-background/80">
           {format(date, "d")}
         </div>
         {team && (
@@ -468,7 +483,7 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
                         <div className="flex items-center gap-2">
                           <div
                             className="w-3 h-3 md:w-4 md:h-4 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: team.color || '#3b82f6' }}
+                            style={{ backgroundColor: getTeamCalendarColor(team.name, team.color) }}
                           />
                           <span className="font-medium text-sm md:text-base">{team.name}</span>
                         </div>
@@ -489,13 +504,13 @@ export function TeamScheduleCalendar({ readOnly = false }: TeamScheduleCalendarP
                                 <div className="flex gap-2">
                                   <Input
                                     type="color"
-                                    value={team.color || '#3b82f6'}
+                                    value={getTeamCalendarColor(team.name, team.color)}
                                     onChange={(e) => updateTeamColor(team.id, e.target.value)}
                                     className="w-20 h-10 cursor-pointer"
                                   />
                                   <Input
                                     type="text"
-                                    value={team.color || '#3b82f6'}
+                                    value={getTeamCalendarColor(team.name, team.color)}
                                     onChange={(e) => updateTeamColor(team.id, e.target.value)}
                                     placeholder="#3b82f6"
                                     className="flex-1"

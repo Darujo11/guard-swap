@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { TeamBadge } from '@/components/ui/team-badge';
 import { TeamScheduleCalendar } from '@/components/schedule/TeamScheduleCalendar';
+import { AdminDutyCalendar } from '@/components/schedule/AdminDutyCalendar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -22,11 +23,9 @@ import autoTable from 'jspdf-autotable';
 
 import {
   Users,
-  Clock,
   CheckCircle,
   XCircle,
   Calendar,
-  BarChart3,
   ArrowUpRight,
   Filter,
   Trash2,
@@ -52,6 +51,7 @@ const AdminDashboard = () => {
   const [decisionReason, setDecisionReason] = useState('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<SwapRequest | null>(null);
+  const [calendarReloadKey, setCalendarReloadKey] = useState(0);
   
   // TRE leave states
   const [pendingTreLeaves, setPendingTreLeaves] = useState<any[]>([]);
@@ -296,6 +296,7 @@ const AdminDashboard = () => {
 
       setDecisionDialog({ open: false, request: null, action: null });
       fetchData();
+      setCalendarReloadKey((prev) => prev + 1);
     } catch (error) {
       console.error('[AdminDashboard][HandleDecision]', error);
       toast({
@@ -323,6 +324,7 @@ const AdminDashboard = () => {
       });
 
       await fetchData();
+      setCalendarReloadKey((prev) => prev + 1);
       setIsDeleteDialogOpen(false);
       setRequestToDelete(null);
     } catch (error) {
@@ -396,53 +398,6 @@ const AdminDashboard = () => {
     >
       {/* Stats Grid */}
       <div className="flex flex-col gap-6">
-        {/* Stats Grid - Order 2 on mobile, Order 1 on desktop */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 order-2 md:order-1">
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Trocas Pendentes</CardTitle>
-              <Clock className="h-4 w-4 text-warning" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-warning">{stats.pendingSwaps}</div>
-              <p className="text-xs text-muted-foreground">Aguardando aprovação</p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Aprovadas</CardTitle>
-              <CheckCircle className="h-4 w-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-success">{stats.approvedSwaps}</div>
-              <p className="text-xs text-muted-foreground">Total aprovadas</p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rejeitadas</CardTitle>
-              <XCircle className="h-4 w-4 text-danger" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-danger">{stats.rejectedSwaps}</div>
-              <p className="text-xs text-muted-foreground">Total rejeitadas</p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Seguranças</CardTitle>
-              <Users className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalGuards}</div>
-              <p className="text-xs text-muted-foreground">Cadastrados no sistema</p>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Swap Requests - Order 1 on mobile, Order 2 on desktop */}
         <Card className="order-1 md:order-2">
           <CardHeader>
@@ -629,6 +584,8 @@ const AdminDashboard = () => {
           </Card>
         )}
 
+        <AdminDutyCalendar reloadKey={calendarReloadKey} />
+
         {/* Schedule Calendar - Order 3 */}
         <Card className="order-3">
           <CardHeader>
@@ -652,6 +609,16 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <TeamScheduleCalendar />
+          </CardContent>
+        </Card>
+
+        {/* Footer Card */}
+        <Card className="order-4">
+          <CardContent className="py-6">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Trocas aprovadas</p>
+              <p className="text-2xl font-bold text-success">{stats.approvedSwaps}</p>
+            </div>
           </CardContent>
         </Card>
       </div>
