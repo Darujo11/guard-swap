@@ -378,7 +378,8 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
   };
 
   const canDelete = (request: SwapRequest) => {
-    return request.requester_id === currentUser.id;
+    // Após aprovação do coordenador, só o coordenador pode excluir a troca
+    return request.requester_id === currentUser.id && request.status !== 'APPROVED';
   };
 
   const toggleMonth = (monthKey: string) => {
@@ -879,6 +880,14 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                                     Excluir
                                   </Button>
                                 )}
+                              </div>
+                            )}
+
+                            {/* Troca aprovada: exclusão apenas pelo coordenador */}
+                            {request.requester_id === currentUser.id && request.status === 'APPROVED' && (
+                              <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
+                                <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                                Trocas aprovadas só podem ser removidas pelo coordenador.
                               </div>
                             )}
                           </div>

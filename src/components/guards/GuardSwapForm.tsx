@@ -24,6 +24,14 @@ interface TeamSchedule {
   team?: Team;
 }
 
+interface ActiveSwap {
+  requester_id: string;
+  target_id: string;
+  requester_shift_date: string;
+  target_shift_date: string;
+  status: string;
+}
+
 interface GuardSwapFormProps {
   currentUser: Profile;
   onClose?: () => void;
@@ -37,6 +45,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
   const [targetShiftDate, setTargetShiftDate] = useState<Date | undefined>();
   const [schedules, setSchedules] = useState<TeamSchedule[]>([]);
   const [approvedSwaps, setApprovedSwaps] = useState<any[]>([]);
+  const [myActiveSwaps, setMyActiveSwaps] = useState<ActiveSwap[]>([]);
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [requesterCalendarOpen, setRequesterCalendarOpen] = useState(false);
@@ -50,6 +59,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
     fetchAvailableGuards();
     fetchSchedules();
     fetchApprovedSwapsData();
+    fetchMyActiveSwaps();
   }, [currentUser]);
 
   const fetchAvailableGuards = async () => {
@@ -134,6 +144,23 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
     }
   };
 
+  // Busca trocas ativas (pendentes, aceitas ou aprovadas) que envolvem o usuário atual.
+  // Usado para impedir que ele assuma o mesmo dia em mais de uma troca.
+  const fetchMyActiveSwaps = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('swap_requests')
+        .select('requester_id, target_id, requester_shift_date, target_shift_date, status')
+        .in('status', ['PENDING', 'ACCEPTED', 'APPROVED'])
+        .or(`requester_id.eq.${currentUser.id},target_id.eq.${currentUser.id}`);
+
+      if (error) throw error;
+      setMyActiveSwaps((data || []) as ActiveSwap[]);
+    } catch (error) {
+      console.error('[GuardSwapForm][FetchMyActiveSwaps]', error);
+    }
+  };
+
   // Escala efetiva do solicitante (meus dias reais de trabalho)
   const myEffectiveDates = useMemo(() => {
     if (!currentUser.team_id) return new Set<string>();
@@ -147,6 +174,21 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
     if (!targetGuard?.team_id) return new Set<string>();
     return getEffectiveDatesSet(schedules, approvedSwaps, targetGuard.id, targetGuard.team_id);
   }, [schedules, approvedSwaps, selectedTarget, availableGuards]);
+
+  // Datas que o solicitante já está comprometido a ASSUMIR via outra troca ativa.
+  // Assumir uma data acontece como solicitante (target_shift_date) ou como alvo (requester_shift_date).
+  // Não pode assumir o mesmo dia duas vezes (ficaria escalado para duas equipes no mesmo dia).
+  const myAssumedDates = useMemo(() => {
+    const dates = new Set<string>();
+    myActiveSwaps.forEach(swap => {
+      if (swap.requester_id === currentUser.id && swap.target_shift_date) {
+        dates.add(swap.target_shift_date);
+      } else if (swap.target_id === currentUser.id && swap.requester_shift_date) {
+        dates.add(swap.requester_shift_date);
+      }
+    });
+    return dates;
+  }, [myActiveSwaps, currentUser.id]);
 
   if (settings.swaps_blocked) {
     return (
@@ -230,6 +272,15 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
       return false;
     }
 
+    if (myAssumedDates.has(format(targetDate, 'yyyy-MM-dd'))) {
+      toast({
+        title: 'Troca não permitida',
+        description: `Você já possui uma troca em que assume o plantão do dia ${format(targetDate, 'dd/MM/yyyy', { locale: ptBR })}. Não é possível assumir o mesmo plantão duas vezes.`,
+        variant: 'destructive',
+      });
+      return false;
+    }
+
     if (settings.swap_same_month_only) {
       if (requesterDate.getMonth() !== targetDate.getMonth() || requesterDate.getFullYear() !== targetDate.getFullYear()) {
         toast({
@@ -287,6 +338,14 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
           toast({
             title: 'Erro de validação',
             description: 'Não é possível solicitar troca consigo mesmo.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        if (error.message?.includes('DUPLICATE_ASSUMED_SHIFT')) {
+          toast({
+            title: 'Troca não permitida',
+            description: `Você já possui uma troca em que assume o plantão do dia ${format(targetShiftDate, 'dd/MM/yyyy', { locale: ptBR })}. Não é possível assumir o mesmo plantão duas vezes.`,
             variant: 'destructive',
           });
           return;
@@ -382,7 +441,10 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
       setRequesterShiftDate(undefined);
       setTargetShiftDate(undefined);
       setReason('');
-      
+
+      // Atualiza as trocas ativas para refletir o novo compromisso imediatamente
+      fetchMyActiveSwaps();
+
       // Notify parent to refresh the list
       if (onSwapCreated) {
         onSwapCreated();
@@ -571,6 +633,8 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
                         return true;
                       }
                     }
+                    // Bloqueia datas que o solicitante já assume em outra troca ativa
+                    if (myAssumedDates.has(format(date, 'yyyy-MM-dd'))) return true;
                     return !isTargetDate(date);
                   }}
                   modifiers={{
