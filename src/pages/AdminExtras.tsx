@@ -26,6 +26,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Profile } from "@/lib/types";
+import { getEffectiveDatesSet } from "@/utils/effectiveSchedule";
 
 // Helper functions for Brazilian holidays and weekend detection
 const getBrazilianHolidays = (year: number): Date[] => {
@@ -558,31 +559,54 @@ export default function AdminExtras() {
       const start = startOfMonth(month);
       const end = endOfMonth(month);
 
-      const { data: schedules, error: schedulesError } = await supabase
-        .from("team_schedules")
-        .select("shift_date, team_id")
-        .eq("team_id", guardProfile.team_id)
-        .gte("shift_date", format(start, "yyyy-MM-dd"))
-        .lte("shift_date", format(end, "yyyy-MM-dd"))
-        .order("shift_date", { ascending: true });
+      const startStr = format(start, "yyyy-MM-dd");
+      const endStr = format(end, "yyyy-MM-dd");
 
-      if (schedulesError) {
-        console.error("[fetchGuardShiftDates] Error fetching schedules:", schedulesError);
+      // A escala base do time não basta: trocas aprovadas movem plantões entre
+      // profissionais. Sem isso o calendário destacaria um dia já cedido.
+      const [schedulesRes, swapsRes] = await Promise.all([
+        supabase
+          .from("team_schedules")
+          .select("shift_date, team_id")
+          .eq("team_id", guardProfile.team_id)
+          .gte("shift_date", startStr)
+          .lte("shift_date", endStr)
+          .order("shift_date", { ascending: true }),
+        supabase
+          .from("swap_requests")
+          .select("requester_id, target_id, requester_shift_date, target_shift_date")
+          .eq("status", "APPROVED")
+          .or(`requester_id.eq.${guardId},target_id.eq.${guardId}`),
+      ]);
+
+      if (schedulesRes.error) {
+        console.error("[fetchGuardShiftDates] Error fetching schedules:", schedulesRes.error);
         setGuardShiftDates([]);
         return;
       }
 
-      if (!schedules || schedules.length === 0) {
-        setGuardShiftDates([]);
-        return;
+      if (swapsRes.error) {
+        console.error("[fetchGuardShiftDates] Error fetching swaps:", swapsRes.error);
       }
+
+      const effectiveDates = getEffectiveDatesSet(
+        schedulesRes.data || [],
+        swapsRes.data || [],
+        guardId,
+        guardProfile.team_id
+      );
 
       const parseYmd = (ymd: string) => {
         const [y, m, d] = ymd.split("-").map(Number);
         return new Date(y, (m || 1) - 1, d || 1);
       };
 
-      const dates = schedules.map((s) => parseYmd(s.shift_date));
+      // Dias assumidos em troca podem cair fora do mês exibido: manter só o mês.
+      const dates = Array.from(effectiveDates)
+        .filter((ymd) => ymd >= startStr && ymd <= endStr)
+        .sort()
+        .map(parseYmd);
+
       setGuardShiftDates(dates);
     } catch (error) {
       console.error("[fetchGuardShiftDates] Unexpected error:", error);

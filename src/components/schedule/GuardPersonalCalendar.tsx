@@ -353,16 +353,22 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               const extraDay = extrasMap.get(dateStr);
               const leaveLabel = leaveDates.get(dateStr);
 
+              // Não faz sentido pedir folga de um plantão que já foi cedido em troca,
+              // nem de um dia já coberto por outro afastamento.
+              const blockedForSelection = !!workDay?.isGivenAway || !!leaveLabel;
+              const selectable = selectionMode && inMonth && !blockedForSelection;
+
                return (
                 <div
                   key={dateStr}
-                  onClick={() => selectionMode && inMonth && onDateSelect?.(dateStr)}
+                  onClick={() => selectable && onDateSelect?.(dateStr)}
                   className={`
                     relative flex flex-col items-center justify-center h-16 rounded-md text-xs transition-colors
                     ${!inMonth ? 'opacity-30' : ''}
                     ${today ? 'ring-2 ring-primary ring-offset-1' : ''}
                     ${selectionMode && selectedDate === dateStr ? 'ring-2 ring-yellow-400 ring-offset-2' : ''}
-                    ${selectionMode && inMonth ? 'cursor-pointer hover:opacity-80' : ''}
+                    ${selectable ? 'cursor-pointer hover:opacity-80' : ''}
+                    ${selectionMode && inMonth && blockedForSelection ? 'cursor-not-allowed opacity-60' : ''}
                     ${leaveLabel || (workDay && !workDay.isGivenAway) || extraDay ? 'text-white font-semibold' : workDay?.isGivenAway ? 'text-gray-700 font-semibold' : 'text-foreground'}
                   `}
                   style={

@@ -711,6 +711,8 @@ const GuardDashboard = () => {
           teamId={currentUser.team_id}
           teamColor={currentUser.team?.color || '#3b82f6'}
           teamName={currentUser.team?.name || 'Minha Equipe'}
+          guardName={currentUser.name}
+          showSwapDetails
         />
       )}
 
