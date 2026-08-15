@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,6 @@ import {
   Search,
   UserPlus,
   Mail,
-  Phone,
   Crown,
   FileText,
   Users,
@@ -31,7 +30,7 @@ import {
   Download,
   Loader2
 } from 'lucide-react';
-import { generateAllGuardsSchedulePDF, GuardScheduleReport } from '@/utils/schedulePdf';
+import { generateAllGuardsSchedulePDF, generateGuardSchedulePDF, GuardScheduleReport } from '@/utils/schedulePdf';
 import { computeEffectiveSchedule } from '@/utils/effectiveSchedule';
 import { GuardPersonalCalendar } from '@/components/schedule/GuardPersonalCalendar';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -195,130 +194,185 @@ const AdminGuards = () => {
   const [memberForm, setMemberForm] = useState({ name: '', phone: '' });
   const [memberTransfers, setMemberTransfers] = useState<Record<string, string>>({});
   const [generatingAllPDF, setGeneratingAllPDF] = useState(false);
+  const [generatingGuardId, setGeneratingGuardId] = useState<string | null>(null);
+
   const [pdfMonth, setPdfMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
-  
+
+  /** Mês de referência do seletor, por extenso ("agosto de 2026"). */
+  const pdfMonthLabel = useMemo(() => {
+    const [year, month] = pdfMonth.split('-').map(Number);
+    return new Date(year, month - 1, 1).toLocaleDateString('pt-BR', {
+      month: 'long',
+      year: 'numeric',
+    });
+  }, [pdfMonth]);
+
+
   const { toast } = useToast();
+
+  /**
+   * Monta os relatórios de escala do mês selecionado para os seguranças
+   * informados. Serve tanto o PDF individual quanto o consolidado.
+   */
+  const buildScheduleReports = async (
+    targetGuards: Profile[]
+  ): Promise<{ reports: GuardScheduleReport[]; monthLabel: string }> => {
+    const [year, month] = pdfMonth.split('-').map(Number);
+    const selectedDate = new Date(year, month - 1, 1);
+    const startOfMonth = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endOfMonth = new Date(year, month, 0);
+    const endStr = `${endOfMonth.getFullYear()}-${String(endOfMonth.getMonth() + 1).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`;
+    const monthLabel = selectedDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+    // Fetch all data in parallel — query schedules by team_id (not admin_id) for reliability
+    const teamIds = teams.map(t => t.id);
+    const [schedulesRes, swapsRes, extrasRes, leavesRes] = await Promise.all([
+      supabase.from('team_schedules').select('*').in('team_id', teamIds).gte('shift_date', startOfMonth).lte('shift_date', endStr),
+      supabase.from('swap_requests').select('*, requester:profiles!swap_requests_requester_id_fkey(name, team_id), target:profiles!swap_requests_target_id_fkey(name, team_id)').eq('admin_id', profile.id).eq('status', 'APPROVED').or(`requester_shift_date.gte.${startOfMonth},target_shift_date.gte.${startOfMonth}`).or(`requester_shift_date.lte.${endStr},target_shift_date.lte.${endStr}`),
+      supabase.from('extras').select('*').eq('admin_id', profile.id).gte('extra_date', startOfMonth).lte('extra_date', endStr),
+      supabase.from('leaves').select('*').eq('admin_id', profile.id).eq('status', 'APPROVED'),
+    ]);
+
+    const schedules = schedulesRes.data || [];
+    const swaps = swapsRes.data || [];
+    const extras = extrasRes.data || [];
+    const treLeaves = leavesRes.data || [];
+
+    const reports: GuardScheduleReport[] = [];
+
+    for (const guard of targetGuards) {
+      const guardTeam = teams.find(t => t.id === guard.team_id);
+      if (!guardTeam) continue;
+
+      const effectiveDays = computeEffectiveSchedule(
+        schedules,
+        swaps as any,
+        guard.id,
+        guardTeam.id,
+        guardTeam.color || '#3b82f6',
+        guardTeam.name,
+        teams.map(t => ({ id: t.id, name: t.name, color: t.color || '#3b82f6' }))
+      );
+
+      // Dias do mês de referência. Plantões cedidos permanecem na lista marcados
+      // como isGivenAway — o relatório os exibe como cedidos, nunca como trabalhados.
+      const reportDays: GuardScheduleReport['days'] = [];
+      effectiveDays.forEach((day, dateStr) => {
+        if (dateStr >= startOfMonth && dateStr <= endStr) {
+          reportDays.push({
+            date: dateStr,
+            teamName: day.teamName,
+            isSwapped: day.isSwapped,
+            isGivenAway: !!day.isGivenAway,
+            counterpartName: day.isGivenAway ? day.coveredByName : day.originalOwnerName,
+            counterpartTeamName: day.originalTeamName,
+            exchangeDate: day.isGivenAway ? day.exchangedForDate : day.originalDate,
+            swapProtocol: day.swapProtocol,
+          });
+        }
+      });
+
+      const reportExtras = extras
+        .filter(e => e.guard_id === guard.id)
+        .map(e => ({
+          date: e.extra_date,
+          justification: e.justification,
+          percentageType: e.percentage_type,
+        }));
+
+      const guardTreLeaves = treLeaves.filter(l => l.guard_id === guard.id);
+      const treDates = new Map<string, string>();
+      guardTreLeaves.forEach(l => {
+        const label = (() => {
+          switch (l.leave_type) {
+            case 'TRE': return 'TRE';
+            case 'ATESTADO': return 'Atestado';
+            case 'FERIAS': return 'Férias';
+            case 'LICENCA_NOJO': return 'Lic. Nojo';
+            case 'LICENCA_PATERNIDADE': return 'Lic. Pat.';
+            case 'LICENCA_NAO_REMUNERADA': return 'Lic. N/R';
+            case 'FALTA_INJUSTIFICADA': return 'Falta';
+            default: return l.custom_type || 'Afastamento';
+          }
+        })();
+        const [sy, sm, sd] = l.start_date.split('-').map(Number);
+        const [ey, em, ed] = l.end_date.split('-').map(Number);
+        const start = new Date(sy, sm - 1, sd);
+        const end = new Date(ey, em - 1, ed);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          if (dateStr >= startOfMonth && dateStr <= endStr) {
+            treDates.set(dateStr, label);
+          }
+        }
+      });
+
+      reports.push({
+        guardName: guard.name,
+        teamName: guardTeam.name,
+        monthStart: startOfMonth,
+        monthLabel,
+        days: reportDays,
+        extras: reportExtras,
+        leaves: Array.from(treDates.entries()).map(([date, label]) => ({ date, label })),
+      });
+    }
+
+    return { reports, monthLabel };
+  };
 
   const handleGenerateAllPDF = async () => {
     if (!profile?.id || guards.length === 0) return;
     setGeneratingAllPDF(true);
     try {
-      const [year, month] = pdfMonth.split('-').map(Number);
-      const selectedDate = new Date(year, month - 1, 1);
-      const startOfMonth = `${year}-${String(month).padStart(2, '0')}-01`;
-      const endOfMonth = new Date(year, month, 0);
-      const endStr = `${endOfMonth.getFullYear()}-${String(endOfMonth.getMonth() + 1).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`;
-      const monthLabel = selectedDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      const { reports, monthLabel } = await buildScheduleReports(guards);
 
-      // Fetch all data in parallel — query schedules by team_id (not admin_id) for reliability
-      const teamIds = teams.map(t => t.id);
-      const [schedulesRes, swapsRes, extrasRes, leavesRes] = await Promise.all([
-        supabase.from('team_schedules').select('*').in('team_id', teamIds).gte('shift_date', startOfMonth).lte('shift_date', endStr),
-        supabase.from('swap_requests').select('*, requester:profiles!swap_requests_requester_id_fkey(name, team_id), target:profiles!swap_requests_target_id_fkey(name, team_id)').eq('admin_id', profile.id).eq('status', 'APPROVED').or(`requester_shift_date.gte.${startOfMonth},target_shift_date.gte.${startOfMonth}`).or(`requester_shift_date.lte.${endStr},target_shift_date.lte.${endStr}`),
-        supabase.from('extras').select('*').eq('admin_id', profile.id).gte('extra_date', startOfMonth).lte('extra_date', endStr),
-        supabase.from('leaves').select('*').eq('admin_id', profile.id).eq('status', 'APPROVED'),
-      ]);
-
-      const schedules = schedulesRes.data || [];
-      const swaps = swapsRes.data || [];
-      const extras = extrasRes.data || [];
-      const treLeaves = leavesRes.data || [];
-
-      const allGuardsData: GuardScheduleReport[] = [];
-
-      for (const guard of guards) {
-        const guardTeam = teams.find(t => t.id === guard.team_id);
-        if (!guardTeam) continue;
-
-        const effectiveDays = computeEffectiveSchedule(
-          schedules,
-          swaps as any,
-          guard.id,
-          guardTeam.id,
-          guardTeam.color || '#3b82f6',
-          guardTeam.name,
-          teams.map(t => ({ id: t.id, name: t.name, color: t.color || '#3b82f6' }))
-        );
-
-        // Dias do mês de referência. Plantões cedidos permanecem na lista marcados
-        // como isGivenAway — o relatório os exibe como cedidos, nunca como trabalhados.
-        const reportDays: GuardScheduleReport['days'] = [];
-        effectiveDays.forEach((day, dateStr) => {
-          if (dateStr >= startOfMonth && dateStr <= endStr) {
-            reportDays.push({
-              date: dateStr,
-              teamName: day.teamName,
-              isSwapped: day.isSwapped,
-              isGivenAway: !!day.isGivenAway,
-              counterpartName: day.isGivenAway ? day.coveredByName : day.originalOwnerName,
-              counterpartTeamName: day.originalTeamName,
-              exchangeDate: day.isGivenAway ? day.exchangedForDate : day.originalDate,
-              swapProtocol: day.swapProtocol,
-            });
-          }
-        });
-
-        const reportExtras = extras
-          .filter(e => e.guard_id === guard.id)
-          .map(e => ({
-            date: e.extra_date,
-            justification: e.justification,
-            percentageType: e.percentage_type,
-          }));
-
-        const guardTreLeaves = treLeaves.filter(l => l.guard_id === guard.id);
-        const treDates = new Map<string, string>();
-        guardTreLeaves.forEach(l => {
-          const label = (() => {
-            switch (l.leave_type) {
-              case 'TRE': return 'TRE';
-              case 'ATESTADO': return 'Atestado';
-              case 'FERIAS': return 'Férias';
-              case 'LICENCA_NOJO': return 'Lic. Nojo';
-              case 'LICENCA_PATERNIDADE': return 'Lic. Pat.';
-              case 'LICENCA_NAO_REMUNERADA': return 'Lic. N/R';
-              case 'FALTA_INJUSTIFICADA': return 'Falta';
-              default: return l.custom_type || 'Afastamento';
-            }
-          })();
-          const [sy, sm, sd] = l.start_date.split('-').map(Number);
-          const [ey, em, ed] = l.end_date.split('-').map(Number);
-          const start = new Date(sy, sm - 1, sd);
-          const end = new Date(ey, em - 1, ed);
-          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            if (dateStr >= startOfMonth && dateStr <= endStr) {
-              treDates.set(dateStr, label);
-            }
-          }
-        });
-
-        allGuardsData.push({
-          guardName: guard.name,
-          teamName: guardTeam.name,
-          monthStart: startOfMonth,
-          monthLabel,
-          days: reportDays,
-          extras: reportExtras,
-          leaves: Array.from(treDates.entries()).map(([date, label]) => ({ date, label })),
-        });
-      }
-
-      if (allGuardsData.length === 0) {
+      if (reports.length === 0) {
         toast({ title: 'Nenhum segurança com equipe', variant: 'destructive' });
         return;
       }
 
-      generateAllGuardsSchedulePDF(allGuardsData, monthLabel);
+      generateAllGuardsSchedulePDF(reports, monthLabel);
       toast({ title: 'PDF gerado com sucesso!' });
     } catch (error) {
       console.error('[AdminGuards][GenerateAllPDF]', error);
       toast({ title: 'Erro ao gerar PDF', variant: 'destructive' });
     } finally {
       setGeneratingAllPDF(false);
+    }
+  };
+
+  const handleGenerateGuardPDF = async (guard: Profile) => {
+    if (!profile?.id) return;
+
+    if (!guard.team_id) {
+      toast({
+        title: 'Segurança sem equipe',
+        description: 'Vincule o profissional a uma equipe para gerar a escala.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setGeneratingGuardId(guard.id);
+    try {
+      const { reports } = await buildScheduleReports([guard]);
+
+      if (reports.length === 0) {
+        toast({ title: 'Nenhuma escala encontrada para o período', variant: 'destructive' });
+        return;
+      }
+
+      generateGuardSchedulePDF(reports[0]);
+      toast({ title: `Escala de ${guard.name} gerada!` });
+    } catch (error) {
+      console.error('[AdminGuards][GenerateGuardPDF]', error);
+      toast({ title: 'Erro ao gerar PDF', variant: 'destructive' });
+    } finally {
+      setGeneratingGuardId(null);
     }
   };
 
@@ -881,6 +935,7 @@ const AdminGuards = () => {
                   type="month"
                   value={pdfMonth}
                   onChange={(e) => setPdfMonth(e.target.value)}
+                  title="Mês de referência dos PDFs de escala"
                   className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
                 />
                 <Button
@@ -895,7 +950,7 @@ const AdminGuards = () => {
               </div>
             </div>
             <CardDescription>
-              Total: {filteredGuards.length} seguranças
+              Total: {filteredGuards.length} seguranças · PDFs de escala referentes a {pdfMonthLabel}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -909,7 +964,6 @@ const AdminGuards = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
-                    <TableHead>Telefone</TableHead>
                     <TableHead>Equipe</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -924,16 +978,6 @@ const AdminGuards = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {guard.phone ? (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Phone className="h-4 w-4" />
-                            {guard.phone}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
                         {guard.team ? (
                           <TeamBadge team={guard.team} />
                         ) : (
@@ -943,10 +987,24 @@ const AdminGuards = () => {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGenerateGuardPDF(guard)}
+                            disabled={generatingGuardId === guard.id}
+                            title={`Baixar escala de ${pdfMonthLabel}`}
+                          >
+                            {generatingGuardId === guard.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+                            ) : (
+                              <Download className="h-4 w-4 sm:mr-2" />
+                            )}
+                            <span className="hidden sm:inline">Plantões</span>
+                          </Button>
+                          <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setSelectedGuardForSchedule(guard)}
-                            title="Ver Escala"
+                            title="Ver escala"
                           >
                             <Calendar className="h-4 w-4" />
                           </Button>
@@ -954,6 +1012,7 @@ const AdminGuards = () => {
                             variant="ghost"
                             size="sm"
                             asChild
+                            title="Ficha funcional"
                           >
                             <Link to={`/admin/ficha/${guard.id}`}>
                               <FileText className="h-4 w-4" />
@@ -963,6 +1022,7 @@ const AdminGuards = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => openEditDialog(guard)}
+                            title="Editar"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -970,6 +1030,7 @@ const AdminGuards = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteGuard(guard)}
+                            title="Excluir"
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
