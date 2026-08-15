@@ -175,7 +175,9 @@ Definidas em `src/App.tsx`.
 - Confirmacao do alvo da troca.
 - Aprovacao/reprovacao administrativa.
 - Registro de status e trilha temporal.
-- Atualizacao de escala efetiva via RPC `swap_team_schedules`.
+- A escala efetiva e derivada na leitura: `team_schedules` permanece imutavel e
+  as trocas aprovadas sao aplicadas por cima (`src/utils/effectiveSchedule.ts`).
+  Aprovar uma troca so grava `status = 'APPROVED'`.
 - Envio opcional de webhook externo de evento.
 - Lembrete diario automatico para trocas aprovadas com plantao no dia seguinte.
 
@@ -241,7 +243,9 @@ Fonte tipada: `src/integrations/supabase/types.ts`.
 
 ### Funcoes RPC relevantes
 
-- `swap_team_schedules(...)`: efetiva troca entre dois plantoes.
+- `swap_team_schedules(...)`: reescreveria `team_schedules` para efetivar a
+  troca. **Existe no banco mas nao e chamada pela aplicacao** - ver debito em
+  [14](#14-qualidade-tecnica-e-debitos-atuais).
 - `get_available_guards_for_swap()`: retorna candidatos para troca.
 - `has_role(...)`: verifica papel de usuario.
 - `is_super_admin(...)` / `is_admin_active(...)`: regras de permissao/estado.
@@ -341,6 +345,9 @@ Servidor Vite por padrao:
 - `npm run build:dev` - build em modo development
 - `npm run preview` - preview local do build
 - `npm run lint` - lint do projeto
+- `npm run typecheck` - checagem de tipos sem emitir build
+- `npm test` - suite de testes (Vitest, execucao unica)
+- `npm run test:watch` - suite de testes em modo watch
 
 ## 11) Build e deploy
 
@@ -405,13 +412,31 @@ Recomendacoes imediatas:
 
 ## 14) Qualidade tecnica e debitos atuais
 
-- **Sem testes automatizados**: nao ha suite de testes no projeto.
+### Testes
+
+Suite em Vitest (`vitest.config.ts`, ambiente `node`), cobrindo a regra mais
+sensivel do dominio: a escala efetiva depois das trocas aprovadas.
+
+- `src/utils/effectiveSchedule.test.ts` - dia cedido, dia assumido, simetria
+  entre os dois lados da troca, independencia da ordem em que as trocas chegam
+  do banco e tolerancia a trocas sem perfis carregados.
+- `src/utils/schedulePdf.test.ts` - classificacao e totais do relatorio:
+  plantao cedido nunca conta como trabalhado, precedencia de afastamento sobre
+  plantao e o texto de detalhamento com protocolo da troca.
+
+Rodar com `npm test`. A cobertura ainda e pontual: nao ha testes de componente,
+de integracao com o Supabase nem das Edge Functions.
+
+### Debitos abertos
+
 - **TypeScript permissivo**: `noImplicitAny: false` e `strictNullChecks: false`.
-- **Arquivos de pagina grandes**: alta concentracao de regra e UI em alguns modulos.
+- **Arquivos de pagina grandes**: alta concentracao de regra e UI em alguns
+  modulos (`AdminExtras.tsx` passa de 2.300 linhas).
 - **Historico longo de migrations**: exige disciplina de versionamento no Supabase.
-- **Inconsistencia de versao**:
-  - `package.json`: `4.1.2`
-  - `src/lib/version.ts`: `4.2.1`
+- **`src/utils/swapScheduleUpdate.ts` e codigo morto**: envolve a RPC
+  `swap_team_schedules`, que nao e chamada por ninguem. A aprovacao de troca so
+  grava `status = 'APPROVED'` e o overlay e aplicado na leitura. Se alguem
+  passar a chamar essa RPC, a troca sera contada duas vezes.
 
 ## 15) Guia rapido de evolucao
 

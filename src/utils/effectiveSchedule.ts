@@ -1,6 +1,7 @@
-import { supabase } from '@/integrations/supabase/client';
-
 /**
+ * Regras de escala efetiva. Modulo puro, sem I/O: quem chama traz os dados
+ * (escala base e trocas aprovadas) e recebe de volta o que vale de fato.
+ *
  * Protocolo curto e legivel de uma troca, derivado do id da solicitacao.
  * Os 8 primeiros caracteres sao os mesmos exibidos em AdminSwaps/GuardSwapList,
  * o que permite cruzar o documento com a tela de trocas.
@@ -151,41 +152,6 @@ export function getWorkedDays(days: Map<string, EffectiveDay>): Map<string, Effe
     if (!day.isGivenAway) worked.set(dateStr, day);
   });
   return worked;
-}
-
-/**
- * Busca trocas aprovadas envolvendo um segurança (como requester ou target).
- * Opcional: filtrar por período — inclui a troca quando qualquer uma das
- * duas datas do par cai dentro do intervalo.
- */
-export async function fetchApprovedSwaps(
-  guardId: string,
-  dateFrom?: string,
-  dateTo?: string
-) {
-  let query = supabase
-    .from('swap_requests')
-    .select(`
-      *,
-      requester:profiles!swap_requests_requester_id_fkey(id, name, team_id),
-      target:profiles!swap_requests_target_id_fkey(id, name, team_id)
-    `)
-    .eq('status', 'APPROVED')
-    .or(`requester_id.eq.${guardId},target_id.eq.${guardId}`);
-
-  if (dateFrom && dateTo) {
-    query = query.or(
-      `and(requester_shift_date.gte.${dateFrom},requester_shift_date.lte.${dateTo}),` +
-      `and(target_shift_date.gte.${dateFrom},target_shift_date.lte.${dateTo})`
-    );
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    console.error('[fetchApprovedSwaps] Error:', error);
-    return [];
-  }
-  return data || [];
 }
 
 /**

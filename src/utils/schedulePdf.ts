@@ -91,9 +91,9 @@ function lastTableY(doc: jsPDF, fallback: number): number {
 /*  Classificação do dia                                                       */
 /* -------------------------------------------------------------------------- */
 
-type DayKind = 'leave' | 'given-away' | 'swap' | 'shift' | 'extra' | 'empty';
+export type DayKind = 'leave' | 'given-away' | 'swap' | 'shift' | 'extra' | 'empty';
 
-interface ResolvedDay {
+export interface ResolvedDay {
   date: string;
   kind: DayKind;
   day?: ScheduleReportDay;
@@ -122,7 +122,7 @@ const KIND_LABEL: Record<Exclude<DayKind, 'empty'>, string> = {
  * A precedência resolve o que a pessoa de fato fez no dia:
  * afastamento > plantão cedido > plantão assumido > plantão normal > extra avulso.
  */
-function resolveDays(report: GuardScheduleReport): Map<string, ResolvedDay> {
+export function resolveDays(report: GuardScheduleReport): Map<string, ResolvedDay> {
   const byDate = new Map<string, ResolvedDay>();
 
   const ensure = (date: string): ResolvedDay => {
@@ -176,7 +176,7 @@ function shortTeam(name?: string): string {
   return name.replace(/^Equipe\s*/i, '');
 }
 
-function describe(entry: ResolvedDay): string {
+export function describe(entry: ResolvedDay): string {
   const parts: string[] = [];
   const { day, extra, leaveLabel } = entry;
 
@@ -247,7 +247,8 @@ function drawHeader(doc: jsPDF, report: GuardScheduleReport): number {
   return bandHeight;
 }
 
-interface Totals {
+export interface Totals {
+  /** Plantões efetivamente trabalhados (exclui cedidos e dias de afastamento). */
   shifts: number;
   swaps: number;
   extras: number;
@@ -255,7 +256,7 @@ interface Totals {
   leaves: number;
 }
 
-function computeTotals(resolved: Map<string, ResolvedDay>): Totals {
+export function computeTotals(resolved: Map<string, ResolvedDay>): Totals {
   const totals: Totals = { shifts: 0, swaps: 0, extras: 0, givenAway: 0, leaves: 0 };
   resolved.forEach(entry => {
     if (entry.extra) totals.extras += 1;
