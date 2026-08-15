@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, ArrowRightLeft, Calendar as CalendarIcon, Do
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday, addDays, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { computeEffectiveSchedule, EffectiveDay } from '@/utils/effectiveSchedule';
-import { generateSchedulePDF } from '@/utils/pdfGenerator';
+import { generateGuardSchedulePDF, GuardScheduleReport } from '@/utils/schedulePdf';
 
 const getLeaveLabel = (leaveType: string, customType?: string | null): string => {
   switch (leaveType) {
@@ -31,11 +31,15 @@ interface GuardPersonalCalendarProps {
   selectionMode?: boolean;
   selectedDate?: string | null;
   onDateSelect?: (date: string) => void;
+  /** Título do card. Padrão: "Minha Escala". */
+  title?: string;
+  /** Exibe o painel com as trocas do mês (protocolo, colega e datas). */
+  showSwapDetails?: boolean;
 }
 
 interface WorkingDay extends EffectiveDay {}
 
-export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, guardName, selectionMode, selectedDate, onDateSelect }: GuardPersonalCalendarProps) {
+export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, guardName, selectionMode, selectedDate, onDateSelect, title = 'Minha Escala', showSwapDetails = false }: GuardPersonalCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [teamSchedules, setTeamSchedules] = useState<any[]>([]);
   const [swapRequests, setSwapRequests] = useState<any[]>([]);
@@ -167,6 +171,81 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
     return Array.from(workingDays.values()).filter(d => d.isGivenAway).length;
   }, [workingDays]);
 
+  // Plantões efetivamente trabalhados: exclui dias cedidos e dias cobertos por afastamento.
+  const workedCount = useMemo(() => {
+    let count = 0;
+    workingDays.forEach((day, dateStr) => {
+      if (!day.isGivenAway && !leaveDates.has(dateStr)) count += 1;
+    });
+    return count;
+  }, [workingDays, leaveDates]);
+
+  // Trocas do mês consolidadas: um registro por solicitação (protocolo).
+  const monthSwaps = useMemo(() => {
+    const map = new Map<string, {
+      protocol: string;
+      counterpart: string;
+      gave?: string;
+      took?: string;
+      coveredTeam?: string;
+    }>();
+
+    Array.from(workingDays.values())
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .forEach(day => {
+        if (!day.isSwapped && !day.isGivenAway) return;
+
+        const key = day.swapId || day.date;
+        const record = map.get(key) || {
+          protocol: day.swapProtocol || '-',
+          counterpart: (day.isGivenAway ? day.coveredByName : day.originalOwnerName) || 'N/A',
+        };
+
+        if (day.isGivenAway) {
+          record.gave = day.date;
+          record.took = record.took || day.exchangedForDate;
+        } else {
+          record.took = day.date;
+          record.gave = record.gave || day.originalDate;
+          record.coveredTeam = day.originalTeamName;
+        }
+
+        map.set(key, record);
+      });
+
+    return Array.from(map.values()).sort((a, b) => (a.gave || '').localeCompare(b.gave || ''));
+  }, [workingDays]);
+
+  const buildReport = (): GuardScheduleReport => {
+    const monthStart = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+    const monthEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+
+    return {
+      guardName: guardName || 'Segurança',
+      teamName,
+      monthStart,
+      monthLabel: format(currentMonth, 'MMMM yyyy', { locale: ptBR }),
+      days: Array.from(workingDays.values()).map(day => ({
+        date: day.date,
+        teamName: day.teamName,
+        isSwapped: day.isSwapped,
+        isGivenAway: !!day.isGivenAway,
+        counterpartName: day.isGivenAway ? day.coveredByName : day.originalOwnerName,
+        counterpartTeamName: day.originalTeamName,
+        exchangeDate: day.isGivenAway ? day.exchangedForDate : day.originalDate,
+        swapProtocol: day.swapProtocol,
+      })),
+      extras: Array.from(extrasMap.entries()).map(([date, extra]) => ({
+        date,
+        justification: extra.justification,
+        percentageType: extra.percentage_type,
+      })),
+      leaves: Array.from(leaveDates.entries())
+        .filter(([date]) => date >= monthStart && date <= monthEnd)
+        .map(([date, label]) => ({ date, label })),
+    };
+  };
+
   // Legenda dinâmica: todas as equipes que aparecem no calendário
   const legendTeams = useMemo(() => {
     const teamsMap = new Map<string, { color: string; name: string }>();
@@ -188,7 +267,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Minha Escala</CardTitle>
+            <CardTitle className="text-lg">{title}</CardTitle>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}>
@@ -205,10 +284,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               size="icon"
               className="h-8 w-8"
               title="Baixar PDF"
-              onClick={() => {
-                const monthLabel = format(currentMonth, 'MMMM yyyy', { locale: ptBR });
-                generateSchedulePDF(guardName || 'Segurança', teamName, monthLabel, workingDays, extrasMap, leaveDates);
-              }}
+              onClick={() => generateGuardSchedulePDF(buildReport())}
             >
               <Download className="h-4 w-4" />
             </Button>
@@ -251,7 +327,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
             ));
           })()}
           <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground font-medium">Total: {workingDays.size - givenAwayCount} plantões</span>
+            <span className="text-muted-foreground font-medium">Total: {workedCount} plantões trabalhados</span>
           </div>
         </div>
       </CardHeader>
@@ -350,6 +426,48 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {showSwapDetails && !loading && monthSwaps.length > 0 && (
+          <div className="mt-5 border-t pt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-sm font-medium">Trocas do mês ({monthSwaps.length})</h4>
+            </div>
+            <div className="space-y-2">
+              {monthSwaps.map(swap => (
+                <div
+                  key={swap.protocol}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{swap.counterpart}</p>
+                    <p className="text-[11px] text-muted-foreground font-mono">{swap.protocol}</p>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs">
+                    <div className="text-right">
+                      <p className="text-muted-foreground text-[10px] uppercase tracking-wide">Cedeu</p>
+                      <p className="font-medium">
+                        {swap.gave ? format(parseISO(swap.gave), 'dd/MM', { locale: ptBR }) : '-'}
+                      </p>
+                    </div>
+                    <ArrowRightLeft className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-muted-foreground text-[10px] uppercase tracking-wide">Assumiu</p>
+                      <p className="font-medium">
+                        {swap.took ? format(parseISO(swap.took), 'dd/MM', { locale: ptBR }) : '-'}
+                      </p>
+                    </div>
+                    {swap.coveredTeam && (
+                      <Badge variant="outline" className="text-[10px]">
+                        {swap.coveredTeam}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </CardContent>

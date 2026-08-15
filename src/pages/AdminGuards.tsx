@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TeamBadge } from '@/components/ui/team-badge';
 import { useToast } from '@/hooks/use-toast';
@@ -31,7 +31,7 @@ import {
   Download,
   Loader2
 } from 'lucide-react';
-import { generateAllGuardsSchedulePDF } from '@/utils/pdfGenerator';
+import { generateAllGuardsSchedulePDF, GuardScheduleReport } from '@/utils/schedulePdf';
 import { computeEffectiveSchedule } from '@/utils/effectiveSchedule';
 import { GuardPersonalCalendar } from '@/components/schedule/GuardPersonalCalendar';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -227,14 +227,7 @@ const AdminGuards = () => {
       const extras = extrasRes.data || [];
       const treLeaves = leavesRes.data || [];
 
-      const allGuardsData: Array<{
-        guardName: string;
-        teamName: string;
-        monthLabel: string;
-        workingDays: Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string; originalDate?: string }>;
-        extrasMap: Map<string, { justification: string; percentage_type: number }>;
-        treDates: Map<string, string>;
-      }> = [];
+      const allGuardsData: GuardScheduleReport[] = [];
 
       for (const guard of guards) {
         const guardTeam = teams.find(t => t.id === guard.team_id);
@@ -250,23 +243,31 @@ const AdminGuards = () => {
           teams.map(t => ({ id: t.id, name: t.name, color: t.color || '#3b82f6' }))
         );
 
-        const workingDays = new Map<string, { teamName: string; teamColor: string; isSwapped: boolean; originalTeamName?: string; originalOwnerName?: string; originalDate?: string }>();
+        // Dias do mês de referência. Plantões cedidos permanecem na lista marcados
+        // como isGivenAway — o relatório os exibe como cedidos, nunca como trabalhados.
+        const reportDays: GuardScheduleReport['days'] = [];
         effectiveDays.forEach((day, dateStr) => {
           if (dateStr >= startOfMonth && dateStr <= endStr) {
-            workingDays.set(dateStr, {
+            reportDays.push({
+              date: dateStr,
               teamName: day.teamName,
-              teamColor: day.teamColor,
               isSwapped: day.isSwapped,
-              originalTeamName: day.originalTeamName,
-              originalOwnerName: day.originalOwnerName,
-              originalDate: day.originalDate,
+              isGivenAway: !!day.isGivenAway,
+              counterpartName: day.isGivenAway ? day.coveredByName : day.originalOwnerName,
+              counterpartTeamName: day.originalTeamName,
+              exchangeDate: day.isGivenAway ? day.exchangedForDate : day.originalDate,
+              swapProtocol: day.swapProtocol,
             });
           }
         });
 
-        const guardExtras = extras.filter(e => e.guard_id === guard.id);
-        const extrasMap = new Map<string, { justification: string; percentage_type: number }>();
-        guardExtras.forEach(e => extrasMap.set(e.extra_date, { justification: e.justification, percentage_type: e.percentage_type }));
+        const reportExtras = extras
+          .filter(e => e.guard_id === guard.id)
+          .map(e => ({
+            date: e.extra_date,
+            justification: e.justification,
+            percentageType: e.percentage_type,
+          }));
 
         const guardTreLeaves = treLeaves.filter(l => l.guard_id === guard.id);
         const treDates = new Map<string, string>();
@@ -298,10 +299,11 @@ const AdminGuards = () => {
         allGuardsData.push({
           guardName: guard.name,
           teamName: guardTeam.name,
+          monthStart: startOfMonth,
           monthLabel,
-          workingDays,
-          extrasMap,
-          treDates,
+          days: reportDays,
+          extras: reportExtras,
+          leaves: Array.from(treDates.entries()).map(([date, label]) => ({ date, label })),
         });
       }
 
@@ -983,9 +985,16 @@ const AdminGuards = () => {
 
         {/* Dialog de Escala do Segurança */}
         <Dialog open={selectedGuardForSchedule !== null} onOpenChange={(open) => { if (!open) setSelectedGuardForSchedule(null); }}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Escala de {selectedGuardForSchedule?.name}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                Escala de {selectedGuardForSchedule?.name}
+                {selectedGuardForSchedule?.is_shift_chief && <Crown className="h-4 w-4 text-amber-500" />}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedGuardForSchedule?.team?.name || 'Sem equipe'} · plantões cedidos em trocas
+                aparecem em cinza e não contam como dias trabalhados.
+              </DialogDescription>
             </DialogHeader>
             {selectedGuardForSchedule && (
               <GuardPersonalCalendar
@@ -994,6 +1003,8 @@ const AdminGuards = () => {
                 teamColor={selectedGuardForSchedule.team?.color || '#6B7280'}
                 teamName={selectedGuardForSchedule.team?.name || 'Sem equipe'}
                 guardName={selectedGuardForSchedule.name}
+                title="Escala efetiva"
+                showSwapDetails
               />
             )}
           </DialogContent>
