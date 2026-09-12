@@ -68,7 +68,11 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     if (!profile?.id) return;
     try {
-      // Solicitações aceitas pelo alvo aguardando aprovação do admin
+      // Solicitações aceitas pelo alvo aguardando aprovação do admin.
+      // IMPORTANTE: filtrar por target_confirmation = true, não só por status.
+      // Sem isso, trocas ainda PENDING (alvo nunca respondeu) apareciam aqui com o
+      // badge "Aceita — aguardando aprovação" e o botão Aprovar, permitindo que o
+      // admin aprovasse uma troca que o segurança-alvo nunca confirmou.
       const { data: swaps, error: swapsError } = await supabase
         .from('swap_requests')
         .select(`
@@ -88,7 +92,8 @@ const AdminDashboard = () => {
             team:teams(id, name)
           )
         `)
-        .in('status', ['PENDING', 'ACCEPTED'])
+        .eq('status', 'ACCEPTED')
+        .eq('target_confirmation', true)
         .eq('admin_id', profile.id)
         .order('created_at', { ascending: false })
         .limit(10);
