@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { treDecisionToGuard } from "../_shared/messages.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,17 +28,12 @@ Deno.serve(async (req) => {
     const digits = guard_phone.replace(/\D/g, "");
     const phoneWithCountry = digits.startsWith("55") ? digits : `55${digits}`;
 
-    // Dynamic greeting based on Brasília time
-    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    const hour = now.getHours();
-    const saudacao = hour >= 6 && hour < 12 ? "Bom dia" : hour >= 12 && hour < 18 ? "Boa tarde" : "Boa noite";
-
-    const guardFirstName = guard_name.split(" ")[0];
-    const adminFirstName = admin_name.split(" ")[0];
-
-    const message = approved
-      ? `${saudacao} ${guardFirstName}, sua folga TRE do dia ${leave_date} foi *autorizada* pelo coordenador ${adminFirstName}. ✅`
-      : `${saudacao} ${guardFirstName}, sua folga TRE do dia ${leave_date} foi *rejeitada* pelo coordenador ${adminFirstName}. ❌`;
+    const message = treDecisionToGuard({
+      guard: guard_name,
+      leaveDate: leave_date,
+      coordinator: admin_name,
+      approved: Boolean(approved),
+    });
 
     const token = Deno.env.get("tokenevolutiondainstancia");
     if (!token) {

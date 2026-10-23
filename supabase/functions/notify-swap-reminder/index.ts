@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { swapReminder } from "../_shared/messages.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,10 +24,6 @@ Deno.serve(async (req) => {
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split("T")[0]; // YYYY-MM-DD
-
-    // Dynamic greeting
-    const hour = now.getHours();
-    const saudacao = hour >= 6 && hour < 12 ? "Bom dia" : hour >= 12 && hour < 18 ? "Boa tarde" : "Boa noite";
 
     console.log("Looking for approved swaps for tomorrow:", tomorrowStr);
 
@@ -100,15 +97,13 @@ Deno.serve(async (req) => {
           const guardFirstName = guardRes.data.name.split(" ")[0];
           const otherName = otherRes.data?.name || "colega";
 
-          // Format dates as DD/MM/YYYY
-          const formatDate = (d: string) => {
-            const [y, m, day] = d.split("-");
-            return `${day}/${m}/${y}`;
-          };
-
-          const protocolShort = swap.id.substring(0, 8);
-
-          const message = `${saudacao} ${guardFirstName}! 🔔 Lembrete: Não se esqueça do seu plantão de amanhã (${formatDate(reminder.shiftDate)}) em virtude da troca com ${otherName}. Troca: dia ${formatDate(reminder.shiftDate)} ↔ dia ${formatDate(reminder.otherShiftDate)}. Protocolo: ${protocolShort}.`;
+          const message = swapReminder({
+            swapId: swap.id,
+            name: guardRes.data.name,
+            otherName,
+            shiftDate: reminder.shiftDate,
+            otherShiftDate: reminder.otherShiftDate,
+          });
 
           // Normalize phone
           const digits = guardRes.data.phone.replace(/\D/g, "");

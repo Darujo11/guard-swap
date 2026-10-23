@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { treRequestToCoordinator } from "../_shared/messages.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,14 +47,12 @@ Deno.serve(async (req) => {
     const digits = adminProfile.phone.replace(/\D/g, "");
     const phoneWithCountry = digits.startsWith("55") ? digits : `55${digits}`;
 
-    // Dynamic greeting based on Brasília time
-    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    const hour = now.getHours();
-    const saudacao = hour >= 6 && hour < 12 ? "Bom dia" : hour >= 12 && hour < 18 ? "Boa tarde" : "Boa noite";
-
-    const adminFirstName = adminProfile.name.split(" ")[0];
-
-    const message = `${saudacao} ${adminFirstName}, tudo bem!? O segurança ${guard_name} solicita folga do TRE no dia ${leave_date}. Restam ainda ${remaining_days} folga(s) a retirar.`;
+    const message = treRequestToCoordinator({
+      coordinator: adminProfile.name,
+      guard: guard_name,
+      leaveDate: leave_date,
+      remainingDays: remaining_days,
+    });
 
     const token = Deno.env.get("tokenevolutiondainstancia");
     if (!token) {
