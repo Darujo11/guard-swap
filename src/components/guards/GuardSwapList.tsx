@@ -26,6 +26,7 @@ import {
 import { format, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { SWAP_STATUS_CONFIG } from '@/lib/constants';
+import { escapeHtml, PRINT_DOCUMENT_CSP_META } from '@/lib/html';
 
 
 interface GuardSwapListProps {
@@ -285,7 +286,8 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Solicitação de Troca - ${request.id}</title>
+            ${PRINT_DOCUMENT_CSP_META}
+            <title>Solicitação de Troca - ${escapeHtml(request.id)}</title>
             <meta charset="UTF-8">
             <style>
               body { 
@@ -358,7 +360,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
           <body>
             <div class="header">
               <h1>📄 Solicitação de Troca de Plantão</h1>
-              <p class="protocol">Protocolo: ${request.id}</p>
+              <p class="protocol">Protocolo: ${escapeHtml(request.id)}</p>
             </div>
             
             <div class="section">
@@ -377,26 +379,26 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
             <div class="section">
               <h3>👤 Solicitante</h3>
               <div class="info-row">
-                <span class="label">Nome:</span> ${request.requester?.name}
+                <span class="label">Nome:</span> ${escapeHtml(request.requester?.name)}
               </div>
               <div class="info-row">
-                <span class="label">E-mail:</span> ${request.requester?.email}
+                <span class="label">E-mail:</span> ${escapeHtml(request.requester?.email)}
               </div>
               <div class="info-row">
-                <span class="label">Equipe:</span> ${request.requester?.team?.name}
+                <span class="label">Equipe:</span> ${escapeHtml(request.requester?.team?.name)}
               </div>
             </div>
 
             <div class="section">
               <h3>👥 Troca Solicitada com</h3>
               <div class="info-row">
-                <span class="label">Nome:</span> ${request.target?.name}
+                <span class="label">Nome:</span> ${escapeHtml(request.target?.name)}
               </div>
               <div class="info-row">
-                <span class="label">E-mail:</span> ${request.target?.email}
+                <span class="label">E-mail:</span> ${escapeHtml(request.target?.email)}
               </div>
               <div class="info-row">
-                <span class="label">Equipe:</span> ${request.target?.team?.name}
+                <span class="label">Equipe:</span> ${escapeHtml(request.target?.team?.name)}
               </div>
               <div class="info-row">
                 <span class="label">Confirmação de Ciência:</span> ${request.target_confirmation ? '✅ Confirmada' : '⏳ Pendente'}
@@ -406,7 +408,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
             <div class="section">
               <h3>📝 Motivo da Troca</h3>
               <div class="reason-text">
-                ${request.reason}
+                ${escapeHtml(request.reason)}
               </div>
               <div class="reason-footer">
                 (registrado em ${format(new Date(request.created_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.created_at), 'HH:mm', { locale: ptBR })})
@@ -420,7 +422,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                   <span class="label">Decidido em:</span> ${format(new Date(request.admin_approved_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.admin_approved_at), 'HH:mm', { locale: ptBR })}
                 </div>
                 <div class="info-row">
-                  <span class="label">Aprovado por:</span> ${request.admin_approver?.name || 'Coordenador'}
+                  <span class="label">Aprovado por:</span> ${escapeHtml(request.admin_approver?.name || 'Coordenador')}
                 </div>
               </div>
             ` : ''}
