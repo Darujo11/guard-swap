@@ -642,6 +642,60 @@ export type Database = {
           },
         ]
       }
+      swap_signatures: {
+        Row: {
+          action: string
+          declaration: string
+          id: string
+          ip: string | null
+          password_confirmed_at: string
+          signed_at: string
+          signer_name: string
+          signer_profile_id: string | null
+          signer_role: string
+          signer_user_id: string
+          swap_id: string
+          terms: Json
+          terms_hash: string
+          user_agent: string | null
+          verification_code: string
+        }
+        Insert: {
+          action: string
+          declaration: string
+          id?: string
+          ip?: string | null
+          password_confirmed_at: string
+          signed_at?: string
+          signer_name: string
+          signer_profile_id?: string | null
+          signer_role: string
+          signer_user_id: string
+          swap_id: string
+          terms: Json
+          terms_hash: string
+          user_agent?: string | null
+          verification_code: string
+        }
+        Update: {
+          action?: string
+          declaration?: string
+          id?: string
+          ip?: string | null
+          password_confirmed_at?: string
+          signed_at?: string
+          signer_name?: string
+          signer_profile_id?: string | null
+          signer_role?: string
+          signer_user_id?: string
+          swap_id?: string
+          terms?: Json
+          terms_hash?: string
+          user_agent?: string | null
+          verification_code?: string
+        }
+        Relationships: []
+      }
       team_schedules: {
         Row: {
           admin_id: string | null
@@ -774,6 +828,10 @@ export type Database = {
       user_belongs_to_admin_org: {
         Args: { _admin_user_id: string; _target_user_id: string }
         Returns: boolean
+      }
+      verify_swap_document: {
+        Args: { p_code: string }
+        Returns: Json
       }
     }
     Enums: {

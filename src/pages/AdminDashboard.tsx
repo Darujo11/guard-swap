@@ -20,6 +20,9 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { SignatureFields } from '@/components/swaps/SignatureFields';
+import { useSignatureFields } from '@/hooks/useSignatureFields';
+import { describeSignatureError, signSwapAction } from '@/lib/swapSignature';
 
 import {
   Users,
@@ -49,6 +52,8 @@ const AdminDashboard = () => {
     action: 'APPROVED' | 'REJECTED' | null;
   }>({ open: false, request: null, action: null });
   const [decisionReason, setDecisionReason] = useState('');
+  const [signing, setSigning] = useState(false);
+  const signature = useSignatureFields();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<SwapRequest | null>(null);
   const [calendarReloadKey, setCalendarReloadKey] = useState(0);
@@ -229,23 +234,28 @@ const AdminDashboard = () => {
   const openDecisionDialog = (request: SwapRequest, action: 'APPROVED' | 'REJECTED') => {
     setDecisionDialog({ open: true, request, action });
     setDecisionReason('');
+    signature.reset();
   };
 
   const handleDecision = async () => {
-    if (!decisionDialog.request || !decisionDialog.action) return;
+    if (!decisionDialog.request || !decisionDialog.action || !signature.ready) return;
+    const request = decisionDialog.request;
+    const action = decisionDialog.action;
 
+    setSigning(true);
     try {
       if (!profile?.id) throw new Error('Perfil não encontrado');
 
-      const { error } = await supabase
+      // Assinatura eletrônica: a decisão sai pela sessão em que a senha acabou de ser confirmada.
+      const { error } = await signSwapAction(signature.password, (signer) => signer
         .from('swap_requests')
         .update({
-          status: decisionDialog.action,
-          admin_approved: decisionDialog.action === 'APPROVED',
+          status: action,
+          admin_approved: action === 'APPROVED',
           admin_approved_by: profile.id,
           admin_approved_at: new Date().toISOString(),
         })
-        .eq('id', decisionDialog.request.id);
+        .eq('id', request.id));
 
       if (error) throw error;
 
@@ -264,15 +274,18 @@ const AdminDashboard = () => {
       });
 
       setDecisionDialog({ open: false, request: null, action: null });
+      signature.reset();
       fetchData();
       setCalendarReloadKey((prev) => prev + 1);
     } catch (error) {
       console.error('[AdminDashboard][HandleDecision]', error);
       toast({
         title: 'Erro ao processar decisão',
-        description: 'Não foi possível processar sua decisão.',
+        description: describeSignatureError(error) ?? 'Não foi possível processar sua decisão.',
         variant: 'destructive',
       });
+    } finally {
+      setSigning(false);
     }
   };
 
@@ -593,7 +606,13 @@ const AdminDashboard = () => {
       </div>
 
       {/* Decision Dialog */}
-      <Dialog open={decisionDialog.open} onOpenChange={(open) => setDecisionDialog({ ...decisionDialog, open })}>
+      <Dialog
+        open={decisionDialog.open}
+        onOpenChange={(open) => {
+          setDecisionDialog({ ...decisionDialog, open });
+          if (!open) signature.reset();
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -620,16 +639,30 @@ const AdminDashboard = () => {
                 rows={3}
               />
             </div>
+            <SignatureFields
+              action={decisionDialog.action === 'APPROVED' ? 'APROVOU' : 'REJEITOU'}
+              agreed={signature.agreed}
+              onAgreedChange={signature.setAgreed}
+              password={signature.password}
+              onPasswordChange={signature.setPassword}
+              disabled={signing}
+              idPrefix="decidir-painel"
+            />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDecisionDialog({ open: false, request: null, action: null })}>
+            <Button
+              variant="outline"
+              onClick={() => setDecisionDialog({ open: false, request: null, action: null })}
+              disabled={signing}
+            >
               Cancelar
             </Button>
             <Button
               variant={decisionDialog.action === 'APPROVED' ? 'default' : 'destructive'}
               onClick={handleDecision}
+              disabled={!signature.ready || signing}
             >
-              {decisionDialog.action === 'APPROVED' ? 'Aprovar' : 'Rejeitar'}
+              {signing ? 'Assinando...' : decisionDialog.action === 'APPROVED' ? 'Assinar e aprovar' : 'Assinar e rejeitar'}
             </Button>
           </DialogFooter>
         </DialogContent>

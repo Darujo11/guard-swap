@@ -4,6 +4,12 @@ import { escapeHtml, PRINT_DOCUMENT_CSP_META } from '@/lib/html';
 import { SWAP_STATUS_CONFIG } from '@/lib/constants';
 import { formatSwapProtocol } from '@/utils/effectiveSchedule';
 import type { SwapRequest } from '@/lib/types';
+import {
+  SWAP_SIGNATURE_ACTION_LABELS,
+  SWAP_SIGNER_ROLE_LABELS,
+  type SwapSignatureAction,
+  type SwapSignerRole,
+} from '@/lib/swapSignatureText';
 
 /**
  * Comprovante de troca de plantão para impressão (A4), usado pelo coordenador (AdminSwaps) e pelo
@@ -11,10 +17,24 @@ import type { SwapRequest } from '@/lib/types';
  * janela e imprime é printSwapReceipt.ts. Todo valor vindo do banco passa por escapeHtml.
  */
 
+/** Linha de swap_signatures usada no comprovante. */
+export interface ReceiptSignature {
+  action: string;
+  signer_role: string;
+  signer_name: string;
+  signed_at: string;
+  verification_code: string;
+  ip: string | null;
+}
+
 export interface SwapReceiptOptions {
   /** Logo embutida como data: URL (a CSP do documento bloqueia qualquer imagem de fora). */
   logoDataUrl?: string | null;
   generatedAt?: Date;
+  /** Assinaturas eletrônicas da troca; sem elas o comprovante sai com linhas para assinar à mão. */
+  signatures?: ReceiptSignature[];
+  /** Endereço da página de verificação, terminando antes do código (ex.: "https://escalasmart.com.br/#/verificar/"). */
+  verifyBaseUrl?: string;
 }
 
 type Tone = 'success' | 'warning' | 'info' | 'danger' | 'neutral';
@@ -42,6 +62,7 @@ const fmtMonthYear = (value: string) => {
 };
 const fmtDateTime = (value: string | Date) =>
   format(typeof value === 'string' ? new Date(value) : value, "dd/MM/yyyy 'às' HH:mm");
+const fmtDateTimeSeconds = (value: string) => format(new Date(value), "dd/MM/yyyy 'às' HH:mm:ss");
 
 /** "22997604822" / "5522997604822" -> "(22) 99760-4822"; formatos desconhecidos voltam como vieram. */
 export function formatPhoneBR(raw?: string | null): string {
@@ -164,6 +185,49 @@ export function buildSwapReceiptHtml(request: SwapRequest, options: SwapReceiptO
     )
     .join('');
 
+  const signatures = options.signatures ?? [];
+  const verificationCode = signatures[0]?.verification_code;
+  const verifyUrl = verificationCode && options.verifyBaseUrl ? `${options.verifyBaseUrl}${verificationCode}` : null;
+
+  const signaturesBlock = signatures.length
+    ? `
+  <section class="e-signatures">
+    <h2>Assinaturas eletrônicas</h2>
+    <table class="sigs">
+      <colgroup><col style="width: 30mm"><col><col style="width: 22mm"><col style="width: 42mm"><col style="width: 30mm"></colgroup>
+      <thead><tr><th>Papel</th><th>Nome</th><th>Ato</th><th>Data e hora</th><th>IP</th></tr></thead>
+      <tbody>${signatures
+        .map(
+          (sig) => `
+        <tr>
+          <td class="muted">${escapeHtml(SWAP_SIGNER_ROLE_LABELS[sig.signer_role as SwapSignerRole] ?? sig.signer_role)}</td>
+          <td class="strong">${escapeHtml(sig.signer_name)}</td>
+          <td>${escapeHtml(SWAP_SIGNATURE_ACTION_LABELS[sig.action as SwapSignatureAction] ?? sig.action)}</td>
+          <td class="mono">${escapeHtml(fmtDateTimeSeconds(sig.signed_at))}</td>
+          <td class="mono muted">${escapeHtml(sig.ip || '—')}</td>
+        </tr>`
+        )
+        .join('')}
+      </tbody>
+    </table>
+    <div class="verify">
+      <div class="verify-code">
+        <span class="eyebrow">Código de verificação</span>
+        <span class="code">${escapeHtml(verificationCode)}</span>
+      </div>
+      <p class="verify-text">
+        Atos assinados eletronicamente no Escala Smart, com confirmação de senha de cada signatário.
+        ${verifyUrl ? `Confira a autenticidade e se os termos não foram alterados em <strong>${escapeHtml(verifyUrl.replace(/^https?:\/\//, ''))}</strong>.` : ''}
+      </p>
+    </div>
+  </section>`
+    : `
+  <div class="signatures">
+    <div class="signature"><strong>${escapeHtml(requester?.name || 'Solicitante')}</strong><span>Solicitante</span></div>
+    <div class="signature"><strong>${escapeHtml(target?.name || 'Colega')}</strong><span>Colega da troca</span></div>
+    <div class="signature"><strong>${escapeHtml(request.admin_approver?.name || '')}</strong><span>Coordenação</span></div>
+  </div>`;
+
   const logo = options.logoDataUrl
     ? `<img class="logo" src="${escapeHtml(options.logoDataUrl)}" alt="Câmara Municipal de Macaé">`
     : `<div class="logo-text">Câmara Municipal de Macaé</div>`;
@@ -196,7 +260,7 @@ ${PRINT_DOCUMENT_CSP_META}
   .sheet { width: 210mm; min-height: 297mm; padding: 0 16mm 12mm; margin: 0 auto; display: flex; flex-direction: column; }
   .topbar { height: 3mm; background: var(--navy); margin: 0 -16mm; border-bottom: 1mm solid var(--gold); }
 
-  header { display: flex; align-items: center; justify-content: space-between; gap: 8mm; padding: 9mm 0 6mm; border-bottom: 1px solid var(--line); }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 8mm; padding: 7mm 0 5mm; border-bottom: 1px solid var(--line); }
   .logo { height: 15mm; width: auto; display: block; }
   .logo-text { font-weight: 800; font-size: 15pt; color: var(--navy); letter-spacing: -0.01em; }
   .doc-id { text-align: right; }
@@ -211,13 +275,14 @@ ${PRINT_DOCUMENT_CSP_META}
   .pill.danger { color: var(--danger); background: var(--danger-bg); border-color: var(--danger-line); }
   .pill.neutral { color: var(--neutral); background: var(--neutral-bg); border-color: var(--neutral-line); }
 
-  section { margin-top: 7mm; }
+  section { margin-top: 5.5mm; break-inside: avoid; }
   h2 { font-size: 8pt; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--navy); margin: 0 0 2.5mm; display: flex; align-items: center; gap: 2.5mm; }
   h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
   table.coverage { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; border: 1px solid var(--line); border-radius: 2.5mm; overflow: hidden; }
   .coverage th { font-size: 7.5pt; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 2.2mm 4mm; background: var(--soft); border-bottom: 1px solid var(--line); }
-  .coverage td { padding: 3.2mm 4mm; vertical-align: middle; }
+  .coverage td { padding: 2.8mm 4mm; vertical-align: middle; }
+  table, tr, .verify, .signatures, footer { break-inside: avoid; }
   .coverage tr + tr td { border-top: 1px solid var(--line); }
   .coverage td.date { white-space: nowrap; }
   .day { font-size: 20pt; font-weight: 750; color: var(--navy); line-height: 1; vertical-align: middle; }
@@ -230,7 +295,7 @@ ${PRINT_DOCUMENT_CSP_META}
   .hint { font-size: 8.5pt; color: var(--muted); margin: 2mm 0 0; }
 
   .people { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
-  .person { border: 1px solid var(--line); border-radius: 2.5mm; padding: 3.5mm 4mm; }
+  .person { border: 1px solid var(--line); border-radius: 2.5mm; padding: 3mm 4mm; }
   .eyebrow { font-size: 7.5pt; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
   .person-name { font-size: 12pt; font-weight: 700; color: var(--navy); margin: 0.8mm 0 2mm; }
   dl { margin: 0; display: grid; gap: 1mm; }
@@ -258,7 +323,20 @@ ${PRINT_DOCUMENT_CSP_META}
   .signature strong { display: block; font-weight: 600; min-height: 1.45em; }
   .signature span { color: var(--muted); }
 
-  footer { margin-top: 8mm; padding-top: 4mm; display: flex; justify-content: space-between; gap: 6mm; font-size: 7.5pt; color: var(--faint); border-top: 1px solid var(--line); }
+  .e-signatures { margin-top: auto; padding-top: 4mm; }
+  table.sigs { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 8.5pt; }
+  .sigs th { font-size: 7pt; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 1.5mm 2mm; border-bottom: 1px solid var(--line); }
+  .sigs td { padding: 2mm; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+  .sigs .strong { font-weight: 600; }
+  .sigs .muted { color: var(--muted); }
+  .mono { font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace; font-size: 8pt; }
+  .verify { display: flex; gap: 5mm; align-items: center; margin-top: 3.5mm; padding: 3mm 4mm; border: 1px dashed var(--navy); border-radius: 2.5mm; }
+  .verify-code { display: flex; flex-direction: column; gap: 0.5mm; min-width: 42mm; }
+  .verify-code .code { font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace; font-size: 13pt; font-weight: 700; color: var(--navy); letter-spacing: 0.04em; }
+  .verify-text { margin: 0; font-size: 8.5pt; color: var(--muted); }
+  .verify-text strong { color: var(--ink); font-weight: 600; }
+
+  footer { margin-top: 5mm; padding-top: 3mm; display: flex; justify-content: space-between; gap: 6mm; font-size: 7.5pt; color: var(--faint); border-top: 1px solid var(--line); }
   footer .full-id { font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace; }
 
   @media screen {
@@ -312,11 +390,7 @@ ${PRINT_DOCUMENT_CSP_META}
     <ol class="timeline">${steps}</ol>
   </section>
 
-  <div class="signatures">
-    <div class="signature"><strong>${escapeHtml(requester?.name || 'Solicitante')}</strong><span>Solicitante</span></div>
-    <div class="signature"><strong>${escapeHtml(target?.name || 'Colega')}</strong><span>Colega da troca</span></div>
-    <div class="signature"><strong>${escapeHtml(request.admin_approver?.name || '')}</strong><span>Coordenação</span></div>
-  </div>
+  ${signaturesBlock}
 
   <footer>
     <span>Gerado em ${escapeHtml(fmtDateTime(generatedAt))} pelo Escala Smart</span>

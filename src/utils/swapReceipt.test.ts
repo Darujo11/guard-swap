@@ -106,6 +106,38 @@ describe('buildSwapReceiptHtml', () => {
   });
 });
 
+describe('assinaturas eletrônicas no comprovante', () => {
+  const signatures = [
+    { action: 'SOLICITOU', signer_role: 'solicitante', signer_name: 'Philipe', signed_at: '2026-10-23T15:00:05Z', verification_code: '3FA9C-0B71E', ip: '203.0.113.7' },
+    { action: 'ACEITOU', signer_role: 'colega', signer_name: '<b>Fabio</b>', signed_at: '2026-10-23T15:10:00Z', verification_code: '3FA9C-0B71E', ip: null },
+  ];
+
+  it('mostra cada ato assinado, o código e o endereço de verificação', () => {
+    const html = buildSwapReceiptHtml(base, { signatures, verifyBaseUrl: 'https://escalasmart.com.br/#/verificar/' });
+    const t = text(html);
+    expect(t).toContain('Assinaturas eletrônicas');
+    expect(t).toMatch(/Solicitante Philipe Solicitou \d{2}\/\d{2}\/2026 às \d{2}:\d{2}:\d{2} 203\.0\.113\.7/);
+    expect(t).toContain('Colega da troca');
+    expect(t).toContain('Aceitou');
+    expect(t).toContain('3FA9C-0B71E');
+    expect(t).toContain('escalasmart.com.br/#/verificar/3FA9C-0B71E');
+    expect(t).not.toContain('https://escalasmart');
+  });
+
+  it('escapa o nome de quem assinou e troca as linhas manuais pelo bloco eletrônico', () => {
+    const html = buildSwapReceiptHtml(base, { signatures });
+    expect(html).toContain('&lt;b&gt;Fabio&lt;/b&gt;');
+    expect(html).not.toContain('<b>Fabio</b>');
+    expect(html).not.toContain('class="signatures"');
+  });
+
+  it('sem assinaturas (trocas antigas) mantém as linhas para assinar à mão', () => {
+    const html = build();
+    expect(html).toContain('class="signatures"');
+    expect(html).not.toContain('Assinaturas eletrônicas');
+  });
+});
+
 describe('formatPhoneBR', () => {
   it('formata celular e fixo com DDD, com ou sem 55', () => {
     expect(formatPhoneBR('22997604822')).toBe('(22) 99760-4822');

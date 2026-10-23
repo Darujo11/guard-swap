@@ -26,6 +26,9 @@ import {
 import { format, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { printSwapReceipt } from '@/utils/printSwapReceipt';
+import { SignatureFields } from '@/components/swaps/SignatureFields';
+import { useSignatureFields } from '@/hooks/useSignatureFields';
+import { describeSignatureError, signSwapAction } from '@/lib/swapSignature';
 
 
 interface GuardSwapListProps {
@@ -39,6 +42,9 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
   const [isResponseDialogOpen, setIsResponseDialogOpen] = useState(false);
   const [responseAction, setResponseAction] = useState<'accept' | 'reject' | null>(null);
   const [responseReason, setResponseReason] = useState('');
+  const [cancelTarget, setCancelTarget] = useState<SwapRequest | null>(null);
+  const [signing, setSigning] = useState(false);
+  const signature = useSignatureFields();
   const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
@@ -119,18 +125,20 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
   };
 
   const handleResponse = async () => {
-    if (!selectedRequest || !responseAction) return;
+    if (!selectedRequest || !responseAction || !signature.ready) return;
 
+    setSigning(true);
     try {
       const updateData = {
         status: responseAction === 'accept' ? 'ACCEPTED' : 'REJECTED',
         target_confirmation: responseAction === 'accept'
       };
 
-      const { error } = await supabase
+      // Assinatura eletrônica: a resposta sai pela sessão em que a senha acabou de ser confirmada.
+      const { error } = await signSwapAction(signature.password, (signer) => signer
         .from('swap_requests')
         .update(updateData)
-        .eq('id', selectedRequest.id);
+        .eq('id', selectedRequest.id));
 
       if (error) throw error;
 
@@ -155,32 +163,42 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
       setIsResponseDialogOpen(false);
       setResponseReason('');
       setSelectedRequest(null);
+      signature.reset();
     } catch (error) {
       console.error('[GuardSwapList][HandleResponse]', error);
       toast({
         title: 'Erro ao processar',
-        description: 'Não foi possível processar sua resposta.',
+        description: describeSignatureError(error) ?? 'Não foi possível processar sua resposta.',
         variant: 'destructive',
       });
+    } finally {
+      setSigning(false);
     }
   };
 
   const openResponseDialog = (request: SwapRequest, action: 'accept' | 'reject') => {
     setSelectedRequest(request);
     setResponseAction(action);
+    signature.reset();
     setIsResponseDialogOpen(true);
   };
 
-  const cancelRequest = async (request: SwapRequest) => {
-    if (!confirm('Tem certeza que deseja cancelar esta solicitação?')) {
-      return;
-    }
+  const openCancelDialog = (request: SwapRequest) => {
+    signature.reset();
+    setCancelTarget(request);
+  };
 
+  const cancelRequest = async () => {
+    const request = cancelTarget;
+    if (!request || !signature.ready) return;
+
+    setSigning(true);
     try {
-      const { error } = await supabase
+      // Cancelar também é um ato assinado (fica registrado quem desistiu e quando).
+      const { error } = await signSwapAction(signature.password, (signer) => signer
         .from('swap_requests')
         .update({ status: 'CANCELLED' })
-        .eq('id', request.id);
+        .eq('id', request.id));
 
       if (error) throw error;
 
@@ -200,14 +218,18 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
         description: 'A solicitação de troca foi cancelada.',
       });
 
+      setCancelTarget(null);
+      signature.reset();
       await fetchSwapRequests();
     } catch (error) {
       console.error('[GuardSwapList][CancelRequest]', error);
       toast({
         title: 'Erro ao cancelar',
-        description: 'Não foi possível cancelar a solicitação.',
+        description: describeSignatureError(error) ?? 'Não foi possível cancelar a solicitação.',
         variant: 'destructive',
       });
+    } finally {
+      setSigning(false);
     }
   };
 
@@ -583,7 +605,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => cancelRequest(request)}
+                                    onClick={() => openCancelDialog(request)}
                                     className="gap-2"
                                   >
                                     <XCircle className="h-4 w-4" />
@@ -626,7 +648,13 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
       </Card>
 
       {/* Response Dialog */}
-      <Dialog open={isResponseDialogOpen} onOpenChange={setIsResponseDialogOpen}>
+      <Dialog
+        open={isResponseDialogOpen}
+        onOpenChange={(open) => {
+          setIsResponseDialogOpen(open);
+          if (!open) signature.reset();
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -665,16 +693,73 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
                 }
               />
             </div>
+            <SignatureFields
+              action={responseAction === 'accept' ? 'ACEITOU' : 'RECUSOU'}
+              agreed={signature.agreed}
+              onAgreedChange={signature.setAgreed}
+              password={signature.password}
+              onPasswordChange={signature.setPassword}
+              disabled={signing}
+              idPrefix="responder"
+            />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsResponseDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsResponseDialogOpen(false)} disabled={signing}>
               Cancelar
             </Button>
             <Button
               onClick={handleResponse}
+              disabled={!signature.ready || signing}
               className={responseAction === 'accept' ? 'bg-success hover:bg-success/90' : 'bg-danger hover:bg-danger/90'}
             >
-              {responseAction === 'accept' ? 'Aceitar' : 'Rejeitar'}
+              {signing ? 'Assinando...' : responseAction === 'accept' ? 'Assinar e aceitar' : 'Assinar e recusar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Dialog */}
+      <Dialog
+        open={!!cancelTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCancelTarget(null);
+            signature.reset();
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar solicitação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {cancelTarget && (
+              <div className="p-4 bg-muted rounded-lg text-sm">
+                <div className="text-muted-foreground mb-1">Troca com</div>
+                <div className="font-medium">{cancelTarget.target?.name}</div>
+                <div className="text-muted-foreground mt-1">
+                  Datas: {format(parseDateOnly(cancelTarget.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                  {' → '}
+                  {format(parseDateOnly(cancelTarget.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                </div>
+              </div>
+            )}
+            <SignatureFields
+              action="CANCELOU"
+              agreed={signature.agreed}
+              onAgreedChange={signature.setAgreed}
+              password={signature.password}
+              onPasswordChange={signature.setPassword}
+              disabled={signing}
+              idPrefix="cancelar"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelTarget(null)} disabled={signing}>
+              Voltar
+            </Button>
+            <Button variant="destructive" onClick={cancelRequest} disabled={!signature.ready || signing}>
+              {signing ? 'Assinando...' : 'Assinar e cancelar'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -18,6 +18,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { SwapRequest, Profile, Team } from '@/lib/types';
 import { SWAP_STATUS_CONFIG } from '@/lib/constants';
 import { printSwapReceipt } from '@/utils/printSwapReceipt';
+import { SignatureFields } from '@/components/swaps/SignatureFields';
+import { useSignatureFields } from '@/hooks/useSignatureFields';
+import { describeSignatureError, signSwapAction } from '@/lib/swapSignature';
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -68,6 +71,8 @@ const AdminSwaps = () => {
   const [isDecisionDialogOpen, setIsDecisionDialogOpen] = useState(false);
   const [decisionAction, setDecisionAction] = useState<'approve' | 'reject' | null>(null);
   const [decisionReason, setDecisionReason] = useState('');
+  const [signing, setSigning] = useState(false);
+  const signature = useSignatureFields();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<SwapRequest | null>(null);
   const { toast } = useToast();
@@ -225,8 +230,9 @@ const AdminSwaps = () => {
   }, [swapRequests, searchTerm, statusFilter, monthFilter, teamFilter, dateFrom, dateTo, sortBy, sortOrder]);
 
   const handleDecision = async () => {
-    if (!selectedRequest || !decisionAction) return;
+    if (!selectedRequest || !decisionAction || !signature.ready) return;
 
+    setSigning(true);
     try {
       // Get current user profile
       const { data: { user } } = await supabase.auth.getUser();
@@ -248,10 +254,11 @@ const AdminSwaps = () => {
         ...(decisionAction === 'approve' ? { target_confirmation: true } : {}),
       };
 
-      const { error } = await supabase
+      // Assinatura eletrônica: a decisão sai pela sessão em que a senha acabou de ser confirmada.
+      const { error } = await signSwapAction(signature.password, (signer) => signer
         .from('swap_requests')
         .update(updateData)
-        .eq('id', selectedRequest.id);
+        .eq('id', selectedRequest.id));
 
       if (error) throw error;
 
@@ -277,19 +284,23 @@ const AdminSwaps = () => {
       setIsDecisionDialogOpen(false);
       setDecisionReason('');
       setSelectedRequest(null);
+      signature.reset();
     } catch (error) {
       console.error('[AdminSwaps][HandleDecision]', error);
       toast({
         title: 'Erro ao processar',
-        description: 'Não foi possível processar a decisão.',
+        description: describeSignatureError(error) ?? 'Não foi possível processar a decisão.',
         variant: 'destructive',
       });
+    } finally {
+      setSigning(false);
     }
   };
 
   const openDecisionDialog = (request: SwapRequest, action: 'approve' | 'reject') => {
     setSelectedRequest(request);
     setDecisionAction(action);
+    signature.reset();
     setIsDecisionDialogOpen(true);
   };
 
@@ -1022,7 +1033,13 @@ const AdminSwaps = () => {
       </div>
 
       {/* Decision Dialog */}
-      <Dialog open={isDecisionDialogOpen} onOpenChange={setIsDecisionDialogOpen}>
+      <Dialog
+        open={isDecisionDialogOpen}
+        onOpenChange={(open) => {
+          setIsDecisionDialogOpen(open);
+          if (!open) signature.reset();
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -1060,16 +1077,26 @@ const AdminSwaps = () => {
                 }
               />
             </div>
+            <SignatureFields
+              action={decisionAction === 'approve' ? 'APROVOU' : 'REJEITOU'}
+              agreed={signature.agreed}
+              onAgreedChange={signature.setAgreed}
+              password={signature.password}
+              onPasswordChange={signature.setPassword}
+              disabled={signing}
+              idPrefix="decidir"
+            />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDecisionDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDecisionDialogOpen(false)} disabled={signing}>
               Cancelar
             </Button>
             <Button
               onClick={handleDecision}
+              disabled={!signature.ready || signing}
               className={decisionAction === 'approve' ? 'bg-success hover:bg-success/90' : 'bg-danger hover:bg-danger/90'}
             >
-              {decisionAction === 'approve' ? 'Aprovar' : 'Rejeitar'}
+              {signing ? 'Assinando...' : decisionAction === 'approve' ? 'Assinar e aprovar' : 'Assinar e rejeitar'}
             </Button>
           </DialogFooter>
         </DialogContent>

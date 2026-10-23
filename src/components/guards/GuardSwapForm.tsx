@@ -16,6 +16,9 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { getEffectiveDatesSet } from '@/utils/effectiveSchedule';
 import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
+import { SignatureFields } from '@/components/swaps/SignatureFields';
+import { useSignatureFields } from '@/hooks/useSignatureFields';
+import { describeSignatureError, signSwapAction } from '@/lib/swapSignature';
 
 interface TeamSchedule {
   id: string;
@@ -48,6 +51,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
   const [myActiveSwaps, setMyActiveSwaps] = useState<ActiveSwap[]>([]);
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
+  const signature = useSignatureFields();
   const [requesterCalendarOpen, setRequesterCalendarOpen] = useState(false);
   const [targetCalendarOpen, setTargetCalendarOpen] = useState(false);
   const { toast } = useToast();
@@ -311,13 +315,23 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
       return;
     }
 
+    if (!signature.ready) {
+      toast({
+        title: 'Assinatura necessária',
+        description: 'Marque a declaração e confirme com sua senha para enviar a solicitação.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       const requesterDateStr = format(requesterShiftDate, 'yyyy-MM-dd');
       const targetDateStr = format(targetShiftDate, 'yyyy-MM-dd');
 
-      const { error } = await supabase
+      // Assinatura eletrônica: o insert sai pela sessão em que a senha acabou de ser confirmada.
+      const { error } = await signSwapAction(signature.password, (signer) => signer
         .from('swap_requests')
         .insert([
           {
@@ -331,7 +345,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
           }
         ])
         .select()
-        .single();
+        .single());
 
       if (error) {
         if (error.code === '23514') {
@@ -373,6 +387,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
       setRequesterShiftDate(undefined);
       setTargetShiftDate(undefined);
       setReason('');
+      signature.reset();
 
       // Atualiza as trocas ativas para refletir o novo compromisso imediatamente
       fetchMyActiveSwaps();
@@ -389,7 +404,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
       console.error('[GuardSwapForm][Submit]', error);
       toast({
         title: 'Erro ao enviar',
-        description: 'Não foi possível enviar a solicitação de troca.',
+        description: describeSignatureError(error) ?? 'Não foi possível enviar a solicitação de troca.',
         variant: 'destructive',
       });
     } finally {
@@ -637,11 +652,21 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
             </div>
           </div>
 
+          <SignatureFields
+            action="SOLICITOU"
+            agreed={signature.agreed}
+            onAgreedChange={signature.setAgreed}
+            password={signature.password}
+            onPasswordChange={signature.setPassword}
+            disabled={loading}
+            idPrefix="solicitar"
+          />
+
           {/* Action Buttons */}
           <div className="flex gap-3">
             <Button
               type="submit"
-              disabled={loading || !selectedTarget || !requesterShiftDate || !targetShiftDate || !reason.trim()}
+              disabled={loading || !selectedTarget || !requesterShiftDate || !targetShiftDate || !reason.trim() || !signature.ready}
               className="flex-1"
             >
               {loading ? (
@@ -652,7 +677,7 @@ export function GuardSwapForm({ currentUser, onClose, onSwapCreated }: GuardSwap
               ) : (
                 <>
                   <ArrowRightLeft className="h-4 w-4 mr-2" />
-                  Enviar Solicitação
+                  Assinar e enviar solicitação
                 </>
               )}
             </Button>
