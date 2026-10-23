@@ -38,9 +38,10 @@ export function getSafeUrlWithPrefix(raw: unknown, allowedPrefix: string): strin
 }
 
 /**
- * CSP para documentos de impressão: só permite o CSS embutido. Segunda barreira caso algum campo
- * novo seja interpolado sem `escapeHtml` — nenhum script, imagem externa ou requisição é carregado.
+ * CSP para documentos de impressão: só permite o CSS embutido e imagens embutidas (data:, ex. a logo).
+ * Segunda barreira caso algum campo novo seja interpolado sem `escapeHtml` — nenhum script, imagem
+ * externa ou requisição é carregado.
  * Deve ser o primeiro elemento do <head>.
  */
 export const PRINT_DOCUMENT_CSP_META =
-  `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">`;
+  `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">`;

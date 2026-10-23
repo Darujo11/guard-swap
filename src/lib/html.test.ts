@@ -69,9 +69,11 @@ describe('escapeHtml', () => {
 });
 
 describe('PRINT_DOCUMENT_CSP_META', () => {
-  it('bloqueia scripts (default-src none) e libera só o CSS embutido', () => {
+  it('bloqueia scripts (default-src none) e libera só o CSS e imagens embutidos', () => {
     expect(PRINT_DOCUMENT_CSP_META).toContain("default-src 'none'");
     expect(PRINT_DOCUMENT_CSP_META).toContain("style-src 'unsafe-inline'");
+    expect(PRINT_DOCUMENT_CSP_META).toContain('img-src data:');
     expect(PRINT_DOCUMENT_CSP_META).not.toContain('script-src');
+    expect(PRINT_DOCUMENT_CSP_META).not.toMatch(/img-src[^;"]*(https?:|\*|'self')/);
   });
 });

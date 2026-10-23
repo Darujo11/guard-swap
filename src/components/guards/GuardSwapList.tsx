@@ -25,8 +25,7 @@ import {
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { SWAP_STATUS_CONFIG } from '@/lib/constants';
-import { escapeHtml, PRINT_DOCUMENT_CSP_META } from '@/lib/html';
+import { printSwapReceipt } from '@/utils/printSwapReceipt';
 
 
 interface GuardSwapListProps {
@@ -271,172 +270,14 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
 
   const generatePDF = async (request: SwapRequest) => {
     try {
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) return;
-
-      const statusEmoji = {
-        'PENDING': '⏳',
-        'ACCEPTED': '✅',
-        'APPROVED': '✅',
-        'REJECTED': '❌',
-        'CANCELLED': '🚫'
-      }[request.status] || '📋';
-
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            ${PRINT_DOCUMENT_CSP_META}
-            <title>Solicitação de Troca - ${escapeHtml(request.id)}</title>
-            <meta charset="UTF-8">
-            <style>
-              body { 
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; 
-                margin: 40px;
-                color: #1f2937;
-                line-height: 1.8;
-                font-size: 14px;
-              }
-              .header { 
-                margin-bottom: 30px;
-              }
-              .header h1 {
-                margin: 0 0 5px 0;
-                color: #111827;
-                font-size: 20px;
-                font-weight: 600;
-              }
-              .protocol {
-                color: #6b7280;
-                font-size: 13px;
-                margin-top: 5px;
-              }
-              .section { 
-                margin-bottom: 25px;
-              }
-              .section h3 {
-                margin: 0 0 10px 0;
-                color: #111827;
-                font-size: 15px;
-                font-weight: 600;
-              }
-              .info-row {
-                margin: 5px 0;
-                font-size: 14px;
-                line-height: 1.6;
-              }
-              .label { 
-                font-weight: 500;
-                color: #374151;
-              }
-              .value {
-                color: #1f2937;
-              }
-              .dates {
-                font-size: 15px;
-                font-weight: 500;
-                color: #1f2937;
-                margin: 8px 0;
-              }
-              .reason-text {
-                color: #4b5563;
-                margin: 8px 0;
-                line-height: 1.6;
-              }
-              .reason-footer {
-                margin-top: 8px;
-                font-size: 12px;
-                color: #9ca3af;
-              }
-              .footer { 
-                margin-top: 40px;
-                padding-top: 15px;
-                border-top: 1px solid #e5e7eb;
-                color: #6b7280;
-                font-size: 12px;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h1>📄 Solicitação de Troca de Plantão</h1>
-              <p class="protocol">Protocolo: ${escapeHtml(request.id)}</p>
-            </div>
-            
-            <div class="section">
-              <h3>📅 Informações da Solicitação</h3>
-              <div class="info-row dates">
-                Período da Troca: ${format(parseDateOnly(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })} → ${format(parseDateOnly(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
-              </div>
-              <div class="info-row">
-                <span class="label">Status:</span> ${statusEmoji} ${SWAP_STATUS_CONFIG[request.status as keyof typeof SWAP_STATUS_CONFIG]?.label}
-              </div>
-              <div class="info-row">
-                <span class="label">Data da Solicitação:</span> ${format(new Date(request.created_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.created_at), 'HH:mm', { locale: ptBR })}
-              </div>
-            </div>
-
-            <div class="section">
-              <h3>👤 Solicitante</h3>
-              <div class="info-row">
-                <span class="label">Nome:</span> ${escapeHtml(request.requester?.name)}
-              </div>
-              <div class="info-row">
-                <span class="label">E-mail:</span> ${escapeHtml(request.requester?.email)}
-              </div>
-              <div class="info-row">
-                <span class="label">Equipe:</span> ${escapeHtml(request.requester?.team?.name)}
-              </div>
-            </div>
-
-            <div class="section">
-              <h3>👥 Troca Solicitada com</h3>
-              <div class="info-row">
-                <span class="label">Nome:</span> ${escapeHtml(request.target?.name)}
-              </div>
-              <div class="info-row">
-                <span class="label">E-mail:</span> ${escapeHtml(request.target?.email)}
-              </div>
-              <div class="info-row">
-                <span class="label">Equipe:</span> ${escapeHtml(request.target?.team?.name)}
-              </div>
-              <div class="info-row">
-                <span class="label">Confirmação de Ciência:</span> ${request.target_confirmation ? '✅ Confirmada' : '⏳ Pendente'}
-              </div>
-            </div>
-
-            <div class="section">
-              <h3>📝 Motivo da Troca</h3>
-              <div class="reason-text">
-                ${escapeHtml(request.reason)}
-              </div>
-              <div class="reason-footer">
-                (registrado em ${format(new Date(request.created_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.created_at), 'HH:mm', { locale: ptBR })})
-              </div>
-            </div>
-
-            ${request.admin_approved_at ? `
-              <div class="section">
-                <h3>⚖️ Decisão Administrativa</h3>
-                <div class="info-row">
-                  <span class="label">Decidido em:</span> ${format(new Date(request.admin_approved_at), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(request.admin_approved_at), 'HH:mm', { locale: ptBR })}
-                </div>
-                <div class="info-row">
-                  <span class="label">Aprovado por:</span> ${escapeHtml(request.admin_approver?.name || 'Coordenador')}
-                </div>
-              </div>
-            ` : ''}
-
-            <div class="footer">
-              📄 Documento gerado em: ${format(new Date(), 'dd/MM/yyyy', { locale: ptBR })} às ${format(new Date(), 'HH:mm', { locale: ptBR })}
-            </div>
-          </body>
-        </html>
-      `;
-
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      printWindow.print();
+      const opened = await printSwapReceipt(request);
+      if (!opened) {
+        toast({
+          title: 'Janela bloqueada',
+          description: 'Permita pop-ups para este site para imprimir ou salvar o comprovante.',
+          variant: 'destructive',
+        });
+      }
     } catch (error) {
       console.error('[GuardSwapList][GeneratePDF]', error);
       toast({
