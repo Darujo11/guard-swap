@@ -16,6 +16,37 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Só super_admin: esta function roda com verify_jwt = false e antes não checava quem chamava
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authorization header é obrigatório' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const { data: { user: caller }, error: callerError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (callerError || !caller) {
+      return new Response(
+        JSON.stringify({ error: 'Não autorizado' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const { data: callerSuperAdmin } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', caller.id)
+      .eq('role', 'super_admin')
+      .maybeSingle();
+
+    if (!callerSuperAdmin) {
+      return new Response(
+        JSON.stringify({ error: 'Acesso negado. Apenas super admins podem excluir administradores.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
     const { admin_id } = await req.json();
 
     if (!admin_id) {

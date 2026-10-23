@@ -14,10 +14,10 @@ export default function CreateSuperAdmin() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [form, setForm] = useState({
-    phone: '22992242189',
-    password: '123456',
-    name: 'Super Admin',
-    email: '22992242189@guardshift.com'
+    phone: '',
+    password: '',
+    name: '',
+    email: ''
   });
 
   const handleSubmit = async () => {
@@ -90,7 +90,7 @@ export default function CreateSuperAdmin() {
                     id="sa-phone"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    placeholder="Ex: 22992242189"
+                    placeholder="Ex: 22999999999"
                   />
                 </div>
                 <div className="space-y-2">
