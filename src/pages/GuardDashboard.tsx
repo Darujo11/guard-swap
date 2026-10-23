@@ -704,11 +704,6 @@ const GuardDashboard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Minhas solicitações de troca: logo acima da escala, mostrando o mês atual */}
-      <div className="mb-6">
-        <GuardSwapList key={refreshSwapList} currentUser={currentUser} />
-      </div>
-
       {/* Calendário Pessoal */}
       {currentUser.team_id && (
         <GuardPersonalCalendar
@@ -720,6 +715,11 @@ const GuardDashboard = () => {
           showSwapDetails
         />
       )}
+
+      {/* Minhas solicitações de troca: logo abaixo da escala, mostrando o mês atual */}
+      <div className="mb-6">
+        <GuardSwapList key={refreshSwapList} currentUser={currentUser} />
+      </div>
 
       {/* Afastamentos TRE Solicitados */}
       {treLeaves.length > 0 && (
