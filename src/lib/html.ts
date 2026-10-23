@@ -14,6 +14,30 @@ export function escapeHtml(value: unknown): string {
 }
 
 /**
+ * Devolve `raw` normalizada só se for uma URL https dentro de `allowedPrefix` (mesma origem e caminho
+ * começando pelo prefixo); senão `null`. Para links gravados no banco que o app abre com
+ * `window.open`: barra `javascript:`/`data:` (que rodariam código na origem do app) e links para
+ * sites de fora. `new URL` já resolve `..` e `%2e%2e`, então não dá para escapar do prefixo.
+ */
+export function getSafeUrlWithPrefix(raw: unknown, allowedPrefix: string): string | null {
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+
+  let url: URL;
+  let prefix: URL;
+  try {
+    url = new URL(raw.trim());
+    prefix = new URL(allowedPrefix);
+  } catch {
+    return null;
+  }
+
+  if (url.protocol !== 'https:' || url.origin !== prefix.origin) return null;
+  if (!url.pathname.startsWith(prefix.pathname)) return null;
+
+  return url.href;
+}
+
+/**
  * CSP para documentos de impressão: só permite o CSS embutido. Segunda barreira caso algum campo
  * novo seja interpolado sem `escapeHtml` — nenhum script, imagem externa ou requisição é carregado.
  * Deve ser o primeiro elemento do <head>.

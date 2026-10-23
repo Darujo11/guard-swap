@@ -20,8 +20,14 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useOrganizationSettings } from '@/hooks/useOrganizationSettings';
 import { getEffectiveDatesSet } from '@/utils/effectiveSchedule';
+import { getSafeUrlWithPrefix } from '@/lib/html';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+
+// Prefixo das URLs públicas que o upload de documento grava em leaves.document_url
+// (".../storage/v1/object/public/leave-documents/"). Qualquer outro link é bloqueado antes do window.open.
+const LEAVE_DOCUMENTS_URL_PREFIX = supabase.storage.from('leave-documents').getPublicUrl('').data.publicUrl;
+const getSafeLeaveDocumentUrl = (raw: string | null) => getSafeUrlWithPrefix(raw, LEAVE_DOCUMENTS_URL_PREFIX);
 
 interface Guard {
   id: string;
@@ -1036,14 +1042,26 @@ export default function AdminLeaves() {
                         </TableCell>
                         <TableCell className="text-center">
                           {leave.document_url ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => window.open(leave.document_url!, '_blank')}
-                              title="Baixar documento"
-                            >
-                              <Paperclip className="h-4 w-4 text-primary" />
-                            </Button>
+                            getSafeLeaveDocumentUrl(leave.document_url) ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  const url = getSafeLeaveDocumentUrl(leave.document_url);
+                                  if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                                }}
+                                title="Baixar documento"
+                              >
+                                <Paperclip className="h-4 w-4 text-primary" />
+                              </Button>
+                            ) : (
+                              <span
+                                className="text-xs text-destructive"
+                                title="O link deste documento não aponta para o armazenamento do sistema e foi bloqueado."
+                              >
+                                Link inválido
+                              </span>
+                            )
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
