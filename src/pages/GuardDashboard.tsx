@@ -704,6 +704,11 @@ const GuardDashboard = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Minhas solicitações de troca: logo acima da escala, mostrando o mês atual */}
+      <div className="mb-6">
+        <GuardSwapList key={refreshSwapList} currentUser={currentUser} />
+      </div>
+
       {/* Calendário Pessoal */}
       {currentUser.team_id && (
         <GuardPersonalCalendar
@@ -993,11 +998,6 @@ const GuardDashboard = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Swap Requests */}
-      <div className="mb-6">
-        <GuardSwapList key={refreshSwapList} currentUser={currentUser} />
-      </div>
 
       {/* My Extras */}
       <Card className="mb-6">

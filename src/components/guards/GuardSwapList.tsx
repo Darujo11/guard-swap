@@ -26,6 +26,7 @@ import {
 import { format, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { printSwapReceipt } from '@/utils/printSwapReceipt';
+import { groupSwapsByMonth } from '@/utils/swapMonthGroups';
 import { SignatureFields } from '@/components/swaps/SignatureFields';
 import { useSignatureFields } from '@/hooks/useSignatureFields';
 import { describeSignatureError, signSwapAction } from '@/lib/swapSignature';
@@ -46,6 +47,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
   const [signing, setSigning] = useState(false);
   const signature = useSignatureFields();
   const [expandedMonths, setExpandedMonths] = useState<Record<string, boolean>>({});
+  const [showOtherMonths, setShowOtherMonths] = useState(false);
   const { toast } = useToast();
 
   // Helper para converter string YYYY-MM-DD em data local (evita problemas de timezone)
@@ -286,7 +288,7 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
   const toggleMonth = (monthKey: string) => {
     setExpandedMonths(prev => ({
       ...prev,
-      [monthKey]: !prev[monthKey]
+      [monthKey]: !(prev[monthKey] ?? monthKey === format(new Date(), 'yyyy-MM'))
     }));
   };
 
@@ -310,44 +312,277 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
     }
   };
 
-  // Agrupar solicitações pelos meses envolvidos na troca (requester_shift_date e target_shift_date)
-  const groupedByMonth = swapRequests.reduce((acc, request) => {
-    const getMonthKey = (dateStr: string | null | undefined) => {
-      if (!dateStr) return null;
-      const [y, m] = dateStr.split('-');
-      if (!y || !m) return null;
-      return `${y}-${m}`;
-    };
+  // Mês atual aberto e sempre à mostra; os demais ficam atrás de "Ver outros meses", fechados.
+  const {
+    groupedByMonth,
+    currentMonthKey,
+    otherMonthKeys,
+    otherMonthsRequests,
+    otherMonthsAwaitingMe,
+  } = groupSwapsByMonth(swapRequests, currentUser.id);
+  const currentMonthLabel = format(new Date(), 'MMMM yyyy', { locale: ptBR });
+  const otherMonthsRequestCount = otherMonthsRequests.length;
 
-    const months = new Set<string>();
-    const m1 = getMonthKey(request.requester_shift_date);
-    const m2 = getMonthKey(request.target_shift_date);
-    if (m1) months.add(m1);
-    if (m2) months.add(m2);
+  const isMonthExpanded = (monthKey: string) => expandedMonths[monthKey] ?? monthKey === currentMonthKey;
 
-    months.forEach((monthKey) => {
-      if (!acc[monthKey]) {
-        acc[monthKey] = [];
-      }
-      acc[monthKey].push(request);
-    });
+  const renderMonthGroup = (monthKey: string) => {
+    const monthRequests = groupedByMonth[monthKey];
+    const [year, month] = monthKey.split('-');
+    const monthDate = new Date(Number(year), Number(month) - 1, 1);
+    const monthLabel = format(monthDate, 'MMMM yyyy', { locale: ptBR });
+    const isExpanded = isMonthExpanded(monthKey);
+    
+    return (
+      <div key={monthKey} className="space-y-3">
+        <button
+          onClick={() => toggleMonth(monthKey)}
+          className="flex items-center gap-2 pb-2 border-b w-full hover:bg-muted/50 transition-colors rounded-t px-2 -mx-2"
+        >
+          <Calendar className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold text-sm capitalize">{monthLabel}</h3>
+          <Badge variant="secondary" className="ml-auto">
+            {monthRequests.length} {monthRequests.length === 1 ? 'solicitação' : 'solicitações'}
+          </Badge>
+          {isExpanded ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+        
+        {isExpanded && (
+          <div className="space-y-3">
+          {monthRequests.map((request) => {
+            return (
+              <div
+                key={request.id}
+                className="p-5 border rounded-lg hover:bg-muted/30 transition-colors space-y-4"
+              >
+                {/* Header com Protocolo e Status */}
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Badge variant="secondary" className="font-mono text-xs">
+                      Protocolo: {request.id.slice(0, 8)}
+                    </Badge>
+                    <StatusBadge status={request.status} />
+                  </div>
+                  
+                  {request.status === 'APPROVED' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => generatePDF(request)}
+                      className="gap-2"
+                    >
+                      <FileDown className="h-4 w-4" />
+                      PDF
+                    </Button>
+                  )}
+                </div>
 
-    return acc;
-  }, {} as Record<string, SwapRequest[]>);
+                {/* Pendências de Aprovação */}
+                {request.status === 'PENDING' && request.target_id === currentUser.id && (
+                  <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-lg">
+                    <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+                        ⚠️ Aguardando sua confirmação
+                      </p>
+                      <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-0.5">
+                        Você precisa aceitar ou rejeitar esta solicitação de troca
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-  // Ordenar as chaves dos meses (mais recente primeiro)
-  const sortedMonthKeys = Object.keys(groupedByMonth).sort((a, b) => b.localeCompare(a));
+                {request.status === 'PENDING' && request.requester_id === currentUser.id && (
+                  <div className="flex items-start gap-2 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-lg">
+                    <Clock className="h-5 w-5 text-orange-600 dark:text-orange-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                        ⏳ Pendências de Aprovação
+                      </p>
+                      <div className="space-y-2 mt-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                          <p className="text-xs text-orange-700 dark:text-orange-300">
+                            <strong>1. Membro Convidado:</strong> Aguardando {request.target?.name} aceitar a troca
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                          <p className="text-xs text-orange-700 dark:text-orange-300">
+                            <strong>2. Administrador:</strong> Aguardará aprovação após aceite do membro
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-  // Inicializar todos os meses como expandidos na primeira renderização
-  useEffect(() => {
-    if (sortedMonthKeys.length > 0 && Object.keys(expandedMonths).length === 0) {
-      const initialExpanded: Record<string, boolean> = {};
-      sortedMonthKeys.forEach(key => {
-        initialExpanded[key] = true;
-      });
-      setExpandedMonths(initialExpanded);
-    }
-  }, [sortedMonthKeys.length]);
+                {request.status === 'ACCEPTED' && (
+                  <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg">
+                    <Clock className="h-5 w-5 text-blue-600 dark:text-blue-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        ⏳ Aguardando Aprovação do Administrador
+                      </p>
+                      <div className="space-y-2 mt-2">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <p className="text-xs text-blue-700 dark:text-blue-300">
+                            <strong>1. Membro Convidado:</strong> {request.target?.name} aceitou a troca ✓
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                          <p className="text-xs text-blue-700 dark:text-blue-300">
+                            <strong>2. Administrador:</strong> Aguardando aprovação final
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {request.status === 'APPROVED' && (
+                  <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                        ✅ Troca Aprovada e Confirmada
+                      </p>
+                      <div className="space-y-1 mt-2">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <p className="text-xs text-green-700 dark:text-green-300">
+                            Membro convidado aceitou ✓
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <p className="text-xs text-green-700 dark:text-green-300">
+                            Administrador aprovou ✓
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Solicitante e Membro Convidado */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Solicitante</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{request.requester?.name}</span>
+                      {request.requester?.team && (
+                        <TeamBadge team={request.requester.team} />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground mb-1">Membro Convidado</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{request.target?.name}</span>
+                      {request.target?.team && (
+                        <TeamBadge team={request.target.team} />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Datas da Troca */}
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Datas da Troca</div>
+                  <div className="font-medium">
+                    {format(parseDateOnly(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    {' → '}
+                    {format(parseDateOnly(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Plantão do solicitante → Plantão desejado
+                  </div>
+                </div>
+
+                {/* Motivo */}
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Motivo</div>
+                  <div className="text-sm">{request.reason}</div>
+                </div>
+
+                {/* Data de solicitação */}
+                <div className="text-xs text-muted-foreground pt-2 border-t">
+                  Solicitado em {format(new Date(request.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </div>
+
+                {/* Ações */}
+                {(canRespond(request) || canCancel(request) || canDelete(request)) && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {canRespond(request) && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => openResponseDialog(request, 'accept')}
+                          className="gap-2 bg-success hover:bg-success/90 text-success-foreground"
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                          Aceitar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openResponseDialog(request, 'reject')}
+                          className="gap-2 text-danger hover:bg-danger hover:text-danger-foreground"
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Rejeitar
+                        </Button>
+                      </>
+                    )}
+                    
+                    {canCancel(request) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openCancelDialog(request)}
+                        className="gap-2"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Cancelar
+                      </Button>
+                    )}
+
+                    {canDelete(request) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deleteRequest(request)}
+                        className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Excluir
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {/* Troca aprovada: exclusão apenas pelo coordenador */}
+                {request.requester_id === currentUser.id && request.status === 'APPROVED' && (
+                  <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
+                    <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                    Trocas aprovadas só podem ser removidas pelo coordenador.
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
 
   if (loading) {
     return (
@@ -385,263 +620,43 @@ export function GuardSwapList({ currentUser }: GuardSwapListProps) {
             </div>
           ) : (
             <div className="space-y-6">
-              {sortedMonthKeys.map((monthKey) => {
-                const monthRequests = groupedByMonth[monthKey];
-                const [year, month] = monthKey.split('-');
-                const monthDate = new Date(Number(year), Number(month) - 1, 1);
-                const monthLabel = format(monthDate, 'MMMM yyyy', { locale: ptBR });
-                const isExpanded = expandedMonths[monthKey] ?? true;
-                
-                return (
-                  <div key={monthKey} className="space-y-3">
-                    <button
-                      onClick={() => toggleMonth(monthKey)}
-                      className="flex items-center gap-2 pb-2 border-b w-full hover:bg-muted/50 transition-colors rounded-t px-2 -mx-2"
-                    >
-                      <Calendar className="h-4 w-4 text-primary" />
-                      <h3 className="font-semibold text-sm capitalize">{monthLabel}</h3>
-                      <Badge variant="secondary" className="ml-auto">
-                        {monthRequests.length} {monthRequests.length === 1 ? 'solicitação' : 'solicitações'}
-                      </Badge>
-                      {isExpanded ? (
-                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              {groupedByMonth[currentMonthKey] ? (
+                renderMonthGroup(currentMonthKey)
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma solicitação de troca em <span className="capitalize">{currentMonthLabel}</span>.
+                </p>
+              )}
+
+              {otherMonthKeys.length > 0 && (
+                <div className="space-y-4">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between h-auto py-2.5"
+                    onClick={() => setShowOtherMonths((value) => !value)}
+                    aria-expanded={showOtherMonths}
+                  >
+                    <span className="flex items-center gap-2 flex-wrap text-left">
+                      {showOtherMonths ? 'Ocultar outros meses' : 'Ver outros meses'}
+                      <span className="text-muted-foreground font-normal">
+                        ({otherMonthsRequestCount} {otherMonthsRequestCount === 1 ? 'solicitação' : 'solicitações'})
+                      </span>
+                      {otherMonthsAwaitingMe > 0 && (
+                        <Badge className="bg-warning text-warning-foreground hover:bg-warning">
+                          {otherMonthsAwaitingMe} aguardando sua resposta
+                        </Badge>
                       )}
-                    </button>
-                    
-                    {isExpanded && (
-                      <div className="space-y-3">
-                      {monthRequests.map((request) => {
-                        return (
-                          <div
-                            key={request.id}
-                            className="p-5 border rounded-lg hover:bg-muted/30 transition-colors space-y-4"
-                          >
-                            {/* Header com Protocolo e Status */}
-                            <div className="flex items-center justify-between gap-3 flex-wrap">
-                              <div className="flex items-center gap-3 flex-wrap">
-                                <Badge variant="secondary" className="font-mono text-xs">
-                                  Protocolo: {request.id.slice(0, 8)}
-                                </Badge>
-                                <StatusBadge status={request.status} />
-                              </div>
-                              
-                              {request.status === 'APPROVED' && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => generatePDF(request)}
-                                  className="gap-2"
-                                >
-                                  <FileDown className="h-4 w-4" />
-                                  PDF
-                                </Button>
-                              )}
-                            </div>
-
-                            {/* Pendências de Aprovação */}
-                            {request.status === 'PENDING' && request.target_id === currentUser.id && (
-                              <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900 rounded-lg">
-                                <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
-                                    ⚠️ Aguardando sua confirmação
-                                  </p>
-                                  <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-0.5">
-                                    Você precisa aceitar ou rejeitar esta solicitação de troca
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-
-                            {request.status === 'PENDING' && request.requester_id === currentUser.id && (
-                              <div className="flex items-start gap-2 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900 rounded-lg">
-                                <Clock className="h-5 w-5 text-orange-600 dark:text-orange-500 flex-shrink-0 mt-0.5" />
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
-                                    ⏳ Pendências de Aprovação
-                                  </p>
-                                  <div className="space-y-2 mt-2">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                                      <p className="text-xs text-orange-700 dark:text-orange-300">
-                                        <strong>1. Membro Convidado:</strong> Aguardando {request.target?.name} aceitar a troca
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-                                      <p className="text-xs text-orange-700 dark:text-orange-300">
-                                        <strong>2. Administrador:</strong> Aguardará aprovação após aceite do membro
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {request.status === 'ACCEPTED' && (
-                              <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg">
-                                <Clock className="h-5 w-5 text-blue-600 dark:text-blue-500 flex-shrink-0 mt-0.5" />
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                                    ⏳ Aguardando Aprovação do Administrador
-                                  </p>
-                                  <div className="space-y-2 mt-2">
-                                    <div className="flex items-center gap-2">
-                                      <CheckCircle className="w-4 h-4 text-green-600" />
-                                      <p className="text-xs text-blue-700 dark:text-blue-300">
-                                        <strong>1. Membro Convidado:</strong> {request.target?.name} aceitou a troca ✓
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                      <p className="text-xs text-blue-700 dark:text-blue-300">
-                                        <strong>2. Administrador:</strong> Aguardando aprovação final
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {request.status === 'APPROVED' && (
-                              <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg">
-                                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-500 flex-shrink-0 mt-0.5" />
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                                    ✅ Troca Aprovada e Confirmada
-                                  </p>
-                                  <div className="space-y-1 mt-2">
-                                    <div className="flex items-center gap-2">
-                                      <CheckCircle className="w-4 h-4 text-green-600" />
-                                      <p className="text-xs text-green-700 dark:text-green-300">
-                                        Membro convidado aceitou ✓
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <CheckCircle className="w-4 h-4 text-green-600" />
-                                      <p className="text-xs text-green-700 dark:text-green-300">
-                                        Administrador aprovou ✓
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Solicitante e Membro Convidado */}
-                            <div className="grid gap-4 sm:grid-cols-2">
-                              <div>
-                                <div className="text-sm text-muted-foreground mb-1">Solicitante</div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{request.requester?.name}</span>
-                                  {request.requester?.team && (
-                                    <TeamBadge team={request.requester.team} />
-                                  )}
-                                </div>
-                              </div>
-                              <div>
-                                <div className="text-sm text-muted-foreground mb-1">Membro Convidado</div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{request.target?.name}</span>
-                                  {request.target?.team && (
-                                    <TeamBadge team={request.target.team} />
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Datas da Troca */}
-                            <div>
-                              <div className="text-sm text-muted-foreground mb-1">Datas da Troca</div>
-                              <div className="font-medium">
-                                {format(parseDateOnly(request.requester_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
-                                {' → '}
-                                {format(parseDateOnly(request.target_shift_date), 'dd/MM/yyyy', { locale: ptBR })}
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-0.5">
-                                Plantão do solicitante → Plantão desejado
-                              </div>
-                            </div>
-
-                            {/* Motivo */}
-                            <div>
-                              <div className="text-sm text-muted-foreground mb-1">Motivo</div>
-                              <div className="text-sm">{request.reason}</div>
-                            </div>
-
-                            {/* Data de solicitação */}
-                            <div className="text-xs text-muted-foreground pt-2 border-t">
-                              Solicitado em {format(new Date(request.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                            </div>
-
-                            {/* Ações */}
-                            {(canRespond(request) || canCancel(request) || canDelete(request)) && (
-                              <div className="flex flex-wrap gap-2 pt-2">
-                                {canRespond(request) && (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      onClick={() => openResponseDialog(request, 'accept')}
-                                      className="gap-2 bg-success hover:bg-success/90 text-success-foreground"
-                                    >
-                                      <CheckCircle className="h-4 w-4" />
-                                      Aceitar
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => openResponseDialog(request, 'reject')}
-                                      className="gap-2 text-danger hover:bg-danger hover:text-danger-foreground"
-                                    >
-                                      <XCircle className="h-4 w-4" />
-                                      Rejeitar
-                                    </Button>
-                                  </>
-                                )}
-                                
-                                {canCancel(request) && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => openCancelDialog(request)}
-                                    className="gap-2"
-                                  >
-                                    <XCircle className="h-4 w-4" />
-                                    Cancelar
-                                  </Button>
-                                )}
-
-                                {canDelete(request) && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => deleteRequest(request)}
-                                    className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                    Excluir
-                                  </Button>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Troca aprovada: exclusão apenas pelo coordenador */}
-                            {request.requester_id === currentUser.id && request.status === 'APPROVED' && (
-                              <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
-                                <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
-                                Trocas aprovadas só podem ser removidas pelo coordenador.
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                      </div>
+                    </span>
+                    {showOtherMonths ? (
+                      <ChevronUp className="h-4 w-4 shrink-0" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 shrink-0" />
                     )}
-                  </div>
-                );
-              })}
+                  </Button>
+
+                  {showOtherMonths && otherMonthKeys.map((monthKey) => renderMonthGroup(monthKey))}
+                </div>
+              )}
             </div>
           )}
         </CardContent>
