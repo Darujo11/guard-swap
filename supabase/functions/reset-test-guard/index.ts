@@ -22,7 +22,44 @@ serve(async (req) => {
       }
     });
 
+    // Só super_admin: antes qualquer pessoa apagava qualquer usuário sabendo só o telefone
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authorization header é obrigatório' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const { data: { user }, error: callerError } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (callerError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Não autorizado' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const { data: superAdminRole } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'super_admin')
+      .maybeSingle();
+
+    if (!superAdminRole) {
+      return new Response(
+        JSON.stringify({ error: 'Acesso negado. Apenas super admins podem resetar usuários de teste.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
     const { phone, admin_id } = await req.json();
+    if (!phone) {
+      return new Response(
+        JSON.stringify({ error: 'Telefone é obrigatório' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
     const phoneClean = phone.replace(/\D/g, '');
     const loginEmail = `${phoneClean}@guardshift.com`;
 
@@ -38,6 +75,25 @@ serve(async (req) => {
     const existingUser = existingUsers?.users?.find(u => u.email === loginEmail);
 
     if (existingUser) {
+      // O login de todo segurança é <telefone>@guardshift.com: sem esta trava, "resetar teste"
+      // com o telefone de um segurança real apagaria a conta dele (e as trocas, em cascata).
+      const [{ data: existingProfile }, { data: existingRoles }] = await Promise.all([
+        supabaseAdmin.from('profiles').select('name').eq('user_id', existingUser.id).maybeSingle(),
+        supabaseAdmin.from('user_roles').select('role').eq('user_id', existingUser.id),
+      ]);
+
+      const isTestAccount =
+        existingProfile?.name === 'Usuário Teste' &&
+        (existingRoles ?? []).every((r) => r.role === 'guard');
+
+      if (!isTestAccount) {
+        console.warn('[reset-test-guard] Refusing to delete non-test account:', existingUser.id);
+        return new Response(
+          JSON.stringify({ error: 'Este telefone pertence a uma conta que não é de teste. Nada foi apagado.' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
+        );
+      }
+
       console.log('[reset-test-guard] Found existing user, deleting:', existingUser.id);
       
       // Delete from profiles first

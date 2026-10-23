@@ -22,6 +22,37 @@ serve(async (req) => {
       }
     });
 
+    // Só super_admin: antes qualquer pessoa na internet criava contas (senha 123456) em qualquer organização
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authorization header é obrigatório' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const { data: { user }, error: callerError } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (callerError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Não autorizado' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const { data: superAdminRole } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'super_admin')
+      .maybeSingle();
+
+    if (!superAdminRole) {
+      return new Response(
+        JSON.stringify({ error: 'Acesso negado. Apenas super admins podem criar usuários de teste.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
     const { name, phone, admin_id } = await req.json();
 
     console.log('[create-test-guard] Creating test guard:', { name, phone, admin_id });

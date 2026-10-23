@@ -279,8 +279,8 @@ Diretorio: `supabase/functions/`.
 
 ### Suporte/teste
 
-- `create-test-guard`: cria usuario de teste rapido.
-- `reset-test-guard`: recria usuario de teste padrao.
+- `create-test-guard`: cria usuario de teste rapido (somente super_admin).
+- `reset-test-guard`: recria usuario de teste padrao (somente super_admin; recusa apagar conta que nao seja de teste).
 
 ### Configuracao de JWT por funcao
 
