@@ -35,23 +35,36 @@ Edge Function notify-swap-event
 
 | Mudança em `swap_requests` | Evento | Envios (em ordem) |
 |---|---|---|
-| INSERT `PENDING` | `troca_solicitada` | alvo → 15 s → solicitante |
-| `PENDING → ACCEPTED` | `troca_aceita` | coordenador → 40 s → solicitante |
-| `ACCEPTED → APPROVED` | `troca_aprovada_admin` | solicitante → 15 s → alvo |
-| `→ REJECTED` por admin | `troca_rejeitada_admin` | solicitante → 15 s → alvo |
-| `PENDING → REJECTED` pelo alvo | `troca_rejeitada_alvo` | solicitante |
+| INSERT `PENDING` | `troca_solicitada` | colega → 15 s → solicitante |
+| `PENDING → ACCEPTED` | `troca_aceita` | coordenação → 40 s → solicitante |
+| `ACCEPTED → APPROVED` | `troca_aprovada_admin` | solicitante → 15 s → colega |
+| `→ REJECTED` por admin | `troca_rejeitada_admin` | solicitante → 15 s → colega |
+| `PENDING → REJECTED` pelo colega | `troca_rejeitada_alvo` | solicitante |
+| `PENDING → CANCELLED` | `troca_cancelada` | colega |
 
 Rejeição é "por admin" quando `OLD.status = 'ACCEPTED'`, ou `admin_approved_by` foi preenchido, ou quem fez o UPDATE tem papel `admin`/`super_admin`.
 
-`CANCELLED` não gera aviso. Cada evento é enviado no máximo uma vez por troca (`unique (swap_id, event)`).
+Cada evento é enviado no máximo uma vez por troca (`unique (swap_id, event)`). `troca_cancelada` veio na migration `20261023160000_swap_notification_cancel.sql`.
 
-Os textos estão em `buildMessages()` na edge function. Diferenças em relação ao n8n:
+### Textos
 
-- Recusa pelo alvo tinha o texto "o coordenador rejeitou"; agora tem mensagem própria, só para o solicitante.
-- Aviso de "troca aceita" vai para o telefone do coordenador da troca (`admin_id`), não mais para um número fixo.
-- Datas em `DD/MM/AAAA` (antes saíam `AAAA-MM-DD`).
-- Telefone normalizado (aceita máscara, `0` ou `55` na frente).
-- Pequenas correções de texto (nome do alvo na rejeição, concordância, pontuação).
+Todos os textos (trocas, lembrete das 8h, folga TRE e nova senha) ficam em
+`supabase/functions/_shared/messages.ts`, revisados com a coordenação em 2026-10-23:
+
+- saudação + nome, o que aconteceu, o que muda na escala de quem recebe, próximo passo, protocolo;
+- datas com dia da semana ("qui, 01/10") dizendo quem trabalha em cada dia;
+- sem artigo antes de nomes nem "meu amigo"/"o segurança"/"Chefia" (servem para qualquer gênero);
+- sem rodapé de "mensagem automática";
+- protocolo no formato do comprovante (`TRC-XXXXXXXX`); as mensagens de aprovação trazem também o código de verificação da assinatura eletrônica;
+- links diretos: colega → `/#/dashboard/guard`, coordenação → `/#/admin/trocas`.
+
+Para conferir o texto final de todas as mensagens com dados de exemplo:
+
+```bash
+PRINT=1 npx -y deno@2.1.4 test --no-lock --allow-env supabase/functions/_shared/messages.test.ts
+```
+
+Depois de mudar um texto, publicar as funções que usam o módulo (`notify-swap-event`, `notify-swap-reminder`, `notify-tre-leave`, `notify-tre-leave-guard`, `forgot-password`).
 
 ---
 

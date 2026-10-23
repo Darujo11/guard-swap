@@ -116,8 +116,7 @@ Definidas em `src/App.tsx`.
 - `/#/` e `/#/login`: login
 - `/#/home`: landing/marketing
 - `/#/teste-gratuito`: cadastro trial
-- `/#/criar-admin`: bootstrap de admin
-- `/#/criar-super-admin`: bootstrap de super admin
+- `/#/verificar` e `/#/verificar/:codigo`: verificacao publica do comprovante de troca (assinatura eletronica)
 
 ### Admin
 
@@ -143,6 +142,7 @@ Definidas em `src/App.tsx`.
 - `/#/super-admin/administradores`
 - `/#/super-admin/relatorios`
 - `/#/super-admin/resetar-senha`
+- `/#/criar-super-admin`: cria/atualiza super admin (exige estar logado como super admin)
 
 ## 6) Modulos funcionais (o que o sistema faz)
 
@@ -167,7 +167,6 @@ Definidas em `src/App.tsx`.
 - Cadastro de equipes (`teams`) com metadados.
 - Alocacao de segurancas em equipes.
 - Cadastro/manutencao de escalas em `team_schedules`.
-- Reorganizacao de escalas via RPC de swap.
 
 ### 6.4 Trocas de plantao
 
@@ -178,7 +177,13 @@ Definidas em `src/App.tsx`.
 - A escala efetiva e derivada na leitura: `team_schedules` permanece imutavel e
   as trocas aprovadas sao aplicadas por cima (`src/utils/effectiveSchedule.ts`).
   Aprovar uma troca so grava `status = 'APPROVED'`.
-- Aviso por WhatsApp a cada etapa da troca, disparado pelo banco (`notify-swap-event`).
+- Assinatura eletronica: solicitar, aceitar, recusar, cancelar, aprovar e rejeitar exigem
+  declaracao + senha; o banco grava cada ato em `swap_signatures` (append-only) e congela
+  os termos da troca depois de solicitada. Ver `docs/assinatura-eletronica.md`.
+- Comprovante impresso (A4, logo da Camara) com as assinaturas e codigo de verificacao
+  (`src/utils/swapReceipt.ts`); verificacao publica em `/#/verificar/:codigo`.
+- Aviso por WhatsApp a cada etapa da troca, inclusive cancelamento, disparado pelo banco
+  (`notify-swap-event`).
 - Lembrete diario automatico para trocas aprovadas com plantao no dia seguinte.
 
 ### 6.5 Horas extras
@@ -239,18 +244,20 @@ Fonte tipada: `src/integrations/supabase/types.ts`.
 - `subscription_plans`: catalogo de planos.
 - `admin_subscriptions`: assinatura ativa por admin.
 - `audit_logs`: trilha de auditoria.
+- `swap_notifications`: fila (outbox) dos avisos de troca por WhatsApp.
+- `swap_signatures`: assinaturas eletronicas dos atos de troca (append-only).
 - `keep_alive`: controle tecnico de atividade.
 
 ### Funcoes RPC relevantes
 
-- `swap_team_schedules(...)`: reescreveria `team_schedules` para efetivar a
-  troca. **Existe no banco mas nao e chamada pela aplicacao** - ver debito em
-  [14](#14-qualidade-tecnica-e-debitos-atuais).
-- `get_available_guards_for_swap()`: retorna candidatos para troca.
+- `get_available_guards_for_swap()`: candidatos para troca (so para quem tem papel `guard`).
+- `verify_swap_document(codigo)`: verificacao publica do comprovante (dados minimos).
 - `has_role(...)`: verifica papel de usuario.
 - `is_super_admin(...)` / `is_admin_active(...)`: regras de permissao/estado.
-- `get_user_id_by_email(...)`: suporte a fluxos administrativos idempotentes.
+- `get_user_id_by_email(...)`: so `service_role` (usada pelas edge functions).
 - `check_admin_subscription_status(...)`: valida situacao de assinatura.
+- `swap_team_schedules(...)`: legado, sem uso; so `service_role`. A escala efetiva e
+  calculada na leitura (`effectiveSchedule.ts`) - chamar essa RPC contaria a troca duas vezes.
 
 ## 8) Edge Functions
 
@@ -258,13 +265,14 @@ Diretorio: `supabase/functions/`.
 
 ### Provisionamento e administracao de usuarios
 
-- `create-admin`: cria/atualiza admin e role.
-- `create-guard`: cria guarda com login baseado em telefone.
-- `create-trial-admin`: cria admin + assinatura trial + settings iniciais.
-- `create-super-admin`: bootstrap de super admin por email.
-- `create-super-admin-phone`: bootstrap/upsert por telefone.
-- `update-admin`: atualiza dados de admin (inclui email no auth).
-- `delete-admin`: exclusao em cascata dos dados do admin.
+- `create-admin`: cria/atualiza admin e role (somente super_admin).
+- `create-guard`: cria guarda com login baseado em telefone (admin ativo, so na propria
+  organizacao, ou super_admin).
+- `create-trial-admin`: cria admin + assinatura trial + settings iniciais (publica, cadastro trial).
+- `create-super-admin`: cria super admin por email (somente super_admin).
+- `create-super-admin-phone`: cria/atualiza super admin por telefone (somente super_admin).
+- `update-admin`: atualiza dados de admin (somente super_admin).
+- `delete-admin`: exclusao em cascata dos dados do admin (somente super_admin).
 - `update-auth-email`: atualiza email de login com base no telefone.
 - `reset-user-password`: reset de senha (acesso de super admin).
 
@@ -277,6 +285,9 @@ Diretorio: `supabase/functions/`.
 - `notify-tre-leave-guard`: notifica guarda sobre decisao da folga.
 - `forgot-password`: reset por telefone e envio de nova senha via WhatsApp.
 
+Os textos de todas as mensagens de WhatsApp ficam em `supabase/functions/_shared/messages.ts`
+(testes em `messages.test.ts`, rodar com `deno test`).
+
 ### Suporte/teste
 
 - `create-test-guard`: cria usuario de teste rapido (somente super_admin).
@@ -286,8 +297,10 @@ Diretorio: `supabase/functions/`.
 
 Em `supabase/config.toml`, cada funcao define `verify_jwt = true/false`.
 
-- Existem funcoes administrativas com `verify_jwt = false` e controle interno por service role.
-- Em casos sensiveis (ex.: `reset-user-password`), ha validacao explicita de papel no corpo da funcao.
+- `verify_jwt = true` NAO protege sozinho: a anon key publica e um JWT valido.
+- Toda funcao administrativa valida o chamador no corpo (`auth.getUser` + papel em `user_roles`).
+- `notify-swap-event` tem `verify_jwt = false` de proposito (chamada pelo `pg_net`), mas so processa
+  eventos `pending` da fila `swap_notifications`.
 
 ## 9) Integracoes externas
 
@@ -303,6 +316,7 @@ Em `supabase/config.toml`, cada funcao define `verify_jwt = true/false`.
   - avisos de cada etapa da troca e lembrete de troca;
   - solicitacao/retorno de folga TRE;
   - reset de senha.
+- Textos: `supabase/functions/_shared/messages.ts`.
 
 ### Avisos de troca (sem n8n)
 
@@ -368,29 +382,42 @@ Saida: pasta `dist/`.
 
 ### Deploy
 
-Por ser SPA, servir `dist/` em host estatico (ou CDN) com fallback para `index.html` quando necessario.
+O projeto saiu do Lovable. Cada parte sobe de um jeito:
+
+| Parte | Como publica |
+|---|---|
+| Frontend (`escalasmart.com.br`) | Automatico: push na `main` -> Cloudflare rebuilda em ~1 min |
+| Edge Functions | Manual: `npx supabase functions deploy <nome> --project-ref wyoysecfbmmidjiofymg --use-api` (precisa de `SUPABASE_ACCESS_TOKEN`) |
+| Migrations | Manual: rodar o SQL no banco (SQL Editor ou `psql`). `supabase_migrations.schema_migrations` nao e confiavel desde 2026-04 |
+
+Ordem: quando uma mudanca depende de funcao/migration nova, publicar a funcao e a migration
+ANTES do push do frontend (o push vai ao ar sozinho).
+
+Versao: atualizar `package.json` (`npm version X --no-git-tag-version`), `src/lib/version.ts`
+e `public/version.json`. `forceUpdate: true` recarrega quem estiver na versao antiga.
 
 ## 12) Seguranca e controles de acesso
 
 ### O que existe hoje
 
-- Controle de acesso por papel no frontend (`ProtectedRoute`).
-- Uso de `SUPABASE_SERVICE_ROLE_KEY` nas Edge Functions para operacoes administrativas.
-- Validacao de papel em funcoes criticas especificas (ex.: reset de senha administrativo).
-- CORS habilitado nas funcoes para chamadas cross-origin.
+- Controle de acesso por papel no frontend (`ProtectedRoute`) e, de verdade, no banco (RLS).
+- RLS isolando organizacoes (`admin_id`): avaliacoes, auditoria, escalas e equipes so da propria
+  organizacao (migration `20261023140000_org_isolation`).
+- Cadastro aberto do Supabase Auth desligado (`disable_signup`); contas so via edge functions.
+- Edge functions administrativas exigem super_admin; `create-guard` exige admin da propria organizacao.
+- Assinatura eletronica com senha recente nos atos de troca (`swap_signatures`).
+- Comprovantes impressos com `escapeHtml` + CSP `default-src 'none'` (`src/lib/html.ts`).
 
-### Pontos de atencao atuais
+### Pontos de atencao abertos (revisao de 2026-10-23)
 
-- `SUPABASE_URL` e chave publica estao hardcoded em `src/integrations/supabase/client.ts`.
-- Varias funcoes com `verify_jwt = false`; seguranca depende de validacoes internas.
-- Rotas de bootstrap (`/criar-admin`, `/criar-super-admin`) sao publicas na UI.
-
-Recomendacoes imediatas:
-
-1. migrar URL/chave publica para variaveis de ambiente Vite;
-2. revisar necessidade de `verify_jwt = false` funcao a funcao;
-3. reforcar controles de bootstrap por segredo de ambiente ou allowlist;
-4. padronizar auditoria de chamadas administrativas.
+- Senha padrao `123456` em uso por boa parte das contas (inclusive super admins); `create-guard`
+  ainda cria contas com ela.
+- `notify-tre-leave-guard` e `notify-tre-leave` aceitam chamadas com a anon key: da para mandar
+  WhatsApp pelo numero da empresa.
+- `forgot-password` deixa qualquer pessoa trocar a senha de outro usuario sabendo o telefone.
+- `suspend_expired_admins` / `check_admin_subscription_status` executaveis por anon.
+- `keep_alive` sem RLS; bucket `leave-documents` publico.
+- Datas sem hora exibidas com `new Date('AAAA-MM-DD')` em `SuperAdminReports.tsx` (um dia antes).
 
 ## 13) Operacao, logs e troubleshooting
 
@@ -410,6 +437,10 @@ Recomendacoes imediatas:
   - conferir secret da instancia e status do provedor externo.
 - Aviso de troca nao chegou:
   - consultar `swap_notifications` (coluna `status`/`error`) e os logs de `notify-swap-event`.
+- Erro `ASSINATURA_REQUER_SENHA` ao mexer em troca:
+  - a acao nao veio de uma confirmacao de senha recente (app antigo em cache: recarregar).
+- Erro `TERMOS_CONGELADOS`:
+  - tentativa de alterar pessoas/datas/motivo de troca ja solicitada (bloqueado de proposito).
 
 ## 14) Qualidade tecnica e debitos atuais
 
@@ -425,8 +456,14 @@ sensivel do dominio: a escala efetiva depois das trocas aprovadas.
   plantao cedido nunca conta como trabalhado, precedencia de afastamento sobre
   plantao e o texto de detalhamento com protocolo da troca.
 
-Rodar com `npm test`. A cobertura ainda e pontual: nao ha testes de componente,
-de integracao com o Supabase nem das Edge Functions.
+- `src/lib/html.test.ts` - escape de HTML, CSP do documento impresso e validacao de URLs.
+- `src/utils/swapReceipt.test.ts` - comprovante de troca (escape, quem assume cada plantao,
+  andamento por status, bloco de assinaturas).
+- `src/lib/swapSignature.test.ts` - confirmacao de senha em sessao descartavel.
+- `supabase/functions/_shared/messages.test.ts` - textos do WhatsApp (Deno:
+  `npx deno@2.1.4 test --no-lock --allow-env supabase/functions/_shared/messages.test.ts`).
+
+Rodar com `npm test`. Nao ha testes de componente nem de integracao com o Supabase.
 
 ### Debitos abertos
 
@@ -434,10 +471,8 @@ de integracao com o Supabase nem das Edge Functions.
 - **Arquivos de pagina grandes**: alta concentracao de regra e UI em alguns
   modulos (`AdminExtras.tsx` passa de 2.300 linhas).
 - **Historico longo de migrations**: exige disciplina de versionamento no Supabase.
-- **`src/utils/swapScheduleUpdate.ts` e codigo morto**: envolve a RPC
-  `swap_team_schedules`, que nao e chamada por ninguem. A aprovacao de troca so
-  grava `status = 'APPROVED'` e o overlay e aplicado na leitura. Se alguem
-  passar a chamar essa RPC, a troca sera contada duas vezes.
+- **QR code no comprovante**: pendente; exige nova dependencia e confirmar qual lockfile
+  (`bun.lock`, `bun.lockb` ou `package-lock.json`) o build do Cloudflare usa.
 
 ## 15) Guia rapido de evolucao
 

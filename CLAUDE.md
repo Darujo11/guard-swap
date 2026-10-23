@@ -1,0 +1,50 @@
+# Escala Smart (guard-swap)
+
+Gestão de escalas, trocas de plantão, extras e folgas de equipes de segurança. Cliente atual: Câmara Municipal de Macaé (logo e marca no app e no comprovante). Multi-organização: cada coordenador (`admin`) é uma organização; `profiles.admin_id` aponta para o perfil do coordenador (o do próprio admin aponta para ele mesmo).
+
+Stack: React 18 + Vite + TypeScript + shadcn/ui (SPA com `HashRouter`), Supabase (Auth, Postgres com RLS, Edge Functions em Deno), WhatsApp via Evolution API. Visão completa no `README.md`.
+
+Interface, mensagens, comentários e commits em português.
+
+## Comandos
+
+```bash
+npm run dev          # Vite em :8080 (aponta para o Supabase de PRODUÇÃO, não há ambiente de teste)
+npm run typecheck
+npm test             # Vitest (src/**/*.test.ts)
+npm run build
+npx -y deno@2.1.4 check --no-lock supabase/functions/<nome>/index.ts
+npx -y deno@2.1.4 test --no-lock --allow-env supabase/functions/_shared/messages.test.ts   # PRINT=1 imprime os textos
+```
+
+O lint tem dezenas de problemas antigos (`any`, `prefer-const`): compare antes/depois nos arquivos tocados em vez de exigir zero.
+
+## Deploy (o projeto NÃO está mais no Lovable)
+
+- **Frontend:** push na `main` publica sozinho em `escalasmart.com.br` (Cloudflare, ~1 min). Não existe staging.
+- **Edge Functions:** não sobem com o push. `npx -y supabase@2.20.12 functions deploy <nome> --project-ref wyoysecfbmmidjiofymg --use-api` com `SUPABASE_ACCESS_TOKEN` fornecido pelo dono. Passe `--no-verify-jwt` nas que têm `verify_jwt = false` em `supabase/config.toml`.
+- **Migrations:** não sobem com o push e `supabase_migrations.schema_migrations` parou de ser atualizada em 2026-04. Aplicar o SQL manualmente; ensaiar antes numa transação com `ROLLBACK` simulando usuários (`set local role authenticated` + `request.jwt.claims`).
+- **Ordem:** se o frontend depende de função/migration nova, publique a função e a migration ANTES do push (em 2026-10-23 um push antecipado deixou os avisos fora do ar por ~20 min).
+- **Versão:** `npm version X.Y.Z --no-git-tag-version` + `src/lib/version.ts` + `public/version.json`. `forceUpdate: true` recarrega clientes antigos (PWA); usar quando a versão antiga quebraria com a mudança.
+
+## Regras do domínio que não podem quebrar
+
+- **Escala efetiva = `team_schedules` + trocas APROVADAS aplicadas na leitura** (`src/utils/effectiveSchedule.ts`). `team_schedules` não é reescrita ao aprovar; `swap_team_schedules()` é legado e só service role executa.
+- **Trocas são atos assinados** (`docs/assinatura-eletronica.md`): toda mudança de status de `swap_requests` feita por usuário precisa vir de `signSwapAction` (`src/lib/swapSignature.ts`), senão o banco recusa com `ASSINATURA_REQUER_SENHA`. Termos (pessoas, datas, motivo, `admin_id`) são congelados depois de solicitada (`TERMOS_CONGELADOS`). `swap_signatures` é append-only.
+- **Transições de status** são validadas no banco (`enforce_swap_request_transition`); não confie só na UI.
+- **Avisos de WhatsApp das trocas saem do banco**, não do navegador: trigger → fila `swap_notifications` → `notify-swap-event` (`docs/sistema-avisos-trocas.md`). Não volte a chamar edge function de aviso a partir das telas.
+- **Textos de WhatsApp** só em `supabase/functions/_shared/messages.ts` (aprovados pela coordenação: sem "mensagem automática", sem artigo antes de nome, datas com dia da semana).
+
+## Segurança (aprendido na revisão de 2026-10-23)
+
+- `verify_jwt = true` não protege: a anon key pública é um JWT válido. Toda edge function que faz algo privilegiado valida o chamador no corpo (`auth.getUser(token)` + papel em `user_roles`) e nunca confia em `admin_id`, telefone ou destinatário vindos do cliente.
+- RLS isola organizações por `admin_id` (`get_profile_id`, `get_user_admin_id`). Política nova sem filtro de organização vaza dados entre clientes.
+- Funções `SECURITY DEFINER` em `public` viram RPC para anon por padrão: `revoke execute ... from public, anon, authenticated` quando não forem para o app. Não revogue as usadas dentro de policies (`has_role`, `get_profile_id`, `get_user_admin_id`, `is_admin_active`, `user_belongs_to_admin_org`).
+- Cadastro aberto do Auth está desligado (`disable_signup`); contas só pelas edge functions.
+- HTML montado como string (comprovantes) passa por `escapeHtml` e leva `PRINT_DOCUMENT_CSP_META` (`src/lib/html.ts`). Links gravados por usuários só abrem via `getSafeUrlWithPrefix`.
+- Pendências conhecidas: ver "Pontos de atenção abertos" no README (senha padrão `123456`, `notify-tre-leave*` e `forgot-password` abertos, etc.).
+
+## Acesso ao banco
+
+- `wyoysecfbmmidjiofymg` não está na conta Supabase conectada ao MCP (permission denied). Consultas via `psql`/`pg` com a connection string que o dono fornecer; escritas em produção costumam ser barradas pelo modo automático — prepare o script e peça para o dono rodar com `!`.
+- Nunca commitar credenciais: o arquivo local `acessos` fica fora do Git (`.git/info/exclude`).
