@@ -44,3 +44,5 @@ verify_jwt = false
 
 [functions.notify-swap-reminder]
 verify_jwt = false
+[functions.notify-swap-event]
+verify_jwt = false

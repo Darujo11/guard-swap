@@ -36,7 +36,7 @@ Objetivos centrais do sistema:
 - permitir trocas de plantao entre profissionais;
 - registrar extras e folgas com rastreabilidade;
 - manter historico funcional e avaliativo por profissional;
-- automatizar notificacoes e lembretes via WhatsApp e webhook.
+- automatizar notificacoes e lembretes via WhatsApp.
 
 ## 2) Stack e arquitetura
 
@@ -178,7 +178,7 @@ Definidas em `src/App.tsx`.
 - A escala efetiva e derivada na leitura: `team_schedules` permanece imutavel e
   as trocas aprovadas sao aplicadas por cima (`src/utils/effectiveSchedule.ts`).
   Aprovar uma troca so grava `status = 'APPROVED'`.
-- Envio opcional de webhook externo de evento.
+- Aviso por WhatsApp a cada etapa da troca, disparado pelo banco (`notify-swap-event`).
 - Lembrete diario automatico para trocas aprovadas com plantao no dia seguinte.
 
 ### 6.5 Horas extras
@@ -270,7 +270,8 @@ Diretorio: `supabase/functions/`.
 
 ### Operacao e notificacao
 
-- `send-swap-webhook`: envia payload de troca para AutoZapX.
+- `notify-swap-event`: envia os avisos de cada etapa da troca por WhatsApp (chamada pelo trigger `trg_enqueue_swap_notification`).
+- `send-swap-webhook`: desativada (no-op); mantida so para clientes PWA antigos.
 - `notify-swap-reminder`: lembrete diario de troca aprovada para o dia seguinte.
 - `notify-tre-leave`: notifica admin sobre solicitacao de folga TRE.
 - `notify-tre-leave-guard`: notifica guarda sobre decisao da folga.
@@ -299,15 +300,15 @@ Em `supabase/config.toml`, cada funcao define `verify_jwt = true/false`.
 
 - Endpoint usado nas funcoes: `https://evolution.autozapx.com/message/sendText/escala`
 - Envio de mensagens para:
-  - lembrete de troca;
+  - avisos de cada etapa da troca e lembrete de troca;
   - solicitacao/retorno de folga TRE;
   - reset de senha.
 
-### Webhook AutoZapX
+### Avisos de troca (sem n8n)
 
-- Endpoint: `https://webhook.autozapx.com/webhook/show`
-- Recebe eventos de troca de plantao.
-- Implementa retry com timeout e backoff.
+- Trigger em `swap_requests` grava o evento em `swap_notifications` e chama `notify-swap-event` via `pg_net`.
+- O webhook n8n `https://webhook.autozapx.com/webhook/show` nao e mais usado.
+- Documentacao completa em `docs/sistema-avisos-trocas.md`.
 
 ### Cron diario (Supabase)
 
@@ -407,8 +408,8 @@ Recomendacoes imediatas:
   - validar cron, status `APPROVED`, data de plantao e telefone do perfil.
 - Mensagem WhatsApp nao enviada:
   - conferir secret da instancia e status do provedor externo.
-- Erro em webhook de troca:
-  - funcao retorna sucesso parcial para nao quebrar fluxo principal.
+- Aviso de troca nao chegou:
+  - consultar `swap_notifications` (coluna `status`/`error`) e os logs de `notify-swap-event`.
 
 ## 14) Qualidade tecnica e debitos atuais
 

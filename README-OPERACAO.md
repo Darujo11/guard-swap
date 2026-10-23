@@ -211,7 +211,7 @@ O sistema possui automacoes de comunicacao:
 - lembrete de troca aprovada para o dia seguinte (WhatsApp);
 - alerta de solicitacao de folga TRE para admin;
 - retorno de aprovacao/rejeicao de folga para guarda;
-- envio de evento de troca para webhook externo.
+- aviso por WhatsApp a cada etapa da troca (solicitada, aceita, aprovada, rejeitada).
 
 Se uma notificacao externa falhar, o registro principal no sistema geralmente continua salvo.
 

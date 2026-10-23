@@ -258,42 +258,6 @@ const AdminDashboard = () => {
         details: { reason: decisionReason },
       });
 
-      // Enviar webhook para aprovação ou rejeição do admin
-      try {
-        const webhookPayload = {
-          evento: decisionDialog.action === 'APPROVED' ? 'troca_aprovada_admin' : 'troca_rejeitada_admin',
-          aprovacao_chefe_estado: decisionDialog.action === 'APPROVED' ? 'aprovado' : 'rejeitado',
-          requester_name: decisionDialog.request.requester?.name || '',
-          requester_email: decisionDialog.request.requester?.email || '',
-          requester_phone: decisionDialog.request.requester?.phone || '',
-          target_name: decisionDialog.request.target?.name || '',
-          target_email: decisionDialog.request.target?.email || '',
-          target_phone: decisionDialog.request.target?.phone || '',
-          requester_shift_date: decisionDialog.request.requester_shift_date,
-          target_shift_date: decisionDialog.request.target_shift_date,
-          reason: decisionDialog.request.reason,
-          ...(decisionDialog.action === 'REJECTED' && { rejection_reason: decisionReason }),
-          status: decisionDialog.action,
-          admin_approved: decisionDialog.action === 'APPROVED',
-          [decisionDialog.action === 'APPROVED' ? 'approved_at' : 'rejected_at']: new Date().toISOString(),
-        };
-
-        console.log(`📤 [AdminDashboard][Webhook] Enviando payload de ${decisionDialog.action === 'APPROVED' ? 'aprovação' : 'rejeição'} admin:`, webhookPayload);
-
-        const { data: webhookData, error: webhookError } = await supabase.functions.invoke('send-swap-webhook', {
-          body: webhookPayload
-        });
-
-        if (webhookError) {
-          console.error('⚠️ [AdminDashboard][Webhook] Erro ao enviar webhook:', webhookError);
-        } else {
-          console.log('✅ [AdminDashboard][Webhook] Webhook enviado com sucesso:', webhookData);
-        }
-      } catch (webhookError) {
-        console.error('⚠️ [AdminDashboard][Webhook] Exceção ao enviar webhook:', webhookError);
-        // Não falhar a operação principal se webhook falhar
-      }
-
       toast({
         title: decisionDialog.action === 'APPROVED' ? 'Solicitação aprovada' : 'Solicitação rejeitada',
         description: `A troca foi ${decisionDialog.action === 'APPROVED' ? 'aprovada' : 'rejeitada'} com sucesso.`,
