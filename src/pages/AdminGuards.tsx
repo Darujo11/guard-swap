@@ -1053,8 +1053,9 @@ const AdminGuards = () => {
                 {selectedGuardForSchedule?.is_shift_chief && <Crown className="h-4 w-4 text-amber-500" />}
               </DialogTitle>
               <DialogDescription>
-                {selectedGuardForSchedule?.team?.name || 'Sem equipe'} · plantões cedidos em trocas
-                aparecem em cinza e não contam como dias trabalhados.
+                {selectedGuardForSchedule?.team?.name || 'Sem equipe'} · plantões cedidos em trocas e folgas
+                de banco de horas aparecem em cinza e não contam como dias trabalhados. Passe o mouse
+                sobre um dia para ver o detalhe.
               </DialogDescription>
             </DialogHeader>
             {selectedGuardForSchedule && (

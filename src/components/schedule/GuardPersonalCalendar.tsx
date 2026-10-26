@@ -8,6 +8,8 @@ import { format, startOfMonth, endOfMonth, addMonths, subMonths, startOfWeek, en
 import { ptBR } from 'date-fns/locale';
 import { computeEffectiveSchedule, EffectiveDay } from '@/utils/effectiveSchedule';
 import { generateGuardSchedulePDF, GuardScheduleReport } from '@/utils/schedulePdf';
+import { CALENDAR_COLORS, CalendarLeave, describeCalendarDay, isHourBankLeave } from '@/utils/calendarDay';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const getLeaveLabel = (leaveType: string, customType?: string | null): string => {
   switch (leaveType) {
@@ -45,7 +47,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
   const [swapRequests, setSwapRequests] = useState<any[]>([]);
   const [allTeams, setAllTeams] = useState<any[]>([]);
   const [extras, setExtras] = useState<any[]>([]);
-  const [leaveDates, setLeaveDates] = useState<Map<string, string>>(new Map());
+  const [leaveDates, setLeaveDates] = useState<Map<string, CalendarLeave>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -102,14 +104,17 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
       setExtras(extrasRes.data || []);
 
       // Build leave dates map with type labels
-      const leaveMap = new Map<string, string>();
+      const leaveMap = new Map<string, CalendarLeave>();
       (treLeavesRes.data || []).forEach((l: any) => {
-        const label = getLeaveLabel(l.leave_type, l.custom_type);
+        const leave: CalendarLeave = {
+          label: getLeaveLabel(l.leave_type, l.custom_type),
+          isHourBank: isHourBankLeave(l.leave_type, l.custom_type),
+        };
         let current = parseISO(l.start_date);
         const end = parseISO(l.end_date);
         while (current <= end) {
           const ds = format(current, 'yyyy-MM-dd');
-          leaveMap.set(ds, label);
+          leaveMap.set(ds, leave);
           current = addDays(current, 1);
         }
       });
@@ -180,6 +185,15 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
     return count;
   }, [workingDays, leaveDates]);
 
+  // Extras feitos em dia não trabalhado (plantão cedido, banco de horas ou afastamento).
+  const splitExtraCount = useMemo(() => {
+    let count = 0;
+    extrasMap.forEach((_, dateStr) => {
+      if (leaveDates.has(dateStr) || workingDays.get(dateStr)?.isGivenAway) count += 1;
+    });
+    return count;
+  }, [extrasMap, leaveDates, workingDays]);
+
   // Trocas do mês consolidadas: um registro por solicitação (protocolo).
   const monthSwaps = useMemo(() => {
     const map = new Map<string, {
@@ -242,7 +256,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
       })),
       leaves: Array.from(leaveDates.entries())
         .filter(([date]) => date >= monthStart && date <= monthEnd)
-        .map(([date, label]) => ({ date, label })),
+        .map(([date, leave]) => ({ date, label: leave.label })),
     };
   };
 
@@ -306,22 +320,36 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
           )}
           {givenAwayCount > 0 && (
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#D1D5DB' }} />
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: CALENDAR_COLORS.off }} />
               <span className="text-muted-foreground">Cedido ({givenAwayCount})</span>
             </div>
           )}
           {extrasMap.size > 0 && (
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#B8860B' }} />
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: CALENDAR_COLORS.extra }} />
               <span className="text-muted-foreground">Extra ({extrasMap.size})</span>
             </div>
           )}
+          {splitExtraCount > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div
+                className="w-3 h-3 rounded-sm"
+                style={{ background: `linear-gradient(135deg, ${CALENDAR_COLORS.off} 50%, ${CALENDAR_COLORS.extra} 50%)` }}
+              />
+              <span className="text-muted-foreground">Extra em dia de folga ({splitExtraCount})</span>
+            </div>
+          )}
           {leaveDates.size > 0 && (() => {
-            const leaveTypes = new Map<string, number>();
-            leaveDates.forEach(label => leaveTypes.set(label, (leaveTypes.get(label) || 0) + 1));
-            return Array.from(leaveTypes.entries()).map(([label, count]) => (
+            const leaveTypes = new Map<string, { count: number; isHourBank: boolean }>();
+            leaveDates.forEach(({ label, isHourBank }) => {
+              leaveTypes.set(label, { count: (leaveTypes.get(label)?.count || 0) + 1, isHourBank });
+            });
+            return Array.from(leaveTypes.entries()).map(([label, { count, isHourBank }]) => (
               <div key={label} className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#DC2626' }} />
+                <div
+                  className="w-3 h-3 rounded-sm"
+                  style={{ backgroundColor: isHourBank ? CALENDAR_COLORS.off : CALENDAR_COLORS.leave }}
+                />
                 <span className="text-muted-foreground">{label} ({count})</span>
               </div>
             ));
@@ -351,14 +379,16 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               const inMonth = isSameMonth(day, currentMonth);
               const today = isToday(day);
               const extraDay = extrasMap.get(dateStr);
-              const leaveLabel = leaveDates.get(dateStr);
+              const leave = leaveDates.get(dateStr);
+              const view = describeCalendarDay(workDay, extraDay, leave);
+              const darkText = !!leave?.isHourBank || (!leave && !!workDay?.isGivenAway);
 
               // Não faz sentido pedir folga de um plantão que já foi cedido em troca,
               // nem de um dia já coberto por outro afastamento.
-              const blockedForSelection = !!workDay?.isGivenAway || !!leaveLabel;
+              const blockedForSelection = !!workDay?.isGivenAway || !!leave;
               const selectable = selectionMode && inMonth && !blockedForSelection;
 
-               return (
+              const cell = (
                 <div
                   key={dateStr}
                   onClick={() => selectable && onDateSelect?.(dateStr)}
@@ -369,40 +399,17 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                     ${selectionMode && selectedDate === dateStr ? 'ring-2 ring-yellow-400 ring-offset-2' : ''}
                     ${selectable ? 'cursor-pointer hover:opacity-80' : ''}
                     ${selectionMode && inMonth && blockedForSelection ? 'cursor-not-allowed opacity-60' : ''}
-                    ${leaveLabel || (workDay && !workDay.isGivenAway) || extraDay ? 'text-white font-semibold' : workDay?.isGivenAway ? 'text-gray-700 font-semibold' : 'text-foreground'}
+                    ${view.textClass}
                   `}
-                  style={
-                    leaveLabel
-                      ? { backgroundColor: '#DC2626' }
-                      : workDay?.isGivenAway
-                        ? { backgroundColor: '#D1D5DB' }
-                        : workDay && extraDay
-                          ? { background: `linear-gradient(135deg, ${workDay.teamColor} 70%, #B8860B 30%)` }
-                          : workDay
-                            ? (workDay.isSwapped && workDay.originalTeamColor ? { background: `linear-gradient(135deg, ${workDay.teamColor} 90%, ${workDay.originalTeamColor} 10%)` } : { backgroundColor: workDay.teamColor })
-                            : extraDay
-                              ? { backgroundColor: '#B8860B' }
-                              : undefined
-                  }
-                  title={
-                    leaveLabel
-                      ? leaveLabel
-                      : workDay?.isGivenAway
-                        ? `Cedido para ${workDay.coveredByName || ''}`
-                        : workDay && extraDay
-                          ? `${workDay.teamName} + Extra ${extraDay.percentage_type}%`
-                          : workDay
-                            ? `${workDay.teamName}${workDay.isSwapped ? ` (troca com ${workDay.originalOwnerName || ''})` : ''}`
-                            : extraDay
-                              ? `Extra ${extraDay.percentage_type}% — ${extraDay.justification}`
-                              : undefined
-                  }
+                  style={view.style}
                 >
                   <span className="text-sm">{format(day, 'd')}</span>
-                  {leaveLabel ? (
-                    <span className="text-[8px] leading-tight text-white/90 font-bold">{leaveLabel}</span>
+                  {leave ? (
+                    <span className={`text-[8px] leading-tight font-bold truncate max-w-full px-0.5 ${darkText ? 'text-gray-700' : 'text-white/90'}`}>
+                      {leave.label}
+                    </span>
                   ) : workDay?.isGivenAway ? (
-                    <span className="text-[8px] leading-tight text-gray-600 truncate max-w-full px-0.5">
+                    <span className="text-[8px] leading-tight text-gray-700 truncate max-w-full px-0.5">
                       {workDay.coveredByName?.split(' ')[0] || 'Cedido'}
                     </span>
                   ) : extraDay && !workDay ? (
@@ -423,13 +430,37 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
                       {workDay.teamName}
                     </span>
                   ) : null}
-                  {workDay?.isSwapped && !leaveLabel && (
+                  {view.isSplitExtra && (
+                    <span
+                      className="mt-0.5 rounded-sm px-1 text-[8px] leading-tight font-bold text-white"
+                      style={{ backgroundColor: CALENDAR_COLORS.extra }}
+                    >
+                      + Extra
+                    </span>
+                  )}
+                  {workDay?.isSwapped && !leave && (
                     <ArrowRightLeft className="absolute top-0.5 right-0.5 h-2.5 w-2.5 text-white/80" />
                   )}
-                  {extraDay && workDay && !leaveLabel && (
+                  {extraDay && workDay && !workDay.isGivenAway && !leave && (
                     <span className="absolute bottom-0.5 right-0.5 text-[7px] text-yellow-200 font-bold">E</span>
                   )}
                 </div>
+              );
+
+              if (!inMonth || view.details.length === 0) return cell;
+
+              return (
+                <Tooltip key={dateStr}>
+                  <TooltipTrigger asChild>{cell}</TooltipTrigger>
+                  <TooltipContent className="max-w-xs text-xs space-y-1">
+                    <p className="font-semibold capitalize">
+                      {format(day, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                    </p>
+                    {view.details.map(line => (
+                      <p key={line} className="text-muted-foreground">{line}</p>
+                    ))}
+                  </TooltipContent>
+                </Tooltip>
               );
             })}
           </div>
