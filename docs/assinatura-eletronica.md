@@ -72,6 +72,7 @@ Garantias:
   - mostra protocolo, datas, situação e as assinaturas;
   - por privacidade, só primeiro nome + inicial do sobrenome; sem motivo, telefone ou IP;
   - avisa se os termos atuais da troca não conferem com os assinados, ou se a troca foi excluída.
+- Na tela de trocas do coordenador (`AdminSwaps`), o botão "Verificar comprovante" abre a mesma verificação num diálogo (aceita o código ou o link colado), e o botão "Verificar" de cada troca já abre com o código dela. Página e diálogo usam `SwapVerificationResult`.
 - As mensagens de WhatsApp de aprovação trazem o código de verificação.
 
 ---

@@ -19,6 +19,7 @@ import { SwapRequest, Profile, Team } from '@/lib/types';
 import { SWAP_STATUS_CONFIG } from '@/lib/constants';
 import { printSwapReceipt } from '@/utils/printSwapReceipt';
 import { SignatureFields } from '@/components/swaps/SignatureFields';
+import { SwapVerificationDialog } from '@/components/swaps/SwapVerificationDialog';
 import { useSignatureFields } from '@/hooks/useSignatureFields';
 import { describeSignatureError, signSwapAction } from '@/lib/swapSignature';
 
@@ -44,7 +45,8 @@ import {
   ArrowDown,
   X,
   CalendarDays,
-  FileText
+  FileText,
+  ShieldCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -75,6 +77,9 @@ const AdminSwaps = () => {
   const signature = useSignatureFields();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<SwapRequest | null>(null);
+
+  const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
+  const [verifyCode, setVerifyCode] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Helper para converter string YYYY-MM-DD em data local (evita problemas de timezone)
@@ -338,6 +343,45 @@ const AdminSwaps = () => {
     }
   };
 
+  // Sem troca: abre o diálogo para digitar/colar o código. Com troca: busca o código dela
+  // (o mesmo em todas as assinaturas) e já mostra o resultado.
+  const openVerification = async (request?: SwapRequest) => {
+    if (!request) {
+      setVerifyCode(null);
+      setIsVerifyDialogOpen(true);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('swap_signatures')
+      .select('verification_code')
+      .eq('swap_id', request.id)
+      .order('signed_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[AdminSwaps][OpenVerification]', error);
+      toast({
+        title: 'Erro ao verificar',
+        description: 'Não foi possível buscar o código de verificação desta troca.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!data?.verification_code) {
+      toast({
+        title: 'Troca sem assinatura eletrônica',
+        description: 'Esta troca é anterior à assinatura eletrônica e não tem código de verificação.',
+      });
+      return;
+    }
+
+    setVerifyCode(data.verification_code);
+    setIsVerifyDialogOpen(true);
+  };
+
   const generatePDF = async (request: SwapRequest) => {
     try {
       const opened = await printSwapReceipt(request);
@@ -582,13 +626,17 @@ const AdminSwaps = () => {
   return (
     <AppLayout title="Gerenciar Trocas" user={{ name: profile?.name || 'Admin', role: 'ADMIN' }}>
       {/* Back to Dashboard Button */}
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
         <Link to="/dashboard/admin">
           <Button variant="outline" className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             Voltar ao Dashboard
           </Button>
         </Link>
+        <Button variant="outline" className="gap-2" onClick={() => openVerification()}>
+          <ShieldCheck className="h-4 w-4 text-primary" />
+          Verificar comprovante
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -988,6 +1036,16 @@ const AdminSwaps = () => {
                               <FileDown className="h-4 w-4" />
                               PDF
                             </Button>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openVerification(request)}
+                              className="gap-2"
+                            >
+                              <ShieldCheck className="h-4 w-4" />
+                              Verificar
+                            </Button>
                             
                             {request.status === 'ACCEPTED' && request.target_confirmation && (
                               <>
@@ -1031,6 +1089,12 @@ const AdminSwaps = () => {
           })
         )}
       </div>
+
+      <SwapVerificationDialog
+        open={isVerifyDialogOpen}
+        onOpenChange={setIsVerifyDialogOpen}
+        initialCode={verifyCode}
+      />
 
       {/* Decision Dialog */}
       <Dialog
