@@ -25,7 +25,8 @@ O lint tem dezenas de problemas antigos (`any`, `prefer-const`): compare antes/d
 - **Edge Functions:** não sobem com o push. `npx -y supabase@2.20.12 functions deploy <nome> --project-ref wyoysecfbmmidjiofymg --use-api` com `SUPABASE_ACCESS_TOKEN` fornecido pelo dono. Passe `--no-verify-jwt` nas que têm `verify_jwt = false` em `supabase/config.toml`.
 - **Migrations:** não sobem com o push e `supabase_migrations.schema_migrations` parou de ser atualizada em 2026-04. Aplicar o SQL manualmente; ensaiar antes numa transação com `ROLLBACK` simulando usuários (`set local role authenticated` + `request.jwt.claims`).
 - **Ordem:** se o frontend depende de função/migration nova, publique a função e a migration ANTES do push (em 2026-10-23 um push antecipado deixou os avisos fora do ar por ~20 min).
-- **Versão:** `npm version X.Y.Z --no-git-tag-version` + `src/lib/version.ts` + `public/version.json`. `forceUpdate: true` recarrega clientes antigos (PWA); usar quando a versão antiga quebraria com a mudança.
+- **Versão:** `npm version X.Y.Z --no-git-tag-version` + `src/lib/version.ts` + `public/version.json`. `forceUpdate: true` recarrega clientes antigos (PWA); usar quando a versão antiga quebraria com a mudança e desligar depois de 1–2 dias (a da 4.6.0 foi desligada em 2026-11-03). Com `false`, quem está em versão antiga vê o aviso "Nova versão disponível". Ajustes pequenos sem bump de versão chegam quando a página recarrega.
+- **Conferir publicação:** o site atualiza ~2 min após o push; compare o `assets/index-*.js` de `https://escalasmart.com.br/` antes/depois e procure o trecho novo no bundle.
 
 ## Regras do domínio que não podem quebrar
 
@@ -33,6 +34,8 @@ O lint tem dezenas de problemas antigos (`any`, `prefer-const`): compare antes/d
 - **Trocas são atos assinados** (`docs/assinatura-eletronica.md`): toda mudança de status de `swap_requests` feita por usuário precisa vir de `signSwapAction` (`src/lib/swapSignature.ts`), senão o banco recusa com `ASSINATURA_REQUER_SENHA`. Termos (pessoas, datas, motivo, `admin_id`) são congelados depois de solicitada (`TERMOS_CONGELADOS`). `swap_signatures` é append-only.
 - **Transições de status** são validadas no banco (`enforce_swap_request_transition`); não confie só na UI.
 - **Avisos de WhatsApp das trocas saem do banco**, não do navegador: trigger → fila `swap_notifications` → `notify-swap-event` (`docs/sistema-avisos-trocas.md`). Não volte a chamar edge function de aviso a partir das telas.
+- **Saldo TRE = `total_days` − `pre_used_days` − dias de TRE não recusados** (pendente já desconta). A mesma regra vale em `AdminLeaves.tsx` (tabela do coordenador) e `GuardDashboard.tsx` (painel do segurança); se mudar uma, mude a outra. Até 2026-11-03 a do coordenador contava recusados.
+- **TRE pelo segurança:** só cria e só cancela pedido `PENDING`, e isso vale no banco (RLS `20261103120000_tre_leave_guard_rules`). Aprovado ou recusado só o coordenador remove.
 - **Textos de WhatsApp** só em `supabase/functions/_shared/messages.ts` (aprovados pela coordenação: sem "mensagem automática", sem artigo antes de nome, datas com dia da semana).
 
 ## Segurança (aprendido na revisão de 2026-10-23)
@@ -47,4 +50,5 @@ O lint tem dezenas de problemas antigos (`any`, `prefer-const`): compare antes/d
 ## Acesso ao banco
 
 - `wyoysecfbmmidjiofymg` não está na conta Supabase conectada ao MCP (permission denied). Consultas via `psql`/`pg` com a connection string que o dono fornecer; escritas em produção costumam ser barradas pelo modo automático — prepare o script e peça para o dono rodar com `!`.
-- Nunca commitar credenciais: o arquivo local `acessos` fica fora do Git (`.git/info/exclude`).
+- Nunca commitar credenciais: o arquivo local `acessos` fica fora do Git (`.git/info/exclude`). As chaves dele estão desativadas desde a limpeza de 2026-10-23 (401).
+- Caminho que funciona (2026-11-03): script Node em pasta temporária, rodado pelo dono com `!`, lendo a chave de variável de ambiente. Para dados, REST (`/rest/v1/...`) com `SUPABASE_KEY` (secret `sb_secret_...`). Para catálogo/regras (`pg_policies` etc.), Management API `POST https://api.supabase.com/v1/projects/wyoysecfbmmidjiofymg/database/query` com `{"query": ..., "read_only": true}` e `SUPABASE_ACCESS_TOKEN` (`sbp_...`). Não ler chaves de arquivo nem pedir para colar na conversa.

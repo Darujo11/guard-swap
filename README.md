@@ -196,6 +196,11 @@ Definidas em `src/App.tsx`.
 
 - Registro de pedidos de folga com periodo, tipo e observacoes.
 - Controle de cotas TRE por profissional (`guard_tre_quotas`).
+  - Saldo = cota total - dias ja usados antes do sistema (`pre_used_days`) - dias de TRE nao
+    recusados. Pedido pendente ja desconta; recusado nao conta (igual nas telas do coordenador
+    e do seguranca desde 2026-11-03).
+  - O seguranca so cria e so cancela TRE pendente (regra no banco, migration
+    `20261103120000_tre_leave_guard_rules`). TRE aprovado ou recusado so o coordenador remove.
 - Notificacao de solicitacao para admin.
 - Notificacao de decisao (aprovado/rejeitado) para guarda.
 
@@ -406,6 +411,7 @@ e `public/version.json`. `forceUpdate: true` recarrega quem estiver na versao an
 - Cadastro aberto do Supabase Auth desligado (`disable_signup`); contas so via edge functions.
 - Edge functions administrativas exigem super_admin; `create-guard` exige admin da propria organizacao.
 - Assinatura eletronica com senha recente nos atos de troca (`swap_signatures`).
+- Afastamentos TRE: o seguranca so insere ou apaga TRE com status `PENDING` (RLS, 2026-11-03).
 - Comprovantes impressos com `escapeHtml` + CSP `default-src 'none'` (`src/lib/html.ts`).
 
 ### Pontos de atencao abertos (revisao de 2026-10-23)
