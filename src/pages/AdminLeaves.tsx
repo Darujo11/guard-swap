@@ -46,6 +46,7 @@ interface Leave {
   end_date: string;
   notes: string | null;
   document_url: string | null;
+  status: string;
   created_at: string;
   guard?: Guard;
 }
@@ -908,7 +909,8 @@ export default function AdminLeaves() {
 
             {/* Quota table */}
             {(() => {
-              const treLeaves = leaves.filter(l => l.leave_type === 'TRE');
+              // Pedido recusado não consome cota (mesma regra da tela do segurança)
+              const treLeaves = leaves.filter(l => l.leave_type === 'TRE' && l.status !== 'REJECTED');
               const guardsWithQuota = guards.map(guard => {
                 const quota = treQuotas.find(q => q.guard_id === guard.id);
                 const totalDays = quota?.total_days || 0;

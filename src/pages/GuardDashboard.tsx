@@ -806,7 +806,8 @@ const GuardDashboard = () => {
                     >
                       <Download className="h-4 w-4" />
                     </Button>
-                    {leave.status !== 'REJECTED' && (
+                    {/* Só pedido pendente pode ser cancelado; aprovado só o coordenador remove */}
+                    {leave.status === 'PENDING' && (
                       <Button
                         variant="destructive"
                         size="sm"
