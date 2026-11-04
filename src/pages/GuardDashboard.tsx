@@ -352,6 +352,13 @@ const GuardDashboard = () => {
     }
   };
 
+  // Dias com TRE já pedido e ainda pendente: não podem ser pedidos de novo.
+  // (Aprovado o calendário já bloqueia; recusado pode ser pedido outra vez.)
+  const pendingTreDates = useMemo(
+    () => new Set(treLeaves.filter((l) => l.status === 'PENDING').map((l) => l.start_date)),
+    [treLeaves],
+  );
+
   // Ranking filtrado por tipo de porcentagem
   const rankingFiltered = useMemo(() => {
     let filteredExtras = allGuardsExtras;
@@ -664,7 +671,7 @@ const GuardDashboard = () => {
           <DialogHeader>
             <DialogTitle>Solicitar Afastamento TRE</DialogTitle>
             <DialogDescription>
-              Selecione o dia do afastamento. Saldo disponível: {treQuota - treUsed} dia(s).
+              Selecione um dia de plantão seu. Dias sem plantão, plantões cedidos em troca e dias que já têm afastamento ou pedido pendente ficam bloqueados. Saldo disponível: {treQuota - treUsed} dia(s).
             </DialogDescription>
           </DialogHeader>
           {currentUser.team_id && (
@@ -676,14 +683,15 @@ const GuardDashboard = () => {
               selectionMode
               selectedDate={treSelectedDate}
               onDateSelect={(date) => setTreSelectedDate(date)}
+              blockedDates={pendingTreDates}
             />
           )}
           {treSelectedDate && (
-            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-muted rounded-lg">
               <span className="text-sm">
                 Dia selecionado: <strong>{format(new Date(treSelectedDate + 'T00:00:00'), 'dd/MM/yyyy')}</strong>
               </span>
-              <Button onClick={handleSubmitTreLeave} disabled={submittingTre}>
+              <Button onClick={handleSubmitTreLeave} disabled={submittingTre} className="w-full sm:w-auto">
                 {submittingTre ? 'Enviando...' : 'Solicitar Afastamento'}
               </Button>
             </div>

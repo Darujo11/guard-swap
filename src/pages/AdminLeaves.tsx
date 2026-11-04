@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { CalendarOff, CalendarIcon, Plus, Pencil, Trash2, FileText, ChevronLeft, ChevronRight, Scale, Save, Download, Paperclip, Undo2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { appendTreDecisionNote, isValidTreReason, LEAVE_STATUS_LABELS, TRE_REASON_MIN_LENGTH } from '@/lib/treDecision';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -62,15 +63,6 @@ const LEAVE_TYPES = [
   { value: 'LICENCA_NAO_REMUNERADA', label: 'Licença não remunerada' },
   { value: 'OUTRO', label: 'Outro' },
 ];
-
-const LEAVE_STATUS_LABELS: Record<string, string> = {
-  APPROVED: 'Aprovado',
-  REJECTED: 'Recusado',
-  PENDING: 'Pendente',
-};
-
-// Motivo obrigatório para reverter a decisão de um TRE: fica nas observações e na auditoria.
-const REVERT_REASON_MIN_LENGTH = 10;
 
 export default function AdminLeaves() {
   const { profile } = useAuth();
@@ -516,14 +508,17 @@ export default function AdminLeaves() {
 
   const handleRevertDecision = async () => {
     if (!revertLeave || !profile) return;
+    if (!isValidTreReason(revertReason)) return;
     const reason = revertReason.trim();
-    if (reason.length < REVERT_REASON_MIN_LENGTH) return;
 
     const fromStatus = revertLeave.status;
     const toStatus = fromStatus === 'APPROVED' ? 'REJECTED' : 'APPROVED';
-    const entry = `Decisão revertida em ${format(new Date(), 'dd/MM/yyyy')} por ${profile.name} `
-      + `(${LEAVE_STATUS_LABELS[fromStatus]} → ${LEAVE_STATUS_LABELS[toStatus]}): ${reason}`;
-    const notes = revertLeave.notes ? `${revertLeave.notes}\n${entry}` : entry;
+    const notes = appendTreDecisionNote(
+      revertLeave.notes,
+      `Decisão revertida (${LEAVE_STATUS_LABELS[fromStatus]} → ${LEAVE_STATUS_LABELS[toStatus]})`,
+      profile.name,
+      reason,
+    );
 
     try {
       setReverting(true);
@@ -1544,7 +1539,7 @@ export default function AdminLeaves() {
                     />
                     <p className="text-xs text-muted-foreground">
                       Fica registrado nas observações do afastamento e na auditoria.
-                      {reasonLength < REVERT_REASON_MIN_LENGTH && ` Mínimo de ${REVERT_REASON_MIN_LENGTH} caracteres.`}
+                      {reasonLength < TRE_REASON_MIN_LENGTH && ` Mínimo de ${TRE_REASON_MIN_LENGTH} caracteres.`}
                     </p>
                   </div>
                 </div>
@@ -1555,7 +1550,7 @@ export default function AdminLeaves() {
                   </Button>
                   <Button
                     onClick={handleRevertDecision}
-                    disabled={reverting || reasonLength < REVERT_REASON_MIN_LENGTH}
+                    disabled={reverting || reasonLength < TRE_REASON_MIN_LENGTH}
                     variant={toApproved ? 'default' : 'destructive'}
                   >
                     {reverting ? 'Salvando...' : toApproved ? 'Aprovar TRE' : 'Recusar TRE'}

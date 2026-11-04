@@ -33,6 +33,8 @@ interface GuardPersonalCalendarProps {
   selectionMode?: boolean;
   selectedDate?: string | null;
   onDateSelect?: (date: string) => void;
+  /** No modo seleção, dias que também não podem ser escolhidos (ex.: TRE já pedido e ainda pendente). */
+  blockedDates?: ReadonlySet<string>;
   /** Título do card. Padrão: "Minha Escala". */
   title?: string;
   /** Exibe o painel com as trocas do mês (protocolo, colega e datas). */
@@ -41,7 +43,7 @@ interface GuardPersonalCalendarProps {
 
 interface WorkingDay extends EffectiveDay {}
 
-export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, guardName, selectionMode, selectedDate, onDateSelect, title = 'Minha Escala', showSwapDetails = false }: GuardPersonalCalendarProps) {
+export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, guardName, selectionMode, selectedDate, onDateSelect, blockedDates, title = 'Minha Escala', showSwapDetails = false }: GuardPersonalCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [teamSchedules, setTeamSchedules] = useState<any[]>([]);
   const [swapRequests, setSwapRequests] = useState<any[]>([]);
@@ -278,7 +280,8 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
   return (
     <Card className="mb-6">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        {/* flex-wrap: no celular (e dentro do diálogo de TRE) título e navegação não cabem numa linha */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">{title}</CardTitle>
@@ -287,7 +290,7 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(prev => subMonths(prev, 1))}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm font-medium min-w-[140px] text-center capitalize">
+            <span className="text-sm font-medium min-w-[112px] sm:min-w-[140px] text-center capitalize">
               {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
             </span>
             <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}>
@@ -383,9 +386,10 @@ export function GuardPersonalCalendar({ guardId, teamId, teamColor, teamName, gu
               const view = describeCalendarDay(workDay, extraDay, leave);
               const darkText = !!leave?.isHourBank || (!leave && !!workDay?.isGivenAway);
 
-              // Não faz sentido pedir folga de um plantão que já foi cedido em troca,
-              // nem de um dia já coberto por outro afastamento.
-              const blockedForSelection = !!workDay?.isGivenAway || !!leave;
+              // Só se pede afastamento de dia em que o segurança está de plantão (escala efetiva:
+              // inclui plantão assumido em troca). Fica bloqueado dia sem plantão, plantão cedido
+              // em troca, dia já coberto por outro afastamento e dia com pedido ainda pendente.
+              const blockedForSelection = !workDay || !!workDay.isGivenAway || !!leave || !!blockedDates?.has(dateStr);
               const selectable = selectionMode && inMonth && !blockedForSelection;
 
               const cell = (

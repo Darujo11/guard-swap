@@ -23,6 +23,7 @@ import autoTable from 'jspdf-autotable';
 import { SignatureFields } from '@/components/swaps/SignatureFields';
 import { useSignatureFields } from '@/hooks/useSignatureFields';
 import { describeSignatureError, signSwapAction } from '@/lib/swapSignature';
+import { appendTreDecisionNote, isValidTreReason, TRE_REASON_MIN_LENGTH } from '@/lib/treDecision';
 
 import {
   Users,
@@ -35,6 +36,16 @@ import {
   Scale,
   Download
 } from 'lucide-react';
+
+/** Campos do pedido de TRE pendente que o painel usa para decidir. */
+type PendingTreLeave = {
+  id: string;
+  guard_id: string;
+  start_date: string;
+  end_date: string;
+  notes: string | null;
+  guard?: { name?: string | null; phone?: string | null } | null;
+};
 
 const AdminDashboard = () => {
   const { profile } = useAuth();
@@ -57,6 +68,10 @@ const AdminDashboard = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<SwapRequest | null>(null);
   const [calendarReloadKey, setCalendarReloadKey] = useState(0);
+  // Recusa de TRE com motivo obrigatório
+  const [treRejectLeave, setTreRejectLeave] = useState<PendingTreLeave | null>(null);
+  const [treRejectReason, setTreRejectReason] = useState('');
+  const [treDeciding, setTreDeciding] = useState(false);
   
   // TRE leave states
   const [pendingTreLeaves, setPendingTreLeaves] = useState<any[]>([]);
@@ -168,13 +183,52 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleTreDecision = async (leave: any, approved: boolean) => {
+  const closeTreRejectDialog = () => {
+    setTreRejectLeave(null);
+    setTreRejectReason('');
+  };
+
+  // Aprovar: um clique. Recusar: exige motivo (vai para as observações e para a auditoria).
+  const handleTreDecision = async (leave: PendingTreLeave, approved: boolean, reason?: string) => {
+    if (!profile) return;
+    if (!approved && !isValidTreReason(reason || '')) return;
     try {
-      const { error } = await supabase
+      setTreDeciding(true);
+      const update: { status: string; notes?: string } = { status: approved ? 'APPROVED' : 'REJECTED' };
+      if (!approved) update.notes = appendTreDecisionNote(leave.notes, 'Recusado', profile.name, reason!);
+
+      // .eq('status', 'PENDING'): não sobrescreve decisão tomada em outra aba/por outra pessoa.
+      const { data, error } = await supabase
         .from('leaves')
-        .update({ status: approved ? 'APPROVED' : 'REJECTED' })
-        .eq('id', leave.id);
+        .update(update)
+        .eq('id', leave.id)
+        .eq('status', 'PENDING')
+        .select('id');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        toast({
+          title: 'Nada foi alterado',
+          description: 'Este pedido já tinha sido decidido. A lista foi atualizada.',
+          variant: 'destructive',
+        });
+        closeTreRejectDialog();
+        fetchPendingTreLeaves();
+        return;
+      }
+
+      const { error: auditError } = await supabase.from('audit_logs').insert({
+        user_id: profile.id,
+        action: approved ? 'TRE_APPROVED' : 'TRE_REJECTED',
+        entity_type: 'leave',
+        entity_id: leave.id,
+        details: {
+          ...(approved ? {} : { reason: reason!.trim() }),
+          guard_id: leave.guard_id,
+          start_date: leave.start_date,
+          end_date: leave.end_date,
+        },
+      });
+      if (auditError) console.error('[AdminDashboard][TreDecision] Falha ao gravar auditoria:', auditError);
 
       // Notify guard via WhatsApp (fire-and-forget)
       supabase.functions.invoke('notify-tre-leave-guard', {
@@ -191,10 +245,15 @@ const AdminDashboard = () => {
         title: approved ? 'Afastamento aprovado' : 'Afastamento rejeitado',
         description: `O afastamento TRE de ${leave.guard?.name} foi ${approved ? 'aprovado' : 'rejeitado'}.`,
       });
+      closeTreRejectDialog();
       fetchPendingTreLeaves();
+      // A escala do dia passa a mostrar (ou não) o afastamento.
+      setCalendarReloadKey((k) => k + 1);
     } catch (error) {
       console.error('[AdminDashboard][TreDecision]', error);
       toast({ title: 'Erro', description: 'Não foi possível processar a decisão.', variant: 'destructive' });
+    } finally {
+      setTreDeciding(false);
     }
   };
 
@@ -544,6 +603,7 @@ const AdminDashboard = () => {
                         variant="default"
                         size="sm"
                         onClick={() => handleTreDecision(leave, true)}
+                        disabled={treDeciding}
                         className="gap-1"
                       >
                         <CheckCircle className="h-4 w-4" />
@@ -552,7 +612,8 @@ const AdminDashboard = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleTreDecision(leave, false)}
+                        onClick={() => { setTreRejectReason(''); setTreRejectLeave(leave); }}
+                        disabled={treDeciding}
                         className="gap-1 text-destructive hover:bg-destructive hover:text-destructive-foreground"
                       >
                         <XCircle className="h-4 w-4" />
@@ -701,6 +762,46 @@ const AdminDashboard = () => {
               variant="destructive"
             >
               Excluir Solicitação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Recusar TRE: motivo obrigatório */}
+      <Dialog open={!!treRejectLeave} onOpenChange={(open) => { if (!open && !treDeciding) closeTreRejectDialog(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Recusar afastamento TRE</DialogTitle>
+            <DialogDescription>
+              {treRejectLeave?.guard?.name || 'Segurança'}
+              {treRejectLeave && ` · ${format(new Date(`${treRejectLeave.start_date}T00:00:00`), "dd/MM/yyyy (EEEE)", { locale: ptBR })}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="tre-reject-reason">Motivo da recusa (obrigatório)</Label>
+            <Textarea
+              id="tre-reject-reason"
+              value={treRejectReason}
+              onChange={(e) => setTreRejectReason(e.target.value)}
+              placeholder="Ex.: comprovante do TRE não apresentado."
+              rows={3}
+              maxLength={500}
+            />
+            <p className="text-xs text-muted-foreground">
+              Fica registrado nas observações do afastamento e na auditoria. O dia não conta como afastamento nem desconta do saldo.
+              {!isValidTreReason(treRejectReason) && ` Mínimo de ${TRE_REASON_MIN_LENGTH} caracteres.`}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeTreRejectDialog} disabled={treDeciding}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => treRejectLeave && handleTreDecision(treRejectLeave, false, treRejectReason)}
+              disabled={treDeciding || !isValidTreReason(treRejectReason)}
+            >
+              {treDeciding ? 'Salvando...' : 'Recusar TRE'}
             </Button>
           </DialogFooter>
         </DialogContent>
