@@ -19,6 +19,8 @@ npx -y deno@2.1.4 test --no-lock --allow-env supabase/functions/_shared/messages
 
 O lint tem dezenas de problemas antigos (`any`, `prefer-const`): compare antes/depois nos arquivos tocados em vez de exigir zero.
 
+**Testar tela sem tocar produção** (usado em 2026-11-04): Playwright global (`require($(npm root -g)/playwright)`) contra o `npm run dev`, com `context.route(/supabase\.co/)` respondendo TUDO com dados falsos (sessão fake no `localStorage` em `sb-wyoysecfbmmidjiofymg-auth-token`, `user_roles`/`profiles` conforme o papel, PATCH/POST só registrados). Rotas usam hash: `http://localhost:8080/#/admin/folgas`. O `google-chrome --headless --screenshot` sozinho captura só o spinner do login; use Playwright. Mock incompleto quebra telas (ex.: troca sem `created_at` derruba `GuardSwapList`) — não é bug do app.
+
 ## Deploy (o projeto NÃO está mais no Lovable)
 
 - **Frontend:** push na `main` publica sozinho em `escalasmart.com.br` (Cloudflare, ~1 min). Não existe staging.
@@ -47,7 +49,7 @@ O lint tem dezenas de problemas antigos (`any`, `prefer-const`): compare antes/d
 - Funções `SECURITY DEFINER` em `public` viram RPC para anon por padrão: `revoke execute ... from public, anon, authenticated` quando não forem para o app. Não revogue as usadas dentro de policies (`has_role`, `get_profile_id`, `get_user_admin_id`, `is_admin_active`, `user_belongs_to_admin_org`).
 - Cadastro aberto do Auth está desligado (`disable_signup`); contas só pelas edge functions.
 - HTML montado como string (comprovantes) passa por `escapeHtml` e leva `PRINT_DOCUMENT_CSP_META` (`src/lib/html.ts`). Links gravados por usuários só abrem via `getSafeUrlWithPrefix`.
-- Pendências conhecidas: ver "Pontos de atenção abertos" no README (senha padrão `123456`, `notify-tre-leave*` e `forgot-password` abertos, etc.).
+- Pendências conhecidas: ver "Pontos de atenção abertos" no README (senha padrão `123456`, `notify-tre-leave*` e `forgot-password` abertos, etc.) e "Pendências do processo de afastamentos" (TRE pendente fora da escala, afastamento de vários dias, trava de dia sem plantão só na tela).
 
 ## Acesso ao banco
 

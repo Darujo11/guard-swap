@@ -201,8 +201,18 @@ Definidas em `src/App.tsx`.
     e do seguranca desde 2026-11-03).
   - O seguranca so cria e so cancela TRE pendente (regra no banco, migration
     `20261103120000_tre_leave_guard_rules`). TRE aprovado ou recusado so o coordenador remove.
+- Pedido de TRE pelo seguranca so em dia de plantao da escala efetiva (inclui plantao assumido em
+  troca). Bloqueados: dia sem plantao, plantao cedido, dia com afastamento e dia com TRE pendente.
+  A trava esta so na tela (`GuardPersonalCalendar` em modo selecao), nao no banco.
+- Decisoes de TRE deixam rastro (`src/lib/treDecision.ts`, desde 2026-11-04):
+  - Aprovar no painel: um clique, grava `TRE_APPROVED` em `audit_logs`.
+  - Recusar no painel: motivo obrigatorio (10+ caracteres) nas observacoes e em `audit_logs`
+    (`TRE_REJECTED`).
+  - Reverter decisao (aprovado <-> recusado): botao em Afastamentos, motivo obrigatorio,
+    `TRE_DECISION_REVERTED`. Nao compensar recusa mexendo em `pre_used_days`.
+  - Todas as decisoes sao condicionadas ao status atual: nao sobrescrevem decisao de outra aba.
 - Notificacao de solicitacao para admin.
-- Notificacao de decisao (aprovado/rejeitado) para guarda.
+- Notificacao de decisao (aprovado/rejeitado) para guarda (sem o motivo; reverter nao notifica).
 
 ### 6.7 Fichas e observacoes
 
@@ -424,6 +434,17 @@ e `public/version.json`. `forceUpdate: true` recarrega quem estiver na versao an
 - `suspend_expired_admins` / `check_admin_subscription_status` executaveis por anon.
 - `keep_alive` sem RLS; bucket `leave-documents` publico.
 - Datas sem hora exibidas com `new Date('AAAA-MM-DD')` em `SuperAdminReports.tsx` (um dia antes).
+
+### Pendencias do processo de afastamentos (revisao de 2026-11-04)
+
+- TRE pendente nao aparece na escala/calendario/PDF; se o coordenador nao decide antes do dia,
+  a escala mostra o seguranca de plantao.
+- Na escala do coordenador (`AdminDutyCalendar`), afastamento de varios dias (exceto ferias) so
+  aparece no 1o dia, mas o saldo conta todos os dias.
+- Afastamento em dia em que o seguranca nao esta na escala some da escala do coordenador sem aviso.
+- Mudancas em `pre_used_days` ("ja tiradas") nao ficam registradas.
+- Pedido de TRE em dia sem plantao e bloqueado so na tela; falta trava no banco.
+- Confirmar com a coordenacao se TRE em dia so de extra deve ser aceito (hoje fica bloqueado).
 
 ## 13) Operacao, logs e troubleshooting
 
