@@ -11,7 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { CalendarOff, CalendarIcon, Plus, Pencil, Trash2, FileText, ChevronLeft, ChevronRight, Scale, Save, Download, Paperclip } from 'lucide-react';
+import { CalendarOff, CalendarIcon, Plus, Pencil, Trash2, FileText, ChevronLeft, ChevronRight, Scale, Save, Download, Paperclip, Undo2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -62,6 +63,15 @@ const LEAVE_TYPES = [
   { value: 'OUTRO', label: 'Outro' },
 ];
 
+const LEAVE_STATUS_LABELS: Record<string, string> = {
+  APPROVED: 'Aprovado',
+  REJECTED: 'Recusado',
+  PENDING: 'Pendente',
+};
+
+// Motivo obrigatório para reverter a decisão de um TRE: fica nas observações e na auditoria.
+const REVERT_REASON_MIN_LENGTH = 10;
+
 export default function AdminLeaves() {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -87,6 +97,11 @@ export default function AdminLeaves() {
   // Delete dialog state
   const [deleteLeaveId, setDeleteLeaveId] = useState<string | null>(null);
   const [deleteTreQuotaGuardId, setDeleteTreQuotaGuardId] = useState<string | null>(null);
+
+  // Reverter decisão de TRE (aprovado <-> recusado)
+  const [revertLeave, setRevertLeave] = useState<Leave | null>(null);
+  const [revertReason, setRevertReason] = useState('');
+  const [reverting, setReverting] = useState(false);
 
   // Filter state
   const [filterGuard, setFilterGuard] = useState<string>('all');
@@ -478,6 +493,92 @@ export default function AdminLeaves() {
 
   const calculateDays = (start: string, end: string) => {
     return differenceInDays(new Date(end), new Date(start)) + 1;
+  };
+
+  // Só TRE já decidido (aprovado ou recusado) pode ter a decisão revertida.
+  // Pendente se decide no painel; os demais tipos o coordenador edita ou exclui.
+  const canRevertDecision = (leave: Leave) =>
+    leave.leave_type === 'TRE' && (leave.status === 'APPROVED' || leave.status === 'REJECTED');
+
+  /** Saldo TRE do segurança com a mesma regra da tabela de cotas (recusado não consome). */
+  const getTreBalance = (guardId: string) => {
+    const quota = treQuotas.find(q => q.guard_id === guardId);
+    const used = leaves
+      .filter(l => l.guard_id === guardId && l.leave_type === 'TRE' && l.status !== 'REJECTED')
+      .reduce((sum, l) => sum + calculateDays(l.start_date, l.end_date), 0);
+    return (quota?.total_days || 0) - (quota?.pre_used_days || 0) - used;
+  };
+
+  const closeRevertDialog = () => {
+    setRevertLeave(null);
+    setRevertReason('');
+  };
+
+  const handleRevertDecision = async () => {
+    if (!revertLeave || !profile) return;
+    const reason = revertReason.trim();
+    if (reason.length < REVERT_REASON_MIN_LENGTH) return;
+
+    const fromStatus = revertLeave.status;
+    const toStatus = fromStatus === 'APPROVED' ? 'REJECTED' : 'APPROVED';
+    const entry = `Decisão revertida em ${format(new Date(), 'dd/MM/yyyy')} por ${profile.name} `
+      + `(${LEAVE_STATUS_LABELS[fromStatus]} → ${LEAVE_STATUS_LABELS[toStatus]}): ${reason}`;
+    const notes = revertLeave.notes ? `${revertLeave.notes}\n${entry}` : entry;
+
+    try {
+      setReverting(true);
+      // .eq('status', fromStatus): se outra pessoa mudou a decisão com a tela aberta, nada é alterado.
+      const { data, error } = await supabase
+        .from('leaves')
+        .update({ status: toStatus, notes })
+        .eq('id', revertLeave.id)
+        .eq('status', fromStatus)
+        .select('id');
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast({
+          title: 'Nada foi alterado',
+          description: 'A decisão deste afastamento mudou enquanto a tela estava aberta. A lista foi atualizada.',
+          variant: 'destructive',
+        });
+        closeRevertDialog();
+        fetchLeaves();
+        return;
+      }
+
+      const { error: auditError } = await supabase.from('audit_logs').insert({
+        user_id: profile.id,
+        action: 'TRE_DECISION_REVERTED',
+        entity_type: 'leave',
+        entity_id: revertLeave.id,
+        details: {
+          reason,
+          from_status: fromStatus,
+          to_status: toStatus,
+          guard_id: revertLeave.guard_id,
+          start_date: revertLeave.start_date,
+          end_date: revertLeave.end_date,
+        },
+      });
+      if (auditError) console.error('[AdminLeaves][RevertDecision] Falha ao gravar auditoria:', auditError);
+
+      toast({
+        title: 'Decisão revertida',
+        description: `TRE de ${revertLeave.guard?.name || 'segurança'} agora está ${LEAVE_STATUS_LABELS[toStatus].toLowerCase()}.`,
+      });
+      closeRevertDialog();
+      fetchLeaves();
+    } catch (error) {
+      console.error('[AdminLeaves][RevertDecision]', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível reverter a decisão.',
+        variant: 'destructive',
+      });
+    } finally {
+      setReverting(false);
+    }
   };
 
   const filteredLeaves = filterGuard === 'all' 
@@ -1028,7 +1129,17 @@ export default function AdminLeaves() {
                           {leave.guard?.name || 'Desconhecido'}
                         </TableCell>
                         <TableCell>
-                          {getLeaveTypeLabel(leave.leave_type, leave.custom_type)}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span>{getLeaveTypeLabel(leave.leave_type, leave.custom_type)}</span>
+                            {leave.status !== 'APPROVED' && (
+                              <Badge
+                                variant={leave.status === 'REJECTED' ? 'destructive' : 'outline'}
+                                className="text-[10px] px-1.5 py-0"
+                              >
+                                {LEAVE_STATUS_LABELS[leave.status] || leave.status}
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           {format(new Date(`${leave.start_date}T00:00:00`), "dd/MM/yyyy", { locale: ptBR })}
@@ -1039,7 +1150,7 @@ export default function AdminLeaves() {
                         <TableCell className="text-center">
                           {calculateDays(leave.start_date, leave.end_date)}
                         </TableCell>
-                        <TableCell className="max-w-[200px] truncate">
+                        <TableCell className="max-w-[200px] truncate" title={leave.notes || undefined}>
                           {leave.notes || '-'}
                         </TableCell>
                         <TableCell className="text-center">
@@ -1078,6 +1189,17 @@ export default function AdminLeaves() {
                             >
                               <Download className="h-4 w-4" />
                             </Button>
+                            {canRevertDecision(leave) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => { setRevertReason(''); setRevertLeave(leave); }}
+                                title="Reverter decisão"
+                                aria-label="Reverter decisão"
+                              >
+                                <Undo2 className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -1369,6 +1491,81 @@ export default function AdminLeaves() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reverter decisão de TRE */}
+      <Dialog open={!!revertLeave} onOpenChange={(open) => { if (!open && !reverting) closeRevertDialog(); }}>
+        <DialogContent>
+          {revertLeave && (() => {
+            const toApproved = revertLeave.status === 'REJECTED';
+            const days = calculateDays(revertLeave.start_date, revertLeave.end_date);
+            const balanceNow = getTreBalance(revertLeave.guard_id);
+            const balanceAfter = balanceNow + (toApproved ? -days : days);
+            const reasonLength = revertReason.trim().length;
+            const period = format(new Date(`${revertLeave.start_date}T00:00:00`), "dd/MM/yyyy (EEEE)", { locale: ptBR })
+              + (revertLeave.start_date !== revertLeave.end_date
+                ? ` a ${format(new Date(`${revertLeave.end_date}T00:00:00`), 'dd/MM/yyyy', { locale: ptBR })}`
+                : '');
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{toApproved ? 'Aprovar TRE recusado' : 'Recusar TRE aprovado'}</DialogTitle>
+                  <DialogDescription>
+                    {revertLeave.guard?.name || 'Segurança'} · {period}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1">
+                    <p>
+                      Decisão: <strong>{LEAVE_STATUS_LABELS[revertLeave.status]}</strong> → <strong>{LEAVE_STATUS_LABELS[toApproved ? 'APPROVED' : 'REJECTED']}</strong>
+                    </p>
+                    <p>
+                      Saldo TRE: <strong>{balanceNow}</strong> → <strong className={cn(balanceAfter < 0 && 'text-destructive')}>{balanceAfter}</strong> dia(s)
+                    </p>
+                    <p className="text-muted-foreground">
+                      {toApproved
+                        ? 'O dia passa a aparecer como afastamento na escala, no calendário e nos relatórios.'
+                        : 'O dia deixa de ser afastamento e volta a contar como plantão na escala.'}
+                    </p>
+                    {toApproved && balanceAfter < 0 && (
+                      <p className="text-destructive">Atenção: o saldo ficará negativo.</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="revert-reason">Motivo (obrigatório)</Label>
+                    <Textarea
+                      id="revert-reason"
+                      value={revertReason}
+                      onChange={(e) => setRevertReason(e.target.value)}
+                      placeholder="Ex.: comprovante do TRE apresentado depois da recusa."
+                      rows={3}
+                      maxLength={500}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Fica registrado nas observações do afastamento e na auditoria.
+                      {reasonLength < REVERT_REASON_MIN_LENGTH && ` Mínimo de ${REVERT_REASON_MIN_LENGTH} caracteres.`}
+                    </p>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={closeRevertDialog} disabled={reverting}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleRevertDecision}
+                    disabled={reverting || reasonLength < REVERT_REASON_MIN_LENGTH}
+                    variant={toApproved ? 'default' : 'destructive'}
+                  >
+                    {reverting ? 'Salvando...' : toApproved ? 'Aprovar TRE' : 'Recusar TRE'}
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Delete TRE Quota Confirmation */}
       <AlertDialog open={!!deleteTreQuotaGuardId} onOpenChange={() => setDeleteTreQuotaGuardId(null)}>

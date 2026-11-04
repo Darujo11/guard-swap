@@ -36,6 +36,7 @@ O lint tem dezenas de problemas antigos (`any`, `prefer-const`): compare antes/d
 - **Avisos de WhatsApp das trocas saem do banco**, não do navegador: trigger → fila `swap_notifications` → `notify-swap-event` (`docs/sistema-avisos-trocas.md`). Não volte a chamar edge function de aviso a partir das telas.
 - **Saldo TRE = `total_days` − `pre_used_days` − dias de TRE não recusados** (pendente já desconta). A mesma regra vale em `AdminLeaves.tsx` (tabela do coordenador) e `GuardDashboard.tsx` (painel do segurança); se mudar uma, mude a outra. Até 2026-11-03 a do coordenador contava recusados.
 - **TRE pelo segurança:** só cria e só cancela pedido `PENDING`, e isso vale no banco (RLS `20261103120000_tre_leave_guard_rules`). Aprovado ou recusado só o coordenador remove.
+- **Reverter decisão de TRE** (aprovado ↔ recusado) só pelo botão em `AdminLeaves.tsx`, com motivo obrigatório: o motivo vai para `leaves.notes` e para `audit_logs` (`TRE_DECISION_REVERTED`). Não compense recusa mexendo em `pre_used_days` (em 2026-11-03 fizeram isso no Verneque e a escala ficou sem o afastamento de 24/10).
 - **Textos de WhatsApp** só em `supabase/functions/_shared/messages.ts` (aprovados pela coordenação: sem "mensagem automática", sem artigo antes de nome, datas com dia da semana).
 
 ## Segurança (aprendido na revisão de 2026-10-23)
