@@ -4,10 +4,11 @@ import type { SwapRequest } from '@/lib/types';
 import { buildSwapReceiptHtml, type ReceiptSignature } from '@/utils/swapReceipt';
 
 // A CSP do documento impresso só aceita imagem embutida (data:), então a logo é lida uma vez e
-// convertida. Se falhar (offline sem cache, por ex.), o comprovante sai com o nome em texto.
+// convertida. Se falhar (offline sem cache, por ex.), o documento sai com o nome em texto.
+// Usada também pelo relatório mensal de trocas.
 let logoDataUrlPromise: Promise<string | null> | null = null;
 
-function loadLogoDataUrl(): Promise<string | null> {
+export function loadLogoDataUrl(): Promise<string | null> {
   logoDataUrlPromise ??= fetch(logoUrl)
     .then((response) => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);

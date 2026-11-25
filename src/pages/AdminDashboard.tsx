@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { MonthlySwapReportDialog } from '@/components/swaps/MonthlySwapReportDialog';
 import { SignatureFields } from '@/components/swaps/SignatureFields';
 import { useSignatureFields } from '@/hooks/useSignatureFields';
 import { describeSignatureError, signSwapAction } from '@/lib/swapSignature';
@@ -34,7 +35,8 @@ import {
   Filter,
   Trash2,
   Scale,
-  Download
+  Download,
+  FileDown
 } from 'lucide-react';
 
 /** Campos do pedido de TRE pendente que o painel usa para decidir. */
@@ -68,6 +70,7 @@ const AdminDashboard = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<SwapRequest | null>(null);
   const [calendarReloadKey, setCalendarReloadKey] = useState(0);
+  const [swapReportOpen, setSwapReportOpen] = useState(false);
   // Recusa de TRE com motivo obrigatório
   const [treRejectLeave, setTreRejectLeave] = useState<PendingTreLeave | null>(null);
   const [treRejectReason, setTreRejectReason] = useState('');
@@ -465,6 +468,15 @@ const AdminDashboard = () => {
                     Gerenciar Trocas
                   </Link>
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 w-full sm:w-auto"
+                  onClick={() => setSwapReportOpen(true)}
+                >
+                  <FileDown className="h-4 w-4" />
+                  Relatório Mensal
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -665,6 +677,16 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Relatório mensal de trocas aprovadas */}
+      {profile && (
+        <MonthlySwapReportDialog
+          open={swapReportOpen}
+          onOpenChange={setSwapReportOpen}
+          adminId={profile.id}
+          coordinatorName={profile.name}
+        />
+      )}
 
       {/* Decision Dialog */}
       <Dialog

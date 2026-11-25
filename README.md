@@ -185,6 +185,9 @@ Definidas em `src/App.tsx`.
 - Aviso por WhatsApp a cada etapa da troca, inclusive cancelamento, disparado pelo banco
   (`notify-swap-event`).
 - Lembrete diario automatico para trocas aprovadas com plantao no dia seguinte.
+- Relatorio mensal em PDF das trocas aprovadas (painel do coordenador, botao "Relatorio Mensal"):
+  vale o mes dos plantoes, nao o da aprovacao; troca entre dois meses sai nos dois
+  (`src/utils/monthlySwapReport.ts`, `monthlySwapReportPdf.ts`). Nao traz o motivo da troca.
 
 ### 6.5 Horas extras
 
@@ -486,6 +489,7 @@ sensivel do dominio: a escala efetiva depois das trocas aprovadas.
 - `src/lib/html.test.ts` - escape de HTML, CSP do documento impresso e validacao de URLs.
 - `src/utils/swapReceipt.test.ts` - comprovante de troca (escape, quem assume cada plantao,
   andamento por status, bloco de assinaturas).
+- `src/utils/monthlySwapReport.test.ts` - relatorio mensal (so aprovadas, mes dos plantoes, ordem, paginas).
 - `src/lib/swapSignature.test.ts` - confirmacao de senha em sessao descartavel.
 - `supabase/functions/_shared/messages.test.ts` - textos do WhatsApp (Deno:
   `npx deno@2.1.4 test --no-lock --allow-env supabase/functions/_shared/messages.test.ts`).
