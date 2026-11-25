@@ -181,13 +181,15 @@ Definidas em `src/App.tsx`.
   declaracao + senha; o banco grava cada ato em `swap_signatures` (append-only) e congela
   os termos da troca depois de solicitada. Ver `docs/assinatura-eletronica.md`.
 - Comprovante impresso (A4, logo da Camara) com as assinaturas e codigo de verificacao
-  (`src/utils/swapReceipt.ts`); verificacao publica em `/#/verificar/:codigo`.
+  (`src/utils/swapReceipt.ts`); verificacao publica em `/#/verificar/:codigo`
+  e, no app, pelo botao "Verificar Comprovante" do painel e da tela de trocas do coordenador.
 - Aviso por WhatsApp a cada etapa da troca, inclusive cancelamento, disparado pelo banco
   (`notify-swap-event`).
 - Lembrete diario automatico para trocas aprovadas com plantao no dia seguinte.
 - Relatorio mensal em PDF das trocas aprovadas (painel do coordenador, botao "Relatorio Mensal"):
   vale o mes dos plantoes, nao o da aprovacao; troca entre dois meses sai nos dois
-  (`src/utils/monthlySwapReport.ts`, `monthlySwapReportPdf.ts`). Nao traz o motivo da troca.
+  (`src/utils/monthlySwapReport.ts`, `monthlySwapReportPdf.ts`). Traz o codigo de verificacao de cada troca
+  e nao traz o motivo.
 
 ### 6.5 Horas extras
 

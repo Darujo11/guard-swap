@@ -24,6 +24,8 @@ export interface ReportSwap {
   requester?: ReportPerson | null;
   target?: ReportPerson | null;
   admin_approver?: { name?: string | null } | null;
+  /** De swap_signatures; trocas anteriores à assinatura eletrônica não têm. */
+  verification_code?: string | null;
 }
 
 export interface ReportSide {
@@ -41,6 +43,8 @@ export interface MonthlySwapReportRow {
   target: ReportSide;
   approvedAt: string;
   approvedBy: string;
+  /** Código de verificação (XXXXX-XXXXX) ou null. */
+  verificationCode: string | null;
 }
 
 export interface MonthlySwapReport {
@@ -53,6 +57,8 @@ export interface MonthlySwapReport {
   peopleCount: number;
   /** Alguma troca tem uma das datas em outro mês (pede a nota de rodapé). */
   hasOtherMonthDates: boolean;
+  /** Alguma troca não tem código de verificação (pede a nota de rodapé). */
+  hasUnsigned: boolean;
 }
 
 // 'YYYY-MM-DD' é data sem hora: new Date('2026-10-01') cairia em 30/09 no fuso do Brasil.
@@ -87,6 +93,19 @@ const firstDateInMonth = (swap: ReportSwap, monthKey: string) =>
   [swap.requester_shift_date, swap.target_shift_date].filter((d) => isInMonth(d, monthKey)).sort()[0];
 
 /**
+ * Junta o código de verificação às trocas. O código é o mesmo em todas as assinaturas de uma troca;
+ * havendo mais de um, vale o primeiro da lista (que vem por signed_at, como em verify_swap_document).
+ */
+export function withVerificationCodes(
+  swaps: ReportSwap[],
+  signatures: { swap_id: string; verification_code: string }[]
+): ReportSwap[] {
+  const codes = new Map<string, string>();
+  for (const sig of signatures) if (!codes.has(sig.swap_id)) codes.set(sig.swap_id, sig.verification_code);
+  return swaps.map((swap) => ({ ...swap, verification_code: codes.get(swap.id) ?? null }));
+}
+
+/**
  * O mês é o dos PLANTÕES, não o da aprovação: entra toda troca aprovada com pelo menos uma das duas
  * datas no mês (mesma regra do filtro de AdminSwaps e de swapMonthGroups). Uma troca entre outubro e
  * novembro aparece nos dois relatórios.
@@ -114,6 +133,7 @@ export function buildMonthlySwapReport(swaps: ReportSwap[], monthKey: string): M
     target: side(swap.target, swap.target_shift_date),
     approvedAt: swap.admin_approved_at ? format(new Date(swap.admin_approved_at), 'dd/MM/yyyy HH:mm') : '-',
     approvedBy: swap.admin_approver?.name || '-',
+    verificationCode: swap.verification_code || null,
   }));
 
   return {
@@ -122,5 +142,6 @@ export function buildMonthlySwapReport(swaps: ReportSwap[], monthKey: string): M
     rows,
     peopleCount: new Set(selected.flatMap((swap) => [swap.requester_id, swap.target_id])).size,
     hasOtherMonthDates: rows.some((row) => !row.requester.inMonth || !row.target.inMonth),
+    hasUnsigned: rows.some((row) => !row.verificationCode),
   };
 }

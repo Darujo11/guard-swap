@@ -13,7 +13,13 @@ import {
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { buildMonthlySwapReport, formatMonthLabel, getMonthRange, type ReportSwap } from '@/utils/monthlySwapReport';
+import {
+  buildMonthlySwapReport,
+  formatMonthLabel,
+  getMonthRange,
+  withVerificationCodes,
+  type ReportSwap,
+} from '@/utils/monthlySwapReport';
 import { downloadMonthlySwapReport } from '@/utils/monthlySwapReportPdf';
 import { loadLogoDataUrl } from '@/utils/printSwapReceipt';
 
@@ -23,6 +29,30 @@ interface MonthlySwapReportDialogProps {
   /** Perfil do coordenador: é a organização do relatório. */
   adminId: string;
   coordinatorName: string;
+}
+
+// Lotes pequenos: os ids vão na URL e cada troca tem até 3 assinaturas (a API corta em 1000 linhas).
+const SIGNATURES_BATCH = 100;
+
+async function fetchSignatureCodes(swapIds: string[]) {
+  const batches: string[][] = [];
+  for (let i = 0; i < swapIds.length; i += SIGNATURES_BATCH) batches.push(swapIds.slice(i, i + SIGNATURES_BATCH));
+
+  const results = await Promise.all(
+    batches.map((ids) =>
+      supabase
+        .from('swap_signatures')
+        .select('swap_id, verification_code')
+        .in('swap_id', ids)
+        .order('signed_at', { ascending: true })
+    )
+  );
+
+  // Falha aqui é erro do relatório: sem isso, troca assinada sairia como se não tivesse código.
+  return results.flatMap(({ data, error }) => {
+    if (error) throw error;
+    return data ?? [];
+  });
 }
 
 async function fetchApprovedSwaps(adminId: string, monthKey: string): Promise<ReportSwap[]> {
@@ -43,7 +73,8 @@ async function fetchApprovedSwaps(adminId: string, monthKey: string): Promise<Re
     );
 
   if (error) throw error;
-  return (data ?? []) as unknown as ReportSwap[];
+  const swaps = (data ?? []) as unknown as ReportSwap[];
+  return withVerificationCodes(swaps, await fetchSignatureCodes(swaps.map((swap) => swap.id)));
 }
 
 /** Escolhe o mês e baixa o PDF das trocas aprovadas com plantão nele. */
@@ -70,7 +101,11 @@ export function MonthlySwapReportDialog({ open, onOpenChange, adminId, coordinat
     setGenerating(true);
     try {
       const logoDataUrl = await loadLogoDataUrl();
-      downloadMonthlySwapReport(report, { coordinatorName, logoDataUrl });
+      downloadMonthlySwapReport(report, {
+        coordinatorName,
+        logoDataUrl,
+        verifyAddress: `${window.location.host}/#/verificar`,
+      });
       toast({
         title: 'Relatório gerado',
         description: `${monthLabel}: ${total} ${total === 1 ? 'troca aprovada' : 'trocas aprovadas'}.`,

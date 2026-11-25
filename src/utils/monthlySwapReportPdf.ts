@@ -25,6 +25,8 @@ export interface MonthlySwapReportPdfOptions {
   coordinatorName: string;
   /** Logo como data: URL; sem ela sai o nome em texto. */
   logoDataUrl?: string | null;
+  /** Endereço da página de verificação, sem protocolo (ex.: 'escalasmart.com.br/#/verificar'). */
+  verifyAddress?: string;
   generatedAt?: Date;
 }
 
@@ -67,7 +69,7 @@ function drawTable(doc: jsPDF, startY: number, report: MonthlySwapReport): numbe
     margin: { left: MARGIN, right: MARGIN, top: 14, bottom: FOOTER_SPACE },
     theme: 'plain',
     rowPageBreak: 'avoid',
-    head: [['Nº', 'Protocolo', 'Solicitante', 'Plantão que cedeu', 'Colega', 'Plantão que cedeu', 'Aprovação']],
+    head: [['Nº', 'Protocolo', 'Solicitante', 'Plantão que cedeu', 'Colega', 'Plantão que cedeu', 'Aprovação', 'Cód. verificação']],
     body: report.rows.map((row, index) => [
       String(index + 1),
       row.protocol,
@@ -76,6 +78,7 @@ function drawTable(doc: jsPDF, startY: number, report: MonthlySwapReport): numbe
       `${row.target.name}\n${row.target.team}`,
       mark(row.target.date, row.target.inMonth),
       `${row.approvedAt}\n${row.approvedBy}`,
+      row.verificationCode ?? '-',
     ]),
     styles: {
       fontSize: 8,
@@ -89,13 +92,14 @@ function drawTable(doc: jsPDF, startY: number, report: MonthlySwapReport): numbe
     headStyles: { fillColor: NAVY, textColor: 255, fontSize: 7.5, fontStyle: 'bold' },
     alternateRowStyles: { fillColor: SOFT },
     columnStyles: {
-      0: { cellWidth: 10, halign: 'center', textColor: MUTED },
-      1: { cellWidth: 30 },
+      0: { cellWidth: 9, halign: 'center', textColor: MUTED },
+      1: { cellWidth: 27 },
       2: { cellWidth: 'auto' },
-      3: { cellWidth: 37 },
+      3: { cellWidth: 35 },
       4: { cellWidth: 'auto' },
-      5: { cellWidth: 37 },
-      6: { cellWidth: 46, textColor: MUTED },
+      5: { cellWidth: 35 },
+      6: { cellWidth: 38, textColor: MUTED },
+      7: { cellWidth: 29, font: 'courier' },
     },
     didParseCell: (data: CellHookData) => {
       if (data.section !== 'body') return;
@@ -112,10 +116,17 @@ function drawTable(doc: jsPDF, startY: number, report: MonthlySwapReport): numbe
   return (doc as DocWithAutoTable).lastAutoTable?.finalY ?? startY;
 }
 
-function drawNotes(doc: jsPDF, startY: number, report: MonthlySwapReport): number {
+function buildNotes(report: MonthlySwapReport, verifyAddress?: string): string[] {
   const notes = ['Em cada troca, um profissional assume o plantão que o outro cedeu.'];
   if (report.hasOtherMonthDates) notes.push('* Plantão de outro mês: a troca aparece também no relatório daquele mês.');
+  if (verifyAddress && report.rows.some((row) => row.verificationCode)) {
+    notes.push(`Verificação: confira as assinaturas eletrônicas de cada troca pelo código em ${verifyAddress}`);
+  }
+  if (report.hasUnsigned) notes.push('Trocas sem código de verificação são anteriores à assinatura eletrônica.');
+  return notes;
+}
 
+function drawNotes(doc: jsPDF, startY: number, notes: string[]): number {
   doc.setFont('helvetica', 'normal').setFontSize(7.5).setTextColor(...MUTED);
   notes.forEach((note, index) => doc.text(note, MARGIN, startY + index * 4));
   return startY + (notes.length - 1) * 4;
@@ -156,12 +167,13 @@ export function createMonthlySwapReportDoc(report: MonthlySwapReport, options: M
   let y = drawTable(doc, drawHeader(doc, report, options), report);
 
   // Notas e assinatura ficam juntas e nunca por cima do rodapé.
-  const closingHeight = 38;
+  const notes = buildNotes(report, options.verifyAddress);
+  const closingHeight = 34 + notes.length * 4;
   if (y + closingHeight > pageHeight - FOOTER_SPACE) {
     doc.addPage();
     y = 10;
   }
-  y = drawNotes(doc, y + 6, report);
+  y = drawNotes(doc, y + 6, notes);
   drawSignature(doc, y + 18, options.coordinatorName);
 
   drawFooters(doc, report, options.generatedAt ?? new Date());

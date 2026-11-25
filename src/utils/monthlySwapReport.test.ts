@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildMonthlySwapReport, formatMonthLabel, getMonthRange, type ReportSwap } from './monthlySwapReport';
+import {
+  buildMonthlySwapReport,
+  formatMonthLabel,
+  getMonthRange,
+  withVerificationCodes,
+  type ReportSwap,
+} from './monthlySwapReport';
 import { createMonthlySwapReportDoc } from './monthlySwapReportPdf';
 
 const swap = (overrides: Partial<ReportSwap> = {}): ReportSwap => ({
@@ -106,6 +112,42 @@ describe('buildMonthlySwapReport', () => {
     expect(row.target.team).toBe('Sem equipe');
     expect(row.approvedAt).toBe('-');
     expect(row.approvedBy).toBe('-');
+  });
+});
+
+describe('código de verificação', () => {
+  it('põe em cada troca o código dela, sem misturar', () => {
+    const swaps = withVerificationCodes(
+      [swap({ id: 'aaaaaaaa' }), swap({ id: 'bbbbbbbb' })],
+      [
+        { swap_id: 'bbbbbbbb', verification_code: '3FA9C-0B71E' },
+        { swap_id: 'aaaaaaaa', verification_code: '57D25-9674C' },
+        { swap_id: 'bbbbbbbb', verification_code: '3FA9C-0B71E' },
+      ]
+    );
+    const report = buildMonthlySwapReport(swaps, '2026-10');
+    expect(report.rows.map((row) => [row.protocol, row.verificationCode])).toEqual([
+      ['TRC-AAAAAAAA', '57D25-9674C'],
+      ['TRC-BBBBBBBB', '3FA9C-0B71E'],
+    ]);
+    expect(report.hasUnsigned).toBe(false);
+  });
+
+  it('havendo mais de um código, vale o da primeira assinatura', () => {
+    const [signed] = withVerificationCodes(
+      [swap({ id: 'aaaaaaaa' })],
+      [
+        { swap_id: 'aaaaaaaa', verification_code: '11111-11111' },
+        { swap_id: 'aaaaaaaa', verification_code: '22222-22222' },
+      ]
+    );
+    expect(signed.verification_code).toBe('11111-11111');
+  });
+
+  it('troca anterior à assinatura eletrônica fica sem código', () => {
+    const report = buildMonthlySwapReport(withVerificationCodes([swap()], []), '2026-10');
+    expect(report.rows[0].verificationCode).toBeNull();
+    expect(report.hasUnsigned).toBe(true);
   });
 });
 
