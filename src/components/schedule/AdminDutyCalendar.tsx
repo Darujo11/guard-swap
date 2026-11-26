@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { getTeamCalendarColor } from "@/utils/monthlyDutyReport";
 
 interface AdminDutyCalendarProps {
   reloadKey?: number;
@@ -92,19 +93,6 @@ interface DayDuty {
 }
 
 const GOLDEN = "#B8860B";
-const TEAM_FIXED_COLORS: Record<string, string> = {
-  A: "#3b82f6",
-  B: "#10b981",
-  C: "#f59e0b",
-  D: "#ef4444",
-};
-
-const getTeamCalendarColor = (teamName?: string | null, fallback?: string | null) => {
-  const normalized = (teamName || "").trim().toUpperCase();
-  const match = normalized.match(/^EQUIPE\s+([A-D])$/) || normalized.match(/^([A-D])$/);
-  if (match?.[1] && TEAM_FIXED_COLORS[match[1]]) return TEAM_FIXED_COLORS[match[1]];
-  return fallback || "#64748b";
-};
 
 const getLeaveLabel = (leaveType: string, customType?: string | null): string => {
   switch (leaveType) {

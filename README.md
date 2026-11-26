@@ -128,6 +128,7 @@ Definidas em `src/App.tsx`.
 - `/#/admin/escalas`
 - `/#/admin/extras`
 - `/#/admin/folgas`
+- `/#/admin/relatorio`
 - `/#/simulador-avaliacao/:id?`
 - `/#/historico-avaliacoes`
 
@@ -243,6 +244,30 @@ Definidas em `src/App.tsx`.
 - Polling de `version.json`.
 - Prompt de atualizacao ao detectar versao mais nova.
 - `forceReload` com limpeza de cache em cenarios de update forcado.
+
+### 6.11 Relatorio mensal de plantoes (menu "Relatorio")
+
+Escala do mes no formato da folha impressa pela coordenacao, para saber quem estava de plantao em
+cada dia (`src/pages/AdminMonthlyReport.tsx`, regras em `src/utils/monthlyDutyReport.ts`, PDF em
+`monthlyDutyReportPdf.ts`).
+
+- Tela com a grade do mes, totais e avisos; botoes "Imprimir" (abre o PDF com a impressao) e
+  "Baixar PDF" (`escala-AAAA-MM.pdf`). A4 paisagem: pagina 1 com a grade e o quadro de observacoes,
+  paginas seguintes com o detalhamento diario (opcional: trocas com protocolo, horas e % das extras).
+- Escala de cada dia = `team_schedules` + trocas aprovadas via `computeEffectiveSchedule` (a mesma regra
+  das outras telas). Quem assume ocupa a posicao de quem cedeu e sai em azul com "c/ colega".
+- Afastamento aprovado vale para todo o periodo, mas so aparece nos dias de plantao da pessoa: nome
+  riscado + codigo (BH, TRE, ATESTADO, FERIAS, LICENCA, FALTA ou o tipo digitado em "Outro").
+  Banco de horas em cinza; os demais em vermelho.
+- Extra de quem nao esta de plantao entra no fim do dia, em amarelo ("EXTRA"); extra no proprio
+  plantao vira "+EXTRA". O banco nao liga a extra ao afastamento coberto: o dia mostra os dois lado a lado.
+- Observacoes automaticas como na folha: banco de horas ("Dinarte – 01 e 05/12"), ferias (periodo),
+  TRE, atestado e outros afastamentos. "Nao podem fazer hora extra", "Eventos diversos" e "Demais
+  observacoes" sao digitados na tela e ficam so no navegador (`localStorage`, por organizacao e mes).
+- Avisos antes de imprimir (nao saem no PDF): TRE pendente no mes (a pessoa continua na escala),
+  afastamento aprovado que nao cai em nenhum plantao e dias sem equipe cadastrada.
+- Limite conhecido: a equipe de cada pessoa e a atual (`profiles.team_id`, sem historico) e inativos saem
+  da grade; relatorio de meses antigos reflete a composicao de hoje.
 
 ## 7) Modelo de dados (Supabase/Postgres)
 
@@ -445,7 +470,8 @@ e `public/version.json`. `forceUpdate: true` recarrega quem estiver na versao an
 - TRE pendente nao aparece na escala/calendario/PDF; se o coordenador nao decide antes do dia,
   a escala mostra o seguranca de plantao.
 - Na escala do coordenador (`AdminDutyCalendar`), afastamento de varios dias (exceto ferias) so
-  aparece no 1o dia, mas o saldo conta todos os dias.
+  aparece no 1o dia, mas o saldo conta todos os dias. O relatorio mensal (6.11) ja usa o periodo todo,
+  entao os dois podem divergir nesse caso.
 - Afastamento em dia em que o seguranca nao esta na escala some da escala do coordenador sem aviso.
 - Mudancas em `pre_used_days` ("ja tiradas") nao ficam registradas.
 - Pedido de TRE em dia sem plantao e bloqueado so na tela; falta trava no banco.
@@ -492,6 +518,8 @@ sensivel do dominio: a escala efetiva depois das trocas aprovadas.
 - `src/utils/swapReceipt.test.ts` - comprovante de troca (escape, quem assume cada plantao,
   andamento por status, bloco de assinaturas).
 - `src/utils/monthlySwapReport.test.ts` - relatorio mensal (so aprovadas, mes dos plantoes, ordem, paginas).
+- `src/utils/monthlyDutyReport.test.ts` - relatorio mensal de plantoes (troca na posicao de quem cedeu,
+  afastamento so em dia de plantao, periodo de varios dias, ferias, TRE pendente, extras, semanas).
 - `src/lib/swapSignature.test.ts` - confirmacao de senha em sessao descartavel.
 - `supabase/functions/_shared/messages.test.ts` - textos do WhatsApp (Deno:
   `npx deno@2.1.4 test --no-lock --allow-env supabase/functions/_shared/messages.test.ts`).

@@ -69,6 +69,11 @@ export function AppLayout({
     icon: CalendarOff,
     roles: ['admin', 'super_admin']
   }, {
+    name: 'Relatório',
+    href: '/admin/relatorio',
+    icon: ClipboardList,
+    roles: ['admin', 'super_admin']
+  }, {
     name: 'Fichas',
     href: '/admin/fichas',
     icon: FileText,

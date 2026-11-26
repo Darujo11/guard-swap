@@ -20,6 +20,7 @@ import AdminGuardProfile from "./pages/AdminGuardProfile";
 import AdminSchedule from "./pages/AdminSchedule";
 import AdminExtras from "./pages/AdminExtras";
 import AdminLeaves from "./pages/AdminLeaves";
+import AdminMonthlyReport from "./pages/AdminMonthlyReport";
 import SuperAdminPlans from "./pages/SuperAdminPlans";
 import SuperAdminManagement from "./pages/SuperAdminManagement";
 import SuperAdminResetPassword from "./pages/SuperAdminResetPassword";
@@ -136,6 +137,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminLeaves />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/relatorio"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminMonthlyReport />
                 </ProtectedRoute>
               }
             />
