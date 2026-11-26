@@ -28,7 +28,8 @@ O lint tem dezenas de problemas antigos (`any`, `prefer-const`): compare antes/d
 - **Migrations:** não sobem com o push e `supabase_migrations.schema_migrations` parou de ser atualizada em 2026-04. Aplicar o SQL manualmente; ensaiar antes numa transação com `ROLLBACK` simulando usuários (`set local role authenticated` + `request.jwt.claims`).
 - **Ordem:** se o frontend depende de função/migration nova, publique a função e a migration ANTES do push (em 2026-10-23 um push antecipado deixou os avisos fora do ar por ~20 min).
 - **Versão:** `npm version X.Y.Z --no-git-tag-version` + `src/lib/version.ts` + `public/version.json`. `forceUpdate: true` recarrega clientes antigos (PWA); usar quando a versão antiga quebraria com a mudança e desligar depois de 1–2 dias (a da 4.6.0 foi desligada em 2026-11-03). Com `false`, quem está em versão antiga vê o aviso "Nova versão disponível". Ajustes pequenos sem bump de versão chegam quando a página recarrega.
-- **Conferir publicação:** o site atualiza ~2 min após o push; compare o `assets/index-*.js` de `https://escalasmart.com.br/` antes/depois e procure o trecho novo no bundle.
+- **Conferir publicação:** o site atualiza ~2 min após o push; compare o `assets/index-*.js` de `https://escalasmart.com.br/` antes/depois e procure o trecho novo no bundle. Com bump de versão, basta consultar `https://escalasmart.com.br/version.json?t=<agora>` até mostrar a versão nova (a 4.7.0 apareceu em ~2 min).
+- **Git:** commits feitos nesta máquina saem como "Fabio Ventura" (config global); o histórico anterior é "venturax". O dono ainda não pediu para padronizar.
 
 ## Regras do domínio que não podem quebrar
 
@@ -40,7 +41,12 @@ O lint tem dezenas de problemas antigos (`any`, `prefer-const`): compare antes/d
 - **TRE pelo segurança:** só cria e só cancela pedido `PENDING`, e isso vale no banco (RLS `20261103120000_tre_leave_guard_rules`). Aprovado ou recusado só o coordenador remove.
 - **Decisões de TRE deixam rastro** (`src/lib/treDecision.ts`): recusar no painel (`AdminDashboard.tsx`) e reverter decisão (aprovado ↔ recusado, só pelo botão em `AdminLeaves.tsx`) exigem motivo de 10+ caracteres, que vai para `leaves.notes` e para `audit_logs` (`TRE_REJECTED`, `TRE_DECISION_REVERTED`; aprovar grava `TRE_APPROVED`). Updates condicionados ao status atual (`.eq('status', ...)`).
 - **Pedido de TRE só em dia de plantão** da escala efetiva (inclui plantão assumido em troca; exclui cedido, dia com afastamento e dia com TRE pendente). A trava está só na tela (`GuardPersonalCalendar` em modo seleção), não no banco. Não compense recusa mexendo em `pre_used_days` (em 2026-11-03 fizeram isso no Verneque e a escala ficou sem o afastamento de 24/10).
-- **Relatório mensal de plantões** (`/admin/relatorio`, `src/utils/monthlyDutyReport.ts`): monta cada dia com `computeEffectiveSchedule`, não com lógica própria. Afastamento aprovado vale no período todo, só em dia de plantão; extra é amarela; o banco não registra quem cobriu quem (a coordenação ainda não pediu esse campo).
+- **Relatório mensal de plantões** (`/admin/relatorio`, 4.7.0 de 2026-11-26; regras em `src/utils/monthlyDutyReport.ts`, PDF em `monthlyDutyReportPdf.ts`, tela em `AdminMonthlyReport.tsx`): reproduz a escala em papel da coordenação (grade do mês + quadro "Observações"). Monta cada dia com `computeEffectiveSchedule`, não com lógica própria; quem assume troca ocupa a posição de quem cedeu. Afastamento aprovado vale no período todo, mas só em dia de plantão da pessoa (fora disso vira aviso na tela, não some calado). Decisões do dono:
+  - Extra se escreve **"EXTRA" em amarelo**, nunca "HE".
+  - Cobertura não é ligada: o dia mostra o ausente riscado e quem fez extra lado a lado. Ligar "quem cobriu quem" exigiria coluna nova em `extras` + migration manual; foi oferecido e o dono não escolheu. Não deduzir pareamento por heurística.
+  - Banco de horas em cinza (código BH); demais afastamentos em vermelho.
+  - "Não podem fazer hora extra", "Eventos diversos" e "Demais observações" não existem no banco: digitados na tela, rascunho só no `localStorage` (`escalasmart:relatorio-mensal:<admin>:<AAAA-MM>`).
+  - O `AdminDutyCalendar` do painel ainda marca afastamento (exceto férias) só no 1º dia; o relatório usa o período todo. Se for alinhar, alinhe o calendário ao relatório, não o contrário.
 - **Textos de WhatsApp** só em `supabase/functions/_shared/messages.ts` (aprovados pela coordenação: sem "mensagem automática", sem artigo antes de nome, datas com dia da semana).
 
 ## Segurança (aprendido na revisão de 2026-10-23)
@@ -50,7 +56,7 @@ O lint tem dezenas de problemas antigos (`any`, `prefer-const`): compare antes/d
 - Funções `SECURITY DEFINER` em `public` viram RPC para anon por padrão: `revoke execute ... from public, anon, authenticated` quando não forem para o app. Não revogue as usadas dentro de policies (`has_role`, `get_profile_id`, `get_user_admin_id`, `is_admin_active`, `user_belongs_to_admin_org`).
 - Cadastro aberto do Auth está desligado (`disable_signup`); contas só pelas edge functions.
 - HTML montado como string (comprovantes) passa por `escapeHtml` e leva `PRINT_DOCUMENT_CSP_META` (`src/lib/html.ts`). Links gravados por usuários só abrem via `getSafeUrlWithPrefix`.
-- Pendências conhecidas: ver "Pontos de atenção abertos" no README (senha padrão `123456`, `notify-tre-leave*` e `forgot-password` abertos, etc.) e "Pendências do processo de afastamentos" (TRE pendente fora da escala, afastamento de vários dias, trava de dia sem plantão só na tela).
+- Pendências conhecidas: ver "Pontos de atenção abertos" no README (senha padrão `123456`, `notify-tre-leave*` e `forgot-password` abertos, etc.) e "Pendências do processo de afastamentos" (TRE pendente fora da escala, afastamento de vários dias, trava de dia sem plantão só na tela). Relatório mensal: equipe de cada pessoa é a atual (`profiles.team_id` não tem histórico) e inativos saem da grade, então meses antigos saem com a composição de hoje; ainda não foi conferido com dados reais de produção (só com dados falsos).
 
 ## Acesso ao banco
 
